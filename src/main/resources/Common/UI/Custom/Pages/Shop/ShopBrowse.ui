@@ -1,7 +1,7 @@
 // ShopBrowse UI - Buyer view for KS-Shops (3 cards per row, 9 per page)
 $C = "../../Common.ui";
 
-// ===== Card Macro — defined once, instantiated 9x =====
+// ===== Card Macro - defined once, instantiated 9x =====
 @CardButtonStyle = ButtonStyle(
   Default: (Background: (Color: #1c2835)),
   Hovered: (Background: (Color: #2a3a4a)),
