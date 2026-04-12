@@ -178,11 +178,13 @@ $C.@PageOverlay {
             FlexWeight: 1;
             Anchor: (Height: 28);
             Style: @TabBtnActiveStyle;
-            LayoutMode: CenterMiddle;
+            LayoutMode: Top;
             Label #TabAllLabel {
               Style: (FontSize: 11, RenderBold: true, TextColor: #bfcdd5, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
               Text: "ALL SHOPS";
+              FlexWeight: 1;
             }
+            Group #TabAllInd { Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
           }
 
           Group { Anchor: (Width: 4); }
@@ -191,11 +193,13 @@ $C.@PageOverlay {
             FlexWeight: 1;
             Anchor: (Height: 28);
             Style: @TabBtnInactiveStyle;
-            LayoutMode: CenterMiddle;
+            LayoutMode: Top;
             Label #TabAdminLabel {
               Style: (FontSize: 11, RenderBold: true, TextColor: #778899, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
               Text: "ADMIN";
+              FlexWeight: 1;
             }
+            Group #TabAdminInd { Visible: false; Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
           }
 
           Group { Anchor: (Width: 4); }
@@ -204,11 +208,13 @@ $C.@PageOverlay {
             FlexWeight: 1;
             Anchor: (Height: 28);
             Style: @TabBtnInactiveStyle;
-            LayoutMode: CenterMiddle;
+            LayoutMode: Top;
             Label #TabPlayerLabel {
               Style: (FontSize: 11, RenderBold: true, TextColor: #778899, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
               Text: "PLAYER";
+              FlexWeight: 1;
             }
+            Group #TabPlayerInd { Visible: false; Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
           }
 
           Group { Anchor: (Width: 4); }
@@ -217,11 +223,13 @@ $C.@PageOverlay {
             FlexWeight: 1;
             Anchor: (Height: 28);
             Style: @TabBtnInactiveStyle;
-            LayoutMode: CenterMiddle;
+            LayoutMode: Top;
             Label #TabFeaturedLabel {
               Style: (FontSize: 11, RenderBold: true, TextColor: #778899, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
               Text: "FEATURED";
+              FlexWeight: 1;
             }
+            Group #TabFeaturedInd { Visible: false; Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
           }
 
           Group { Anchor: (Width: 12); }

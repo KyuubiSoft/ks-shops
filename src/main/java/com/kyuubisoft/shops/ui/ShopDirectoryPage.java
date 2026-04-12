@@ -378,15 +378,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         ui.set("#TabBar #TabFeaturedLabel.Style.TextColor",
             "featured".equals(currentTab) ? activeColor : inactiveColor);
 
-        // Update tab button styles based on active state
-        ui.set("#TabBar #TabAll.Style",
-            "all".equals(currentTab) ? "TabBtnActiveStyle" : "TabBtnInactiveStyle");
-        ui.set("#TabBar #TabAdmin.Style",
-            "admin".equals(currentTab) ? "TabBtnActiveStyle" : "TabBtnInactiveStyle");
-        ui.set("#TabBar #TabPlayer.Style",
-            "player".equals(currentTab) ? "TabBtnActiveStyle" : "TabBtnInactiveStyle");
-        ui.set("#TabBar #TabFeatured.Style",
-            "featured".equals(currentTab) ? "TabBtnActiveStyle" : "TabBtnInactiveStyle");
+        // Tab highlight: use Visible indicator bars instead of Style swap (Style is not dynamically settable)
+        ui.set("#TabBar #TabAllInd.Visible", "all".equals(currentTab));
+        ui.set("#TabBar #TabAdminInd.Visible", "admin".equals(currentTab));
+        ui.set("#TabBar #TabPlayerInd.Visible", "player".equals(currentTab));
+        ui.set("#TabBar #TabFeaturedInd.Visible", "featured".equals(currentTab));
     }
 
     private void buildCards(UICommandBuilder ui, ShopI18n i18n) {
