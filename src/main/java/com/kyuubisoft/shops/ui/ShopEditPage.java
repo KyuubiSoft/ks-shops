@@ -171,12 +171,31 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 + " slot=" + data.slotIndex + " srcSlot=" + data.sourceSlotId
                 + " srcSection=" + data.sourceSectionId);
             switch (data.action) {
-                case "drop_shop", "drop_inv", "drop_hotbar" -> {
-                    // Drag & drop completed: just refresh UI to show updated container state
-                    refreshUI();
+                case "drop_shop" -> {
+                    // Item dropped onto shop grid
+                    if (data.slotIndex != null && data.sourceSlotId != null) {
+                        handleDrop(ref, store, data.sourceSectionId, data.sourceSlotId, 0, data.slotIndex);
+                    } else {
+                        refreshUI();
+                    }
+                }
+                case "drop_inv" -> {
+                    // Item dropped onto inventory
+                    if (data.slotIndex != null && data.sourceSlotId != null) {
+                        handleDrop(ref, store, data.sourceSectionId, data.sourceSlotId, -2, data.slotIndex);
+                    } else {
+                        refreshUI();
+                    }
+                }
+                case "drop_hotbar" -> {
+                    // Item dropped onto hotbar
+                    if (data.slotIndex != null && data.sourceSlotId != null) {
+                        handleDrop(ref, store, data.sourceSectionId, data.sourceSlotId, -1, data.slotIndex);
+                    } else {
+                        refreshUI();
+                    }
                 }
                 case "click_shop" -> {
-                    // Clicked a slot in the shop grid: select it for price editing
                     if (data.slotIndex != null) {
                         int actualSlot = shopPage * SHOP_SLOTS_PER_PAGE + data.slotIndex;
                         handleSelectSlot(String.valueOf(actualSlot));
@@ -484,6 +503,88 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
         selectedSlot = -1;
         refreshUI();
+    }
+
+    // ==================== DRAG & DROP ====================
+
+    /**
+     * Handle item drop between grid sections.
+     * Manually moves items between staging container and player inventory.
+     * Section IDs: 0 = shop staging, -2 = player storage, -1 = player hotbar
+     */
+    private void handleDrop(Ref<EntityStore> ref, Store<EntityStore> store,
+                           Integer sourceSectionId, int sourceSlot,
+                           int destSectionId, int destSlot) {
+        Player p = store.getComponent(ref, Player.getComponentType());
+        if (p == null) {
+            refreshUI();
+            return;
+        }
+
+        int srcSection = sourceSectionId != null ? sourceSectionId : 0;
+
+        ItemContainer srcContainer = resolveContainer(p, srcSection);
+        ItemContainer dstContainer = resolveContainer(p, destSectionId);
+
+        if (srcContainer == null || dstContainer == null) {
+            LOGGER.warning("[ShopEdit] Drop failed: null container (src=" + srcSection + " dst=" + destSectionId + ")");
+            refreshUI();
+            return;
+        }
+
+        if (sourceSlot < 0 || sourceSlot >= srcContainer.getCapacity() ||
+            destSlot < 0 || destSlot >= dstContainer.getCapacity()) {
+            LOGGER.warning("[ShopEdit] Drop failed: slot out of range");
+            refreshUI();
+            return;
+        }
+
+        ItemStack srcItem = srcContainer.getItemStack((short) sourceSlot);
+        ItemStack dstItem = dstContainer.getItemStack((short) destSlot);
+
+        if (srcItem == null || srcItem.isEmpty()) {
+            refreshUI();
+            return;
+        }
+
+        // Swap items between source and destination
+        dstContainer.setItemStackForSlot((short) destSlot, srcItem);
+        srcContainer.setItemStackForSlot((short) sourceSlot, dstItem);
+
+        // Mark inventory dirty if player inventory was involved
+        if (srcSection == -2 || srcSection == -1 || destSectionId == -2 || destSectionId == -1) {
+            try {
+                var invComp = store.getComponent(ref,
+                    com.hypixel.hytale.server.core.inventory.InventoryComponent.Storage.getComponentType());
+                if (invComp != null) invComp.markDirty();
+            } catch (Exception ignored) {}
+        }
+
+        LOGGER.info("[ShopEdit] Moved item from section " + srcSection + "[" + sourceSlot
+            + "] to section " + destSectionId + "[" + destSlot + "]");
+        refreshUI();
+    }
+
+    /**
+     * Resolve a container from a section ID.
+     */
+    private ItemContainer resolveContainer(Player p, int sectionId) {
+        return switch (sectionId) {
+            case 0 -> stagingContainer; // Shop staging container
+            case -1 -> { // Hotbar
+                try {
+                    var inv = p.getInventoryManager().getInventory();
+                    yield inv.getHotbar();
+                } catch (Exception e) { yield null; }
+            }
+            case -2 -> { // Storage
+                try {
+                    var inv = p.getInventoryManager().getInventory();
+                    yield inv.getStorage();
+                } catch (Exception e) { yield null; }
+            }
+            default -> null;
+        };
     }
 
     // ==================== PAGINATION ====================
