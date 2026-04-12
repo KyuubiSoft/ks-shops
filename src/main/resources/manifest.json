@@ -10,7 +10,7 @@
     }
   ],
   "Main": "com.kyuubisoft.shops.ShopPlugin",
-  "IncludesAssetPack": true,
+  "IncludesAssetPack": false,
   "OptionalDependencies": {
     "kyuubisoft:core": "*",
     "kyuubisoft:claims": "*"
