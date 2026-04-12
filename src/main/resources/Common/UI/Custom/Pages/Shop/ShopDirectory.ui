@@ -155,7 +155,7 @@ $C.@PageOverlay {
           Group { FlexWeight: 1; }
 
           Label #DirTitle {
-            Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+            Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
             Text: "SHOP DIRECTORY";
             Padding: (Top: 6);
           }
@@ -350,4 +350,3 @@ $C.@PageOverlay {
   }
 }
 
-$C.@BackButton {}

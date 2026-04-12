@@ -72,7 +72,7 @@ $C.@PageOverlay {
           Group { FlexWeight: 1; }
 
           Label #NotifTitle {
-            Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+            Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
             Text: "SHOP NOTIFICATIONS";
           }
 
@@ -192,5 +192,3 @@ $C.@PageOverlay {
     }
   }
 }
-
-$C.@BackButton {}

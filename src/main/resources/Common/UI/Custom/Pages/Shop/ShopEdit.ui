@@ -29,7 +29,7 @@ $C.@PageOverlay {
                     Padding: (Left: 16, Right: 16);
 
                     Label #ShopTitle {
-                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 12);
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center, RenderUppercase: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 12);
                         Text: "SHOP EDITOR";
                         FlexWeight: 1;
                         Padding: (Top: 6);
@@ -591,4 +591,3 @@ $C.@PageOverlay {
     }
 }
 
-$C.@BackButton {}

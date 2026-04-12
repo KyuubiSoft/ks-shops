@@ -137,7 +137,7 @@ $C.@PageOverlay {
           Group { Anchor: (Width: 120); }
 
           Label #ShopTitle {
-            Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+            Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
             Text: "";
             FlexWeight: 1;
             Padding: (Top: 6);
@@ -298,7 +298,7 @@ $C.@PageOverlay {
 
       #Title {
         Label #ConfirmTitle {
-          Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+          Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
           Padding: (Horizontal: 19);
           Text: "";
         }
@@ -404,4 +404,3 @@ $C.@PageOverlay {
   }
 }
 
-$C.@BackButton {}
