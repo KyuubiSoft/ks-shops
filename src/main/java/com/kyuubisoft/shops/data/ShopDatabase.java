@@ -100,6 +100,7 @@ public class ShopDatabase {
                 "total_ratings INT DEFAULT 0," +
                 "total_revenue DOUBLE DEFAULT 0," +
                 "total_tax_paid DOUBLE DEFAULT 0," +
+                "shop_balance DOUBLE DEFAULT 0," +
                 "rent_paid_until BIGINT DEFAULT 0," +
                 "rent_cost_per_cycle DOUBLE DEFAULT 0," +
                 "rent_cycle_days INT DEFAULT 0," +
@@ -190,6 +191,7 @@ public class ShopDatabase {
                 "total_ratings INT DEFAULT 0," +
                 "total_revenue DOUBLE DEFAULT 0," +
                 "total_tax_paid DOUBLE DEFAULT 0," +
+                "shop_balance REAL DEFAULT 0," +
                 "rent_paid_until BIGINT DEFAULT 0," +
                 "rent_cost_per_cycle DOUBLE DEFAULT 0," +
                 "rent_cycle_days INT DEFAULT 0," +
@@ -260,6 +262,17 @@ public class ShopDatabase {
         provider.executeUpdate(ratingsTable);
         provider.executeUpdate(notificationsTable);
 
+        // Migration: add shop_balance column if missing (existing databases)
+        try {
+            String alterSql = provider.isMySQL()
+                ? "ALTER TABLE shop_shops ADD COLUMN shop_balance DOUBLE DEFAULT 0"
+                : "ALTER TABLE shop_shops ADD COLUMN shop_balance REAL DEFAULT 0";
+            provider.executeUpdate(alterSql);
+            LOGGER.info("Migrated: added shop_balance column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists — expected after first migration
+        }
+
         LOGGER.info("Database tables initialized");
     }
 
@@ -292,13 +305,13 @@ public class ShopDatabase {
             ? "REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
-              "rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+              "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
+              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             : "INSERT OR REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
-              "rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+              "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
+              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try {
             provider.executeUpdate(sql,
@@ -321,6 +334,7 @@ public class ShopDatabase {
                 shop.getTotalRatings(),
                 shop.getTotalRevenue(),
                 shop.getTotalTaxPaid(),
+                shop.getShopBalance(),
                 shop.getRentPaidUntil(),
                 shop.getRentCostPerCycle(),
                 shop.getRentCycleDays(),
@@ -742,7 +756,11 @@ public class ShopDatabase {
                 } catch (Exception ignored) {}
             }
 
-            return ShopData.fromDatabase(
+            // Read shop_balance safely (column may not exist in legacy DBs)
+            double shopBalance = 0;
+            try { shopBalance = rs.getDouble("shop_balance"); } catch (SQLException ignored) {}
+
+            ShopData shop = ShopData.fromDatabase(
                 UUID.fromString(rs.getString("id")),
                 rs.getString("name"),
                 rs.getString("description"),
@@ -772,6 +790,8 @@ public class ShopDatabase {
                 rs.getLong("created_at"),
                 rs.getLong("last_activity")
             );
+            shop.setShopBalance(shopBalance);
+            return shop;
         } catch (Exception e) {
             LOGGER.warning("Failed to read shop row: " + e.getMessage());
             return null;

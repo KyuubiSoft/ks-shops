@@ -233,6 +233,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "save" -> handleSave(ref, store);
                 case "toggleOpen" -> handleToggleOpen();
                 case "removeItem" -> handleRemoveItem();
+                case "deposit" -> handleDeposit(ref, store);
                 case "prevPage" -> handlePrevPage();
                 case "nextPage" -> handleNextPage();
                 case "histPrev" -> handleHistPrev();
@@ -485,6 +486,30 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         refreshUI();
     }
 
+    // ==================== DEPOSIT ====================
+
+    private void handleDeposit(Ref<EntityStore> ref, Store<EntityStore> store) {
+        ShopI18n i18n = plugin.getI18n();
+        double depositAmount = 100;
+
+        boolean success = plugin.getShopService().depositToShop(
+            playerRef, shopData.getId(), depositAmount
+        );
+
+        if (success) {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.deposit.success",
+                    plugin.getEconomyBridge().format(depositAmount), shopData.getName())
+            ).color("#55FF55"));
+        } else {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.deposit.failed")
+            ).color("#FF5555"));
+        }
+
+        refreshUI();
+    }
+
     // ==================== REMOVE ITEM ====================
 
     private void handleRemoveItem() {
@@ -651,6 +676,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             EventData.of("Button", "toggleOpen"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#RemoveItemBtn",
             EventData.of("Button", "removeItem"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DepositBtn",
+            EventData.of("Button", "deposit"), false);
 
         // Shop grid pagination
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageBtn",
@@ -913,6 +940,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== REVENUE PANEL ====================
 
     private void buildRevenuePanel(UICommandBuilder ui) {
+        // Shop Balance (current funds available for buyback)
+        ui.set("#ShopBalanceLbl.Text", "SHOP BALANCE: "
+            + plugin.getEconomyBridge().format(shopData.getShopBalance()) + " Gold");
+
         ui.set("#TotalRevenue.Text", plugin.getEconomyBridge().format(shopData.getTotalRevenue()));
         ui.set("#TaxPaid.Text", plugin.getEconomyBridge().format(shopData.getTotalTaxPaid()));
 

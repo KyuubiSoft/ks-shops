@@ -79,6 +79,7 @@ public class ShopCommand extends AbstractCommandCollection {
         addSubCommand(new HistoryCmd());
         addSubCommand(new NotificationsCmd());
         addSubCommand(new CollectCmd());
+        addSubCommand(new DepositCmd());
     }
 
     // ==================== PLAYER COMMANDS ====================
@@ -746,6 +747,81 @@ public class ShopCommand extends AbstractCommandCollection {
                 String formatted = plugin.getEconomyBridge().format(collected);
                 player.sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.collect.success", formatted)).color("#55FF55"));
+            }
+        }
+    }
+
+    private class DepositCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        DepositCmd() {
+            super("deposit", "Deposit money into your shop balance");
+            withRequiredArg("amount", "Amount to deposit", ArgTypes.INTEGER);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            if (!player.hasPermission("ks.shop.user.edit", true)) {
+                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+                return;
+            }
+
+            if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
+
+            ShopI18n i18n = plugin.getI18n();
+            ShopService shopService = plugin.getShopService();
+            UUID playerUuid = playerRef.getUuid();
+
+            // Parse amount
+            String[] parts = ctx.getInputString().split("\\s+", 3);
+            int amount;
+            try {
+                amount = Integer.parseInt(parts.length > 2 ? parts[2] : "0");
+            } catch (NumberFormatException e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.invalid_arguments",
+                        "/ksshop deposit <amount>")).color("#FF5555"));
+                return;
+            }
+
+            if (amount <= 0) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.invalid_arguments",
+                        "/ksshop deposit <amount>")).color("#FF5555"));
+                return;
+            }
+
+            // Find nearest owned shop
+            List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
+            if (ownedShops.isEmpty()) {
+                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                return;
+            }
+
+            ShopData targetShop;
+            if (ownedShops.size() == 1) {
+                targetShop = ownedShops.get(0);
+            } else {
+                targetShop = findNearestOwnedShop(ownedShops, player, world);
+                if (targetShop == null) {
+                    targetShop = ownedShops.get(0);
+                }
+            }
+
+            boolean success = shopService.depositToShop(playerRef, targetShop.getId(), amount);
+            if (success) {
+                String formatted = plugin.getEconomyBridge().format(amount);
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.deposit.success",
+                        formatted, targetShop.getName())).color("#55FF55"));
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.deposit.new_balance",
+                        plugin.getEconomyBridge().format(targetShop.getShopBalance()))
+                ).color("#96a9be"));
+            } else {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.deposit.failed")).color("#FF5555"));
             }
         }
     }

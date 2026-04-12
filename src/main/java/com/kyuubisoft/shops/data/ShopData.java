@@ -25,6 +25,7 @@ public class ShopData {
     private List<String> tags;
     private double averageRating;
     private int totalRatings;
+    private double shopBalance;   // Shop account balance (owner deposits, customers pay into, sells deduct from)
     private double totalRevenue;
     private double totalTaxPaid;
     private long rentPaidUntil;
@@ -122,6 +123,7 @@ public class ShopData {
     public List<String> getTags() { return tags; }
     public double getAverageRating() { return averageRating; }
     public int getTotalRatings() { return totalRatings; }
+    public double getShopBalance() { return shopBalance; }
     public double getTotalRevenue() { return totalRevenue; }
     public double getTotalTaxPaid() { return totalTaxPaid; }
     public long getRentPaidUntil() { return rentPaidUntil; }
@@ -149,6 +151,12 @@ public class ShopData {
     public void setTags(List<String> tags) { this.tags = tags != null ? tags : new ArrayList<>(); markDirty(); }
     public void setAverageRating(double averageRating) { this.averageRating = averageRating; markDirty(); }
     public void setTotalRatings(int totalRatings) { this.totalRatings = totalRatings; markDirty(); }
+    public void setShopBalance(double shopBalance) { this.shopBalance = shopBalance; markDirty(); }
+    public void addToBalance(double amount) { this.shopBalance += amount; markDirty(); }
+    public boolean deductFromBalance(double amount) {
+        if (shopBalance >= amount) { shopBalance -= amount; markDirty(); return true; }
+        return false;
+    }
     public void setTotalRevenue(double totalRevenue) { this.totalRevenue = totalRevenue; markDirty(); }
     public void setTotalTaxPaid(double totalTaxPaid) { this.totalTaxPaid = totalTaxPaid; markDirty(); }
     public void setRentPaidUntil(long rentPaidUntil) { this.rentPaidUntil = rentPaidUntil; markDirty(); }

@@ -396,6 +396,40 @@ $C.@PageOverlay {
 
                                 Group { Anchor: (Height: 8); }
 
+                                // Shop Balance (funds available for buyback)
+                                Group { Anchor: (Left: 0, Right: 0, Height: 40); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    ItemIcon { Anchor: (Width: 20, Height: 20); ItemId: "Ingredient_Bar_Gold"; }
+                                    Group { Anchor: (Width: 6); }
+                                    Label #ShopBalanceLbl {
+                                        FlexWeight: 1;
+                                        Anchor: (Height: 40);
+                                        Style: (FontSize: 13, TextColor: #44ff44, VerticalAlignment: Center, RenderBold: true);
+                                        Text: "SHOP BALANCE: 0 Gold";
+                                    }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                // Deposit Button
+                                Group {
+                                    Anchor: (Left: 0, Right: 0, Height: 34);
+                                    LayoutMode: CenterMiddle;
+                                    Button #DepositBtn {
+                                        Anchor: (Width: 180, Height: 30);
+                                        Style: ButtonStyle(Default: (Background: (Color: #2a6e2a60)), Hovered: (Background: (Color: #3a8e3a80)), Pressed: (Background: (Color: #1a5e1a90)));
+                                        Label #DepositBtnLbl {
+                                            Style: (FontSize: 11, TextColor: #55ff55, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                                            Text: "DEPOSIT 100G";
+                                        }
+                                    }
+                                }
+                                Group { Anchor: (Height: 8); }
+
+                                // Separator
+                                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+                                Group { Anchor: (Height: 8); }
+
                                 // Total Revenue
                                 Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
                                     Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);

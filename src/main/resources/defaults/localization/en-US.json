@@ -10,7 +10,8 @@
   "shop.help.visit": "/ksshop visit <shopId> - Visit a shop",
   "shop.help.rate": "/ksshop rate <shopId> <1-5> - Rate a shop",
   "shop.help.myshops": "/ksshop myshops - Your shops",
-  "shop.help.collect": "/ksshop collect - Collect earnings",
+  "shop.help.collect": "/ksshop collect - Collect earnings from shop balances",
+  "shop.help.deposit": "/ksshop deposit <amount> - Deposit money into shop",
   "shop.help.history": "/ksshop history - Transaction history",
 
   "shop.create.success": "Shop '{0}' created successfully!",
@@ -63,8 +64,15 @@
   "shop.myshops.entry": "{0} | {1} | {2} items | Earned: {3}",
   "shop.myshops.empty": "You don't own any shops yet.",
 
-  "shop.collect.success": "Collected {0} {1} from shop sales!",
+  "shop.collect.success": "Collected {0} from your shop balances!",
   "shop.collect.empty": "No earnings to collect.",
+  "shop.collect.nothing": "No shop earnings to collect.",
+
+  "shop.deposit.success": "Deposited {0} into shop '{1}'!",
+  "shop.deposit.failed": "Deposit failed! Check your balance.",
+  "shop.deposit.new_balance": "New shop balance: {0}",
+
+  "shop.sell.no_funds": "This shop doesn't have enough funds to buy that item.",
 
   "shop.transfer.success": "Shop '{0}' transferred to {1}.",
   "shop.transfer.cost": "Transfer costs {0} {1}.",

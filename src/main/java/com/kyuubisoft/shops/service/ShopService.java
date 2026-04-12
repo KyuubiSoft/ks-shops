@@ -157,26 +157,15 @@ public class ShopService {
         // --- Step 3: Give item to buyer (placeholder, wired up with Player reference) ---
         giveItem(buyer, shopItem.getItemId(), quantity);
 
-        // --- Step 4: Deposit to seller (if player shop) ---
+        // --- Step 4: Credit shop balance (player shop) or skip (admin shop) ---
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
         if (isPlayerShop) {
-            boolean deposited = economyBridge.deposit(shop.getOwnerUuid(), sellerReceived);
-            if (!deposited) {
-                // Rollback: refund buyer (item already given, so log the inconsistency)
-                LOGGER.warning("Purchase partial failure: deposit to seller failed for shop "
-                    + shopId + " — refunding buyer " + buyerUuid);
-                economyBridge.deposit(buyerUuid, buyerCost);
-                // Restore stock
-                if (!shopItem.isUnlimitedStock()) {
-                    database.executeAtomicStockIncrement(shopId, shopItem.getItemId(), quantity);
-                }
-                return false;
-            }
+            // Add earnings to shop's own balance account (owner collects later)
+            shop.addToBalance(sellerReceived);
 
-            // Update seller's pending earnings for tracking
+            // Update seller's tracking stats
             PlayerShopData sellerData = plugin.getPlayerData(shop.getOwnerUuid());
             if (sellerData != null) {
-                sellerData.setPendingEarnings(sellerData.getPendingEarnings() + sellerReceived);
                 sellerData.setTotalEarnings(sellerData.getTotalEarnings() + sellerReceived);
                 sellerData.setTotalSales(sellerData.getTotalSales() + 1);
             }
@@ -193,6 +182,7 @@ public class ShopService {
                 );
             }
         }
+        // Admin shops: money goes to the void (no balance tracking)
 
         // --- Step 5: Update buyer stats ---
         PlayerShopData buyerData = plugin.getPlayerData(buyerUuid);
@@ -293,14 +283,16 @@ public class ShopService {
         }
         int sellerReceived = totalPrice - taxAmount;
 
-        // --- For player shops: check if shop owner can afford to buy ---
+        // --- For player shops: check if shop balance can afford to buy back ---
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
         if (isPlayerShop) {
-            if (!economyBridge.has(shop.getOwnerUuid(), totalPrice)) {
-                LOGGER.fine("Sell rejected: shop owner has insufficient funds");
+            if (shop.getShopBalance() < totalPrice) {
+                LOGGER.fine("Sell rejected: shop balance insufficient ("
+                    + shop.getShopBalance() + " < " + totalPrice + ")");
                 return false;
             }
         }
+        // Admin shops: unlimited balance, no check needed
 
         // --- Verify seller has the items (placeholder, actual inventory check at Player level) ---
         // The caller (UI handler) should verify inventory before calling this method.
@@ -313,23 +305,24 @@ public class ShopService {
             return false;
         }
 
-        // --- Step 2: Withdraw from shop owner (player shop) ---
+        // --- Step 2: Deduct from shop balance (player shop) ---
         if (isPlayerShop) {
-            boolean withdrawn = economyBridge.withdraw(shop.getOwnerUuid(), totalPrice);
-            if (!withdrawn) {
+            boolean deducted = shop.deductFromBalance(totalPrice);
+            if (!deducted) {
                 // Rollback: return items to seller
                 giveItem(seller, itemId, quantity);
-                LOGGER.warning("Sell failed: withdraw from shop owner failed, items returned");
+                LOGGER.warning("Sell failed: shop balance deduction failed, items returned");
                 return false;
             }
         }
+        // Admin shops: no balance deduction
 
         // --- Step 3: Deposit to seller ---
         boolean deposited = economyBridge.deposit(sellerUuid, sellerReceived);
         if (!deposited) {
-            // Rollback: refund shop owner, return items to seller
+            // Rollback: restore shop balance, return items to seller
             if (isPlayerShop) {
-                economyBridge.deposit(shop.getOwnerUuid(), totalPrice);
+                shop.addToBalance(totalPrice);
             }
             giveItem(seller, itemId, quantity);
             LOGGER.warning("Sell failed: deposit to seller failed, all rolled back");
@@ -346,12 +339,6 @@ public class ShopService {
         PlayerShopData sellerData = plugin.getPlayerData(sellerUuid);
         if (sellerData != null) {
             sellerData.setTotalEarnings(sellerData.getTotalEarnings() + sellerReceived);
-        }
-        if (isPlayerShop) {
-            PlayerShopData ownerData = plugin.getPlayerData(shop.getOwnerUuid());
-            if (ownerData != null) {
-                ownerData.setTotalSpent(ownerData.getTotalSpent() + totalPrice);
-            }
         }
 
         // --- Step 6: Update shop metadata ---
@@ -601,9 +588,11 @@ public class ShopService {
     // ==================== EARNINGS ====================
 
     /**
-     * Collects all pending earnings for a player.
+     * Collects earnings from all owned shop balances.
+     * Iterates all shops owned by the player, sums their shopBalance,
+     * deposits into the player's wallet, and resets shop balances to 0.
      *
-     * @return the amount collected
+     * @return the total amount collected
      */
     public double collectEarnings(PlayerRef player) {
         if (player == null) return 0.0;
@@ -616,30 +605,88 @@ public class ShopService {
             return 0.0;
         }
 
-        // --- Load player data ---
-        PlayerShopData data = plugin.getPlayerData(playerUuid);
-        if (data == null) {
-            LOGGER.fine("Collect earnings: no player data found for " + playerUuid);
-            return 0.0;
+        // --- Sum balances from all owned shops ---
+        List<ShopData> ownedShops = shopManager.getShopsByOwner(playerUuid);
+        double totalToCollect = 0;
+        for (ShopData shop : ownedShops) {
+            totalToCollect += shop.getShopBalance();
         }
 
-        double pending = data.getPendingEarnings();
-        if (pending <= 0) return 0.0;
+        if (totalToCollect <= 0) return 0.0;
 
-        // --- Deposit earnings to player ---
-        boolean deposited = economyBridge.deposit(playerUuid, pending);
+        // --- Deposit total to player wallet ---
+        boolean deposited = economyBridge.deposit(playerUuid, totalToCollect);
         if (!deposited) {
             LOGGER.warning("Collect earnings failed: deposit to " + playerUuid + " failed");
             return 0.0;
         }
 
-        // --- Reset pending earnings ---
-        data.setPendingEarnings(0);
-        data.markDirty();
+        // --- Reset all shop balances to 0 ---
+        for (ShopData shop : ownedShops) {
+            if (shop.getShopBalance() > 0) {
+                shop.setShopBalance(0);
+                database.saveShop(shop);
+            }
+        }
 
         LOGGER.info("Earnings collected: " + player.getUsername() + " received "
-            + economyBridge.format(pending));
-        return pending;
+            + economyBridge.format(totalToCollect) + " from " + ownedShops.size() + " shop(s)");
+        return totalToCollect;
+    }
+
+    // ==================== SHOP BALANCE DEPOSIT ====================
+
+    /**
+     * Deposits money from the player's wallet into a shop's balance.
+     *
+     * @param player the shop owner
+     * @param shopId the shop to deposit into
+     * @param amount the amount to deposit
+     * @return true if the deposit succeeded
+     */
+    public boolean depositToShop(PlayerRef player, UUID shopId, double amount) {
+        if (player == null || shopId == null || amount <= 0) return false;
+
+        UUID playerUuid = player.getUuid();
+
+        // --- Validate economy ---
+        if (!economyBridge.isAvailable()) {
+            LOGGER.warning("Shop deposit rejected: economy provider not available");
+            return false;
+        }
+
+        // --- Validate shop exists and is owned by player ---
+        ShopData shop = shopManager.getShop(shopId);
+        if (shop == null) {
+            LOGGER.fine("Shop deposit rejected: shop not found " + shopId);
+            return false;
+        }
+        if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(playerUuid)) {
+            LOGGER.fine("Shop deposit rejected: not the owner of shop " + shopId);
+            return false;
+        }
+
+        // --- Validate player has enough funds ---
+        if (!economyBridge.has(playerUuid, amount)) {
+            LOGGER.fine("Shop deposit rejected: insufficient funds");
+            return false;
+        }
+
+        // --- Withdraw from player ---
+        boolean withdrawn = economyBridge.withdraw(playerUuid, amount);
+        if (!withdrawn) {
+            LOGGER.warning("Shop deposit failed: withdraw from player failed");
+            return false;
+        }
+
+        // --- Add to shop balance ---
+        shop.addToBalance(amount);
+        database.saveShop(shop);
+
+        LOGGER.info("Shop deposit: " + player.getUsername() + " deposited "
+            + economyBridge.format(amount) + " into shop '" + shop.getName() + "'"
+            + " (new balance: " + economyBridge.format(shop.getShopBalance()) + ")");
+        return true;
     }
 
     // ==================== RENT COLLECTION ====================
