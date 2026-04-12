@@ -630,10 +630,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Toggle open/closed button
         if (shopData.isOpen()) {
             ui.set("#ToggleOpenLbl.Text", "OPEN");
-            ui.set("#ToggleOpenLbl.TextColor", "#44ff44");
+            ui.set("#ToggleOpenLbl.Style.TextColor", "#44ff44");
         } else {
             ui.set("#ToggleOpenLbl.Text", "CLOSED");
-            ui.set("#ToggleOpenLbl.TextColor", "#ff4444");
+            ui.set("#ToggleOpenLbl.Style.TextColor", "#ff4444");
         }
     }
 
@@ -643,9 +643,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         String activeColor = "#e8c547";
         String inactiveColor = "#96a9be";
 
-        ui.set("#SettingsTabLbl.TextColor", activeTab == Tab.SETTINGS ? activeColor : inactiveColor);
-        ui.set("#RevenueTabLbl.TextColor", activeTab == Tab.REVENUE ? activeColor : inactiveColor);
-        ui.set("#HistoryTabLbl.TextColor", activeTab == Tab.HISTORY ? activeColor : inactiveColor);
+        ui.set("#SettingsTabLbl.Style.TextColor", activeTab == Tab.SETTINGS ? activeColor : inactiveColor);
+        ui.set("#RevenueTabLbl.Style.TextColor", activeTab == Tab.REVENUE ? activeColor : inactiveColor);
+        ui.set("#HistoryTabLbl.Style.TextColor", activeTab == Tab.HISTORY ? activeColor : inactiveColor);
     }
 
     // ==================== SHOP GRID ====================
@@ -773,9 +773,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 String buyColor = meta.buyEnabled ? "#44ff44" : "#555555";
                 String sellColor = meta.sellEnabled ? "#cc8844" : "#555555";
                 String bothColor = (meta.buyEnabled && meta.sellEnabled) ? "#7caacc" : "#555555";
-                ui.set("#ModeBuyLbl.TextColor", buyColor);
-                ui.set("#ModeSellLbl.TextColor", sellColor);
-                ui.set("#ModeBothLbl.TextColor", bothColor);
+                ui.set("#ModeBuyLbl.Style.TextColor", buyColor);
+                ui.set("#ModeSellLbl.Style.TextColor", sellColor);
+                ui.set("#ModeBothLbl.Style.TextColor", bothColor);
             } else {
                 showNoItemSelected(ui);
             }
