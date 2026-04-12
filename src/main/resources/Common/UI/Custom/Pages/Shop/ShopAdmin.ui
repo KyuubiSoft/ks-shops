@@ -1,7 +1,9 @@
+// Shop Administration Panel
 $C = "../../Common.ui";
 
 $C.@PageOverlay {
   Group {
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
     LayoutMode: CenterMiddle;
 
     $C.@DecoratedContainer #SAPanel {
@@ -10,26 +12,732 @@ $C.@PageOverlay {
 
       #Title {
         Group {
-          Anchor: (Height: 42);
           LayoutMode: Left;
-          Padding: (Left: 16, Right: 8);
+          Anchor: (Height: 48);
+          Padding: (Left: 16, Right: 16);
           Group { Anchor: (Width: 8); }
           Label #SATitleLbl {
             FlexWeight: 1;
-            Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+            Style: LabelStyle(FontSize: 18, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
             Text: "SHOP ADMINISTRATION";
+          }
+          Group { Anchor: (Width: 8); }
+          Button #SAReloadBtn {
+            Anchor: (Width: 80, Height: 32);
+            Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060)));
+            Label { Style: LabelStyle(FontSize: 10, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Reload"; }
+          }
+          Group { Anchor: (Width: 8); }
+          Button #SACloseBtn {
+            Anchor: (Width: 36, Height: 36);
+            LayoutMode: CenterMiddle;
+            Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ff444444)), Pressed: (Background: (Color: #ff666666)));
+            Label { Style: LabelStyle(FontSize: 14, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "X"; }
           }
         }
       }
 
       #Content {
-        LayoutMode: Top;
-        Padding: (Full: 17);
+        Group {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          LayoutMode: Left;
 
-        Label #SAStatusMsg {
-          Anchor: (Height: 24);
-          Style: (FontSize: 12, TextColor: #888888, HorizontalAlignment: Center, VerticalAlignment: Center);
-          Text: "Admin panel loading...";
+          // ==================== SIDEBAR ====================
+          Group #SANav {
+            Anchor: (Width: 160, Top: 0, Bottom: 0);
+            LayoutMode: Top;
+            Padding: (Left: 6, Right: 6, Top: 8, Bottom: 8);
+            Background: (Color: #ffffff04);
+
+            Label { Style: LabelStyle(FontSize: 10, TextColor: #00bfff, RenderBold: true, RenderUppercase: true); Text: "SETTINGS"; Anchor: (Height: 22); Padding: (Left: 8, Top: 4); }
+
+            Button #SATabGeneral { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabGeneralInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00bfff); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "General"; }
+            }
+            Button #SATabEconomy { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabEconomyInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Economy"; }
+            }
+            Button #SATabRent { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabRentInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Rent"; }
+            }
+
+            Group { Anchor: (Height: 8); }
+            Label { Style: LabelStyle(FontSize: 10, TextColor: #44ff44, RenderBold: true, RenderUppercase: true); Text: "MANAGEMENT"; Anchor: (Height: 22); Padding: (Left: 8, Top: 4); }
+
+            Button #SATabShops { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabShopsInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "All Shops"; }
+            }
+            Button #SATabPlayers { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabPlayersInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Player Shops"; }
+            }
+            Button #SATabTransactions { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabTransactionsInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Transactions"; }
+            }
+
+            Group { Anchor: (Height: 8); }
+            Label { Style: LabelStyle(FontSize: 10, TextColor: #ff8800, RenderBold: true, RenderUppercase: true); Text: "TOOLS"; Anchor: (Height: 22); Padding: (Left: 8, Top: 4); }
+
+            Button #SATabStats { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabStatsInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Statistics"; }
+            }
+            Button #SATabBlacklist { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabBlacklistInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Blacklist"; }
+            }
+          }
+
+          // ==================== CONTENT AREA ====================
+          Group #SAContentArea {
+            FlexWeight: 1;
+            LayoutMode: Full;
+            Padding: (Left: 20, Top: 16, Right: 20, Bottom: 16);
+
+            Group {
+              Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+              LayoutMode: Top;
+
+              Label #SAStatusMsg {
+                Anchor: (Left: 0, Right: 0, Height: 20);
+                Style: LabelStyle(FontSize: 10, TextColor: #888888, HorizontalAlignment: Center, VerticalAlignment: Center);
+                Text: "";
+              }
+              Group { Anchor: (Height: 8); }
+
+              // ========== GENERAL PANEL ==========
+              Group #SAPanelGeneral { Anchor: (Left: 0, Right: 0); LayoutMode: Top;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "General Settings"; }
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Max Shops per Player"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GMaxShops { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 4; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Max Items per Shop"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GMaxItems { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 4; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Creation Cost"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GCreationCost { Anchor: (Width: 80, Height: 28, Right: 8); MaxLength: 8; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Name Max Length"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GNameMaxLen { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 3; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Allow Player Shops"; }
+                  Group { FlexWeight: 1; }
+                  $C.@CheckBox #GAllowPlayerShops { Anchor: (Width: 18, Height: 18, Right: 12); }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Auto-Close Days"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GAutoCloseDays { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 4; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Auto-Delete Days"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #GAutoDeleteDays { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 4; }
+                }
+                Group { Anchor: (Height: 12); }
+                Button #GSaveBtn {
+                  Anchor: (Width: 160, Height: 34);
+                  Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460)));
+                  Label { Style: LabelStyle(FontSize: 12, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Save Changes"; }
+                }
+              }
+
+              // ========== ECONOMY PANEL ==========
+              Group #SAPanelEconomy { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Economy Settings"; }
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Tax Enabled"; }
+                  Group { FlexWeight: 1; }
+                  $C.@CheckBox #ETaxEnabled { Anchor: (Width: 18, Height: 18, Right: 12); }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Buy Tax Rate (%)"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #ETaxRate { Anchor: (Width: 80, Height: 28, Right: 8); MaxLength: 6; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Sell Tax Rate (%)"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #ESellTaxRate { Anchor: (Width: 80, Height: 28, Right: 8); MaxLength: 6; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Display Tax in Price"; }
+                  Group { FlexWeight: 1; }
+                  $C.@CheckBox #EDisplayTax { Anchor: (Width: 18, Height: 18, Right: 12); }
+                }
+                Group { Anchor: (Height: 12); }
+                Button #ESaveBtn {
+                  Anchor: (Width: 160, Height: 34);
+                  Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460)));
+                  Label { Style: LabelStyle(FontSize: 12, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Save Economy"; }
+                }
+              }
+
+              // ========== RENT PANEL ==========
+              Group #SAPanelRent { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Rent Settings"; }
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Rent Enabled"; }
+                  Group { FlexWeight: 1; }
+                  $C.@CheckBox #RRentEnabled { Anchor: (Width: 18, Height: 18, Right: 12); }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Daily Amount"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #RDailyAmount { Anchor: (Width: 80, Height: 28, Right: 8); MaxLength: 8; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Grace Period (Days)"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #RGraceDays { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 3; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Auto-Close on Expire"; }
+                  Group { FlexWeight: 1; }
+                  $C.@CheckBox #RAutoClose { Anchor: (Width: 18, Height: 18, Right: 12); }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 46, Bottom: 2); LayoutMode: Left; Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                  Label { Anchor: (Left: 12); Style: LabelStyle(VerticalAlignment: Center, TextColor: #96a9be, FontSize: 14); Text: "Auto-Delete Days"; }
+                  Group { FlexWeight: 1; }
+                  $C.@TextField #RAutoDeleteDays { Anchor: (Width: 60, Height: 28, Right: 8); MaxLength: 4; }
+                }
+                Group { Anchor: (Height: 12); }
+                Button #RSaveBtn {
+                  Anchor: (Width: 160, Height: 34);
+                  Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460)));
+                  Label { Style: LabelStyle(FontSize: 12, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Save Rent"; }
+                }
+              }
+
+              // ========== ALL SHOPS PANEL ==========
+              Group #SAPanelShops { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "All Shops"; }
+                Group { Anchor: (Height: 6); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  $C.@TextField #SSearchField { Anchor: (Height: 28); FlexWeight: 1; MaxLength: 50; }
+                  Group { Anchor: (Width: 6); }
+                  Button #SSearchBtn {
+                    Anchor: (Width: 60, Height: 28);
+                    Style: ButtonStyle(Default: (Background: (Color: #00bcd420)), Hovered: (Background: (Color: #00bcd440)), Pressed: (Background: (Color: #00bcd460)));
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #00bcd4, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Search"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+                // Header
+                Group { Anchor: (Left: 0, Right: 0, Height: 22); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label { Anchor: (Width: 160); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "NAME"; }
+                  Label { Anchor: (Width: 100); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "OWNER"; }
+                  Label { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "TYPE"; }
+                  Label { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "ITEMS"; }
+                  Label { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "STATUS"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+                // Rows 0-7
+                Group #SRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName0 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner0 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType0 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems0 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus0 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn0 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName1 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner1 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType1 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems1 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus1 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn1 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName2 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner2 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType2 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems2 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus2 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn2 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName3 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner3 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType3 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems3 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus3 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn3 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName4 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner4 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType4 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems4 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus4 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn4 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName5 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner5 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType5 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems5 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus5 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn5 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow6 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName6 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner6 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType6 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems6 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus6 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn6 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #SRow7 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #SName7 { Anchor: (Width: 160); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #SOwner7 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #SType7 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SItems7 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #SStatus7 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #SDeleteBtn7 { Anchor: (Width: 50, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Label #SEmpty { Anchor: (Height: 30); Style: LabelStyle(FontSize: 11, TextColor: #556677, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "No shops found."; }
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left;
+                  Button #SPrevBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "<"; } }
+                  Group { FlexWeight: 1; }
+                  Label #SPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
+                  Group { FlexWeight: 1; }
+                  Button #SNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
+                }
+              }
+
+              // ========== PLAYER SHOPS PANEL ==========
+              Group #SAPanelPlayers { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Player Shops"; }
+                Group { Anchor: (Height: 6); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  $C.@TextField #PSearchField { Anchor: (Height: 28); FlexWeight: 1; MaxLength: 50; }
+                  Group { Anchor: (Width: 6); }
+                  Button #PSearchBtn {
+                    Anchor: (Width: 60, Height: 28);
+                    Style: ButtonStyle(Default: (Background: (Color: #00bcd420)), Hovered: (Background: (Color: #00bcd440)), Pressed: (Background: (Color: #00bcd460)));
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #00bcd4, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Search"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+                // Header
+                Group { Anchor: (Left: 0, Right: 0, Height: 22); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label { Anchor: (Width: 140); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "SHOP"; }
+                  Label { Anchor: (Width: 100); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "OWNER"; }
+                  Label { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "STATUS"; }
+                  Label { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "RATING"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+                // Rows 0-5
+                Group #PRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName0 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName0 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus0 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating0 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn0 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn0 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn0 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #PRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName1 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName1 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus1 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating1 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn1 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn1 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn1 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #PRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName2 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName2 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus2 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating2 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn2 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn2 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn2 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #PRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName3 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName3 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus3 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating3 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn3 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn3 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn3 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #PRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName4 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName4 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus4 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating4 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn4 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn4 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn4 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #PRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #PShopName5 { Anchor: (Width: 140); Style: LabelStyle(FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #POwnerName5 { Anchor: (Width: 100); Style: LabelStyle(FontSize: 11, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #PStatus5 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #PRating5 { Anchor: (Width: 50); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Group { FlexWeight: 1; }
+                  Button #PCloseBtn5 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "CLS"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #POpenBtn5 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "OPN"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #PDeleteBtn5 { Anchor: (Width: 40, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Label #PEmpty { Anchor: (Height: 30); Style: LabelStyle(FontSize: 11, TextColor: #556677, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "No player shops found."; }
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left;
+                  Button #PPrevBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "<"; } }
+                  Group { FlexWeight: 1; }
+                  Label #PPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
+                  Group { FlexWeight: 1; }
+                  Button #PNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
+                }
+              }
+
+              // ========== TRANSACTIONS PANEL ==========
+              Group #SAPanelTransactions { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Transactions"; }
+                Group { Anchor: (Height: 6); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  $C.@TextField #TSearchField { Anchor: (Height: 28); FlexWeight: 1; MaxLength: 50; }
+                  Group { Anchor: (Width: 6); }
+                  Button #TSearchBtn {
+                    Anchor: (Width: 60, Height: 28);
+                    Style: ButtonStyle(Default: (Background: (Color: #00bcd420)), Hovered: (Background: (Color: #00bcd440)), Pressed: (Background: (Color: #00bcd460)));
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #00bcd4, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Search"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+                // Header
+                Group { Anchor: (Left: 0, Right: 0, Height: 22); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "TIME"; }
+                  Label { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "BUYER"; }
+                  Label { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "SELLER"; }
+                  Label { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "ITEM"; }
+                  Label { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "QTY"; }
+                  Label { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "PRICE"; }
+                  Label { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "TAX"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+                // Rows 0-9
+                Group #TRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime0 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer0 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller0 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem0 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty0 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice0 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax0 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime1 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer1 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller1 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem1 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty1 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice1 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax1 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime2 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer2 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller2 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem2 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty2 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice2 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax2 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime3 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer3 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller3 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem3 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty3 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice3 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax3 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime4 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer4 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller4 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem4 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty4 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice4 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax4 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime5 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer5 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller5 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem5 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty5 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice5 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax5 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow6 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime6 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer6 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller6 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem6 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty6 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice6 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax6 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow7 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime7 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer7 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller7 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem7 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty7 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice7 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax7 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow8 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime8 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer8 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller8 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem8 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty8 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice8 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax8 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Group #TRow9 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #TTime9 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TBuyer9 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TSeller9 { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #8899aa, VerticalAlignment: Center); Text: ""; }
+                  Label #TItem9 { Anchor: (Width: 120); Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Label #TQty9 { Anchor: (Width: 35); Style: LabelStyle(FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; }
+                  Label #TPrice9 { Anchor: (Width: 55); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #TTax9 { Anchor: (Width: 45); Style: LabelStyle(FontSize: 10, TextColor: #ff8800, VerticalAlignment: Center); Text: ""; }
+                }
+                Label #TEmpty { Anchor: (Height: 30); Style: LabelStyle(FontSize: 11, TextColor: #556677, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "No transactions found."; }
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left;
+                  Button #TPrevBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "<"; } }
+                  Group { FlexWeight: 1; }
+                  Label #TPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
+                  Group { FlexWeight: 1; }
+                  Button #TNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
+                }
+              }
+
+              // ========== STATISTICS PANEL ==========
+              Group #SAPanelStats { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Statistics"; }
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Total Shops:"; }
+                  Label #StatTotalShops { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Player Shops:"; }
+                  Label #StatPlayerShops { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Admin Shops:"; }
+                  Label #StatAdminShops { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Active Shops:"; }
+                  Label #StatActiveShops { Style: LabelStyle(FontSize: 12, TextColor: #44ff44, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Closed Shops:"; }
+                  Label #StatClosedShops { Style: LabelStyle(FontSize: 12, TextColor: #ff4444, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1, Top: 4, Bottom: 4); Background: (Color: #ffffff10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Total Volume:"; }
+                  Label #StatTotalVolume { Style: LabelStyle(FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Tax Collected:"; }
+                  Label #StatTaxCollected { Style: LabelStyle(FontSize: 12, TextColor: #ff8800, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Rent Collected:"; }
+                  Label #StatRentCollected { Style: LabelStyle(FontSize: 12, TextColor: #00bcd4, VerticalAlignment: Center); Text: "0"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1, Top: 4, Bottom: 4); Background: (Color: #ffffff10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Top Seller:"; }
+                  Label #StatTopSeller { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "-"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Top Item:"; }
+                  Label #StatTopItem { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "-"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  Label { Anchor: (Width: 180); Style: LabelStyle(FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center); Text: "Transactions Today:"; }
+                  Label #StatTransactionsToday { Style: LabelStyle(FontSize: 12, TextColor: #ffffff, VerticalAlignment: Center); Text: "-"; }
+                }
+              }
+
+              // ========== BLACKLIST PANEL ==========
+              Group #SAPanelBlacklist { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Item Blacklist"; }
+                Group { Anchor: (Height: 6); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  $C.@TextField #BItemField { Anchor: (Height: 28); FlexWeight: 1; MaxLength: 80; }
+                  Group { Anchor: (Width: 6); }
+                  Button #BAddBtn {
+                    Anchor: (Width: 50, Height: 28);
+                    Style: ButtonStyle(Default: (Background: (Color: #44ff4420)), Hovered: (Background: (Color: #44ff4440)), Pressed: (Background: (Color: #44ff4460)));
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Add"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+                // Rows 0-9
+                Group #BRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId0 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn0 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId1 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn1 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId2 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn2 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId3 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn3 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId4 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn4 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId5 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn5 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow6 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId6 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn6 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow7 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId7 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn7 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow8 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId8 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn8 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Group #BRow9 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left; Padding: (Left: 8, Right: 4);
+                  Label #BItemId9 { FlexWeight: 1; Style: LabelStyle(FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); Text: ""; }
+                  Button #BRemoveBtn9 { Anchor: (Width: 50, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Remove"; } }
+                }
+                Label #BEmpty { Anchor: (Height: 30); Style: LabelStyle(FontSize: 11, TextColor: #556677, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "No blacklisted items."; }
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left;
+                  Button #BPrevBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "<"; } }
+                  Group { FlexWeight: 1; }
+                  Label #BPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
+                  Group { FlexWeight: 1; }
+                  Button #BNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
+                }
+              }
+
+            }
+          }
         }
       }
     }
