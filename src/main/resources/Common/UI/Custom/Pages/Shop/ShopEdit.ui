@@ -12,7 +12,6 @@ $C = "../../Common.ui";
     Default: (Background: (Color: #1c2835)),
     Hovered: (Background: (Color: #2a3a4a)),
     Pressed: (Background: (Color: #1a2a38)),
-    Sounds: $C.@ButtonSounds,
 );
 
 $C.@PageOverlay {

@@ -7,7 +7,6 @@ $C = "../../Common.ui";
   Hovered: (Background: (Color: #2a3a4a)),
   Pressed: (Background: (Color: #1a2a38)),
   Disabled: (Background: (Color: #141a22)),
-  Sounds: $C.@ButtonSounds,
 );
 
 @ShopCard = Group {

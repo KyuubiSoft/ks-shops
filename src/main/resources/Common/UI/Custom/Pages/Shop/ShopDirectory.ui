@@ -7,7 +7,6 @@ $C = "../../Common.ui";
   Hovered: (Background: (Color: #2a3a4a)),
   Pressed: (Background: (Color: #1a2a38)),
   Disabled: (Background: (Color: #141a22)),
-  Sounds: $C.@ButtonSounds,
 );
 
 // ===== Tab button styles =====
@@ -15,14 +14,12 @@ $C = "../../Common.ui";
   Default: (Background: (Color: #1a3050)),
   Hovered: (Background: (Color: #1e3858)),
   Pressed: (Background: (Color: #163050)),
-  Sounds: $C.@ButtonSounds,
 );
 
 @TabBtnInactiveStyle = ButtonStyle(
   Default: (Background: (Color: #141e28)),
   Hovered: (Background: (Color: #1c2835)),
   Pressed: (Background: (Color: #141a22)),
-  Sounds: $C.@ButtonSounds,
 );
 
 // ===== Directory Card Macro -- 8 cards (4x2 grid), each 220x155 =====

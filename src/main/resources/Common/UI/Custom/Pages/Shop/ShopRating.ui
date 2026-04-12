@@ -6,14 +6,12 @@ $C = "../../Common.ui";
   Default: (Background: (Color: #333344)),
   Hovered: (Background: (Color: #444455)),
   Pressed: (Background: (Color: #2a2a3a)),
-  Sounds: $C.@ButtonSounds,
 );
 
 @StarButtonSelected = ButtonStyle(
   Default: (Background: (Color: #ffd700)),
   Hovered: (Background: (Color: #ffe44d)),
   Pressed: (Background: (Color: #ccaa00)),
-  Sounds: $C.@ButtonSounds,
 );
 
 // ===== Review Entry Macro =====
