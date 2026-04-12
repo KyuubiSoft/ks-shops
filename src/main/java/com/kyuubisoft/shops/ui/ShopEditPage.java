@@ -541,21 +541,13 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         events.addEventBinding(CustomUIEventBindingType.Activating, "#HistNextBtn",
             EventData.of("Button", "histNext"), false);
 
-        // Shop slot selection (clicking a slot to edit its price)
+        // NOTE: ItemGrid does not support Activating/SlotClicking/Dropped events.
+        // Slot selection is handled via separate overlay buttons (#SlotBtn0-#SlotBtn11)
+        // pre-created in the .ui file on top of each grid slot.
         for (int i = 0; i < SHOP_SLOTS_PER_PAGE; i++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating, "#ShopGrid",
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#SlotBtn" + i,
                 EventData.of("Select", String.valueOf(i)), false);
         }
-
-        // Slot click events for native drag & drop
-        events.addEventBinding(CustomUIEventBindingType.SlotClicking, "#ShopGrid",
-            EventData.of("Select", "click"), false);
-        events.addEventBinding(CustomUIEventBindingType.Dropped, "#ShopGrid",
-            EventData.of("Button", "shopDrop"), false);
-        events.addEventBinding(CustomUIEventBindingType.Dropped, "#InvGrid",
-            EventData.of("Button", "invDrop"), false);
-        events.addEventBinding(CustomUIEventBindingType.Dropped, "#HotbarGrid",
-            EventData.of("Button", "hotbarDrop"), false);
 
         // Text field changes
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#EditNameField",

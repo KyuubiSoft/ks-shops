@@ -98,6 +98,24 @@ $C.@PageOverlay {
                             Padding: 0;
                         }
 
+                        // Slot selection overlay buttons (on top of ItemGrid)
+                        Group #SlotOverlay {
+                            Anchor: (Width: 220, Height: 160);
+                            LayoutMode: LeftCenterWrap;
+                            Button #SlotBtn0 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn1 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn2 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn3 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn4 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn5 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn6 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn7 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn8 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn9 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn10 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                            Button #SlotBtn11 { Anchor: (Width: 48, Height: 48); Style: (Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); Padding: (Full: 2); }
+                        }
+
                         // Shop Grid Page Navigation
                         Group #ShopPageNav {
                             Anchor: (Width: 488, Height: 32);
