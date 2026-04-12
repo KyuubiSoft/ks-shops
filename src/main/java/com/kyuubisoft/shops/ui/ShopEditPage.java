@@ -554,9 +554,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Mark inventory dirty if player inventory was involved
         if (srcSection == -2 || srcSection == -1 || destSectionId == -2 || destSectionId == -1) {
             try {
-                var invComp = store.getComponent(ref,
-                    com.hypixel.hytale.server.core.inventory.InventoryComponent.Storage.getComponentType());
-                if (invComp != null) invComp.markDirty();
+                com.kyuubisoft.shops.util.PlayerInventoryAccess.of(p).markChanged();
             } catch (Exception ignored) {}
         }
 
@@ -567,23 +565,16 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
     /**
      * Resolve a container from a section ID.
+     * 0 = shop staging, -1 = hotbar, -2 = storage
      */
     private ItemContainer resolveContainer(Player p, int sectionId) {
+        com.kyuubisoft.shops.util.PlayerInventoryAccess inv =
+            com.kyuubisoft.shops.util.PlayerInventoryAccess.of(p);
         return switch (sectionId) {
-            case 0 -> stagingContainer; // Shop staging container
-            case -1 -> { // Hotbar
-                try {
-                    var inv = p.getInventoryManager().getInventory();
-                    yield inv.getHotbar();
-                } catch (Exception e) { yield null; }
-            }
-            case -2 -> { // Storage
-                try {
-                    var inv = p.getInventoryManager().getInventory();
-                    yield inv.getStorage();
-                } catch (Exception e) { yield null; }
-            }
-            default -> null;
+            case 0 -> stagingContainer;
+            case -1 -> inv.getHotbar();
+            case -2 -> inv.getStorage();
+            default -> stagingContainer;
         };
     }
 
