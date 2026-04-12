@@ -1,0 +1,407 @@
+// ShopBrowse UI - Buyer view for KS-Shops (3 cards per row, 9 per page)
+$C = "../../Common.ui";
+
+// ===== Card Macro - defined once, instantiated 9x =====
+@CardButtonStyle = ButtonStyle(
+  Default: (Background: (Color: #1c2835)),
+  Hovered: (Background: (Color: #2a3a4a)),
+  Pressed: (Background: (Color: #1a2a38)),
+  Disabled: (Background: (Color: #141a22)),
+);
+
+@ShopCard = Group {
+  Visible: false;
+  Anchor: (Width: 218, Height: 178);
+  Padding: (Full: 4);
+
+  Button #CardBtn {
+    Anchor: (Full: 0);
+    LayoutMode: Full;
+    Padding: (Full: 2);
+    Style: @CardButtonStyle;
+    TooltipText: "";
+
+    Group #CardContent {
+      Anchor: (Full: 0);
+      LayoutMode: Top;
+
+      // Item icon
+      Group #IconSection {
+        Anchor: (Height: 80);
+        Padding: (Top: 6);
+        LayoutMode: CenterMiddle;
+
+        Group {
+          Anchor: (Width: 68, Height: 68);
+
+          Group #SlotBorder {
+            Anchor: (Full: 0);
+            Background: (Color: #1a2530);
+            Padding: (Full: 2);
+
+            ItemSlot #ItemIcon {
+              Anchor: (Full: 0);
+              ShowQualityBackground: true;
+              ShowQuantity: false;
+            }
+          }
+
+          Label #Quantity {
+            Anchor: (Right: 6, Bottom: 4);
+            Style: (FontSize: 13, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: End, RenderBold: true);
+            Text: "";
+          }
+        }
+      }
+
+      // Name
+      Group #NameSection {
+        Anchor: (Height: 22);
+        LayoutMode: CenterMiddle;
+
+        Label #Name {
+          Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 10);
+          Text: "";
+          Padding: (Horizontal: 6);
+        }
+      }
+
+      // Divider
+      Group {
+        Anchor: (Height: 6);
+        LayoutMode: CenterMiddle;
+        Group { Anchor: (Width: 140, Height: 1); Background: (Color: #252f3a); }
+      }
+
+      // Cost
+      Group #CostSection {
+        Anchor: (Height: 42);
+        LayoutMode: Top;
+        Padding: (Top: 2);
+
+        Group {
+          LayoutMode: CenterMiddle;
+          Anchor: (Height: 22);
+
+          Group {
+            LayoutMode: Left;
+
+            ItemIcon #CostIcon {
+              Anchor: (Width: 18, Height: 18);
+            }
+            Group { Anchor: (Width: 4); }
+            Label #Cost {
+              Style: (FontSize: 13, TextColor: #7caacc, VerticalAlignment: Center, RenderBold: true);
+              Text: "";
+            }
+          }
+        }
+
+        Label #LimitInfo {
+          Style: (FontSize: 10, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Anchor: (Height: 16);
+        }
+      }
+    }
+
+    // Sold out / can't afford / out of stock overlay
+    Group #Overlay {
+      Anchor: (Full: 0);
+      Background: (Color: #0a0e12(0.75));
+      LayoutMode: CenterMiddle;
+      Visible: false;
+
+      Label #OverlayText {
+        Style: (FontSize: 14, TextColor: #cc4444, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+        Text: "";
+      }
+    }
+  }
+};
+
+// ===== Page Layout =====
+
+$C.@PageOverlay {
+  Group #HubLayout {
+    LayoutMode: CenterMiddle;
+
+    $C.@DecoratedContainer #MainContent {
+      Anchor: (Width: 740, Height: 580);
+
+      #Title {
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 42);
+
+          Group { Anchor: (Width: 120); }
+
+          Label #ShopTitle {
+            Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+            Text: "";
+            FlexWeight: 1;
+            Padding: (Top: 6);
+          }
+
+          Group #CurrencyDisplay {
+            Anchor: (Width: 120, Height: 32);
+            LayoutMode: Left;
+            Padding: (Top: 5, Right: 15);
+
+            ItemIcon #CurrencyIcon {
+              Anchor: (Width: 22, Height: 22);
+              ItemId: "Ingredient_Bar_Gold";
+            }
+            Group { Anchor: (Width: 6); }
+            Label #CurrencyBalance {
+              Style: (FontSize: 14, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center);
+              Text: "0";
+              FlexWeight: 1;
+            }
+          }
+        }
+      }
+
+      #Content {
+        LayoutMode: Top;
+
+        // Info Bar: owner, rating, item count, rate button
+        Group #InfoBar {
+          Anchor: (Height: 28);
+          LayoutMode: Left;
+          Padding: (Left: 15, Right: 15, Top: 2);
+
+          Label #InfoOwner {
+            Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 9);
+            Text: "";
+            FlexWeight: 1;
+          }
+
+          Group { Anchor: (Width: 8); }
+
+          Label #InfoRating {
+            Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center);
+            Text: "";
+          }
+
+          Group { Anchor: (Width: 8); }
+
+          Label #InfoItemCount {
+            Style: (FontSize: 11, TextColor: #5a6a7a, VerticalAlignment: Center);
+            Text: "";
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          $C.@SmallSecondaryTextButton #RateButton {
+            @Anchor = (Width: 60);
+            @Text = "Rate";
+            Visible: false;
+          }
+        }
+
+        // Tab Bar (Buy / Sell)
+        Group #TabBar {
+          Visible: false;
+          Anchor: (Height: 36);
+          LayoutMode: Left;
+          Padding: (Left: 15, Right: 15, Top: 4, Bottom: 4);
+
+          TextButton #BuyTab {
+            FlexWeight: 1;
+            Anchor: (Height: 28);
+            Style: $C.@DefaultTextButtonStyle;
+            Text: "BUY";
+          }
+
+          Group { Anchor: (Width: 6); }
+
+          TextButton #SellTab {
+            FlexWeight: 1;
+            Anchor: (Height: 28);
+            Style: $C.@SecondaryTextButtonStyle;
+            Text: "SELL";
+          }
+        }
+
+        // Card Grid
+        Group #CardContainer {
+          FlexWeight: 1;
+          LayoutMode: TopScrolling;
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+          Padding: (Left: 10, Right: 10, Top: 6);
+
+          Group #CardGrid {
+            LayoutMode: LeftCenterWrap;
+
+            @ShopCard #Card0 {}
+            @ShopCard #Card1 {}
+            @ShopCard #Card2 {}
+            @ShopCard #Card3 {}
+            @ShopCard #Card4 {}
+            @ShopCard #Card5 {}
+            @ShopCard #Card6 {}
+            @ShopCard #Card7 {}
+            @ShopCard #Card8 {}
+          }
+        }
+
+        // Footer - Pagination
+        Group #Footer {
+          Anchor: (Height: 42);
+          LayoutMode: Top;
+          Padding: (Horizontal: 10);
+
+          Group { Anchor: (Height: 2); Background: (Color: #19252f); }
+
+          Group {
+            FlexWeight: 1;
+            LayoutMode: Left;
+            Padding: (Left: 10, Right: 10);
+
+            $C.@SmallSecondaryTextButton #PrevButton {
+              @Anchor = (Width: 70);
+              @Text = "<";
+              Visible: false;
+            }
+
+            Group { FlexWeight: 1; }
+
+            Label #PageInfo {
+              Anchor: (Width: 100);
+              Style: (FontSize: 12, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+              Text: "Page 1/1";
+            }
+
+            Group { FlexWeight: 1; }
+
+            $C.@SmallSecondaryTextButton #NextButton {
+              @Anchor = (Width: 70);
+              @Text = ">";
+              Visible: false;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Confirmation Overlay (Buy/Sell)
+  Group #ConfirmOverlay {
+    Visible: false;
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    LayoutMode: CenterMiddle;
+    Background: (Color: #00000088);
+
+    $C.@Container #ConfirmDialog {
+      Anchor: (Width: 340, Height: 280);
+
+      #Title {
+        Label #ConfirmTitle {
+          Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2);
+          Padding: (Horizontal: 19);
+          Text: "";
+        }
+      }
+
+      #Content {
+        LayoutMode: Top;
+        Padding: (Full: 12);
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 52);
+
+          Group { FlexWeight: 1; }
+
+          Group #ConfirmIconBg {
+            Anchor: (Width: 48, Height: 48);
+            Background: (Color: #1a2530);
+            Padding: (Full: 2);
+            ItemSlot #ConfirmIcon { Anchor: (Full: 0); ShowQualityBackground: true; ShowQuantity: false; }
+          }
+
+          Group { Anchor: (Width: 10); }
+
+          Group {
+            FlexWeight: 2;
+            LayoutMode: Top;
+            Label #ConfirmItemName {
+              Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true);
+              Text: "";
+              Anchor: (Height: 22);
+            }
+            Label #ConfirmPrice {
+              Style: (FontSize: 12, TextColor: #7caacc, RenderBold: true);
+              Text: "";
+              Anchor: (Height: 18);
+            }
+          }
+
+          Group { FlexWeight: 1; }
+        }
+
+        // Tax display
+        Label #ConfirmTax {
+          Style: (FontSize: 10, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Anchor: (Height: 16);
+          Visible: false;
+        }
+
+        Group { Anchor: (Height: 6); }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 34);
+          Padding: (Left: 30, Right: 30);
+
+          $C.@SmallSecondaryTextButton #ConfirmMinus {
+            @Anchor = (Width: 44);
+            @Text = "-";
+          }
+
+          Group { FlexWeight: 1; LayoutMode: CenterMiddle;
+            Label #ConfirmQty {
+              Style: (FontSize: 18, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center);
+              Text: "1";
+            }
+          }
+
+          $C.@SmallSecondaryTextButton #ConfirmPlus {
+            @Anchor = (Width: 44);
+            @Text = "+";
+          }
+        }
+
+        Label #ConfirmTotal {
+          Style: (FontSize: 12, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Anchor: (Height: 20);
+        }
+
+        Group { FlexWeight: 1; }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 38);
+          Padding: (Left: 6, Right: 6);
+
+          $C.@TextButton #ConfirmYes {
+            @Anchor = (Width: 140);
+            @Text = "CONFIRM";
+          }
+
+          Group { FlexWeight: 1; }
+
+          $C.@CancelTextButton #ConfirmNo {
+            @Anchor = (Width: 140);
+            @Text = "CANCEL";
+          }
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}
