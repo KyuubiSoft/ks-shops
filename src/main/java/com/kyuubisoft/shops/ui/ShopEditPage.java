@@ -560,6 +560,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
         LOGGER.info("[ShopEdit] Moved item from section " + srcSection + "[" + sourceSlot
             + "] to section " + destSectionId + "[" + destSlot + "]");
+
+        // Auto-select the destination slot if dropped into shop grid
+        if (destSectionId == 0 && srcItem != null && !srcItem.isEmpty()) {
+            selectedSlot = destSlot;
+        }
+
         refreshUI();
     }
 
