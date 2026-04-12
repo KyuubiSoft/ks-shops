@@ -165,6 +165,31 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                                 @Nonnull EditData data) {
         super.handleDataEvent(ref, store, data);
 
+        // Grid drop/click actions (native ItemGrid events)
+        if (data.action != null) {
+            LOGGER.info("[ShopEdit] Grid action: " + data.action
+                + " slot=" + data.slotIndex + " srcSlot=" + data.sourceSlotId
+                + " srcSection=" + data.sourceSectionId);
+            switch (data.action) {
+                case "drop_shop", "drop_inv", "drop_hotbar" -> {
+                    // Drag & drop completed: just refresh UI to show updated container state
+                    refreshUI();
+                }
+                case "click_shop" -> {
+                    // Clicked a slot in the shop grid: select it for price editing
+                    if (data.slotIndex != null) {
+                        int actualSlot = shopPage * SHOP_SLOTS_PER_PAGE + data.slotIndex;
+                        handleSelectSlot(String.valueOf(actualSlot));
+                    } else {
+                        refreshUI();
+                    }
+                }
+                case "click_inv" -> refreshUI();
+                default -> this.sendUpdate(new UICommandBuilder(), false);
+            }
+            return;
+        }
+
         // Tab switching
         if (data.tab != null) {
             handleTabSwitch(data.tab);
@@ -541,8 +566,19 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         events.addEventBinding(CustomUIEventBindingType.Activating, "#HistNextBtn",
             EventData.of("Button", "histNext"), false);
 
-        // NOTE: Slot selection for price editing is handled via the settings panel.
-        // The ContainerWindow handles drag&drop natively - no event bindings needed on ItemGrid.
+        // Dropped events - native ItemGrid drag & drop between grids
+        events.addEventBinding(CustomUIEventBindingType.Dropped, "#ShopGrid",
+            EventData.of("Action", "drop_shop"), false);
+        events.addEventBinding(CustomUIEventBindingType.Dropped, "#InvGrid",
+            EventData.of("Action", "drop_inv"), false);
+        events.addEventBinding(CustomUIEventBindingType.Dropped, "#HotbarGrid",
+            EventData.of("Action", "drop_hotbar"), false);
+
+        // SlotClicking events - click to select slot for price editing
+        events.addEventBinding(CustomUIEventBindingType.SlotClicking, "#ShopGrid",
+            EventData.of("Action", "click_shop"), false);
+        events.addEventBinding(CustomUIEventBindingType.SlotClicking, "#InvGrid",
+            EventData.of("Action", "click_inv"), false);
 
         // Text field changes
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#EditNameField",
@@ -1016,6 +1052,19 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("@Category", Codec.STRING),
                 (data, value) -> data.categoryVal = value,
                 data -> data.categoryVal)
+            // Grid drop/click events (native ItemGrid interaction)
+            .addField(new KeyedCodec<>("Action", Codec.STRING),
+                (data, value) -> data.action = value,
+                data -> data.action)
+            .addField(new KeyedCodec<>("SlotIndex", Codec.INTEGER),
+                (data, value) -> data.slotIndex = value,
+                data -> data.slotIndex)
+            .addField(new KeyedCodec<>("SourceSlotId", Codec.INTEGER),
+                (data, value) -> data.sourceSlotId = value,
+                data -> data.sourceSlotId)
+            .addField(new KeyedCodec<>("SourceInventorySectionId", Codec.INTEGER),
+                (data, value) -> data.sourceSectionId = value,
+                data -> data.sourceSectionId)
             .build();
 
         private String button;
@@ -1028,6 +1077,11 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String priceVal;
         private String stockLimitVal;
         private String categoryVal;
+        // Grid interaction fields
+        private String action;
+        private Integer slotIndex;
+        private Integer sourceSlotId;
+        private Integer sourceSectionId;
 
         public EditData() {}
     }
