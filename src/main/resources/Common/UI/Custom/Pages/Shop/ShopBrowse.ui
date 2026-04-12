@@ -1,4 +1,4 @@
-// ShopBrowse UI — Buyer view for KS-Shops (3 cards per row, 9 per page)
+// ShopBrowse UI - Buyer view for KS-Shops (3 cards per row, 9 per page)
 $C = "../../Common.ui";
 
 // ===== Card Macro — defined once, instantiated 9x =====
