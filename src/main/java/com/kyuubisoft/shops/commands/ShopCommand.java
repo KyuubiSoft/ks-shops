@@ -335,20 +335,27 @@ public class ShopCommand extends AbstractCommandCollection {
 
             // Open the shop editor page with ContainerWindow for drag&drop
             final ShopData targetShop = nearest;
-            CoreBridge.runWithI18n(playerRef, () -> {
-                try {
-                    ShopEditPage editPage = new ShopEditPage(playerRef, player, plugin, targetShop);
-                    com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow window =
-                        new com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow(editPage.getStagingContainer());
-                    player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
-                    player.sendMessage(Message.raw(
-                        i18n.get(playerRef, "shop.edit.opened", targetShop.getName())).color("#55FF55"));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    sessionManager.unlockEditor(targetShop.getId(), playerUuid);
-                    player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
-                }
-            });
+            final UUID shopUuid = targetShop.getId();
+            try {
+                ShopEditPage editPage = new ShopEditPage(playerRef, player, plugin, targetShop);
+
+                com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow window =
+                    new com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow(editPage.getStagingContainer());
+
+                // Register close event for cleanup (like Bank)
+                window.registerCloseEvent(event -> {
+                    editPage.onWindowClose();
+                    sessionManager.unlockEditor(shopUuid, playerUuid);
+                });
+
+                player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.edit.opened", targetShop.getName())).color("#55FF55"));
+            } catch (Exception e) {
+                e.printStackTrace();
+                sessionManager.unlockEditor(shopUuid, playerUuid);
+                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+            }
         }
     }
 

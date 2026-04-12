@@ -111,10 +111,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         this.editedDesc = shopData.getDescription() != null ? shopData.getDescription() : "";
         this.editedCategory = shopData.getCategory() != null ? shopData.getCategory() : "";
 
-        // Create staging container sized to max items per shop
-        int maxItems = plugin.getShopConfig().getData().playerShops.maxItemsPerShop;
-        this.stagingContainer = new SimpleItemContainer((short) maxItems);
-        this.stagingMeta = new StagedItemMeta[maxItems];
+        // Create staging container matching the grid (9 cols x 5 rows = 45 slots)
+        int containerSlots = SHOP_SLOTS_PER_PAGE; // 45
+        this.stagingContainer = new SimpleItemContainer((short) containerSlots);
+        this.stagingMeta = new StagedItemMeta[containerSlots];
 
         // Copy existing shop items into staging container
         populateStagingFromShop();
@@ -901,6 +901,14 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private int getMaxShopPage() {
         int totalSlots = stagingContainer.getCapacity();
         return Math.max(0, (int) Math.ceil(totalSlots / (double) SHOP_SLOTS_PER_PAGE) - 1);
+    }
+
+    /**
+     * Called by ContainerWindow.registerCloseEvent when the window closes.
+     * Handles save-or-revert logic before the page is dismissed.
+     */
+    public void onWindowClose() {
+        LOGGER.info("[ShopEdit] Window closed for shop: " + shopData.getName() + " (saved=" + saved + ")");
     }
 
     // ==================== DISMISS ====================
