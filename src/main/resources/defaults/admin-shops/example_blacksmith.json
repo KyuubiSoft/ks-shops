@@ -1,0 +1,49 @@
+{
+  "id": "blacksmith",
+  "name": "Village Blacksmith",
+  "description": "Fine weapons and sturdy armor.",
+  "category": "weapons",
+  "npcSkinUsername": "Blacksmith",
+  "currencyId": "",
+  "worldName": "",
+  "posX": 0, "posY": 0, "posZ": 0,
+  "npcRotY": 0,
+  "items": [
+    {
+      "itemId": "Weapon_Sword_Iron",
+      "buyPrice": 150,
+      "sellPrice": 75,
+      "stock": -1,
+      "maxStock": -1,
+      "buyEnabled": true,
+      "sellEnabled": true,
+      "dailyBuyLimit": 0,
+      "dailySellLimit": 0,
+      "category": "weapons"
+    },
+    {
+      "itemId": "Weapon_Sword_Gold",
+      "buyPrice": 350,
+      "sellPrice": 175,
+      "stock": -1,
+      "maxStock": -1,
+      "buyEnabled": true,
+      "sellEnabled": true,
+      "dailyBuyLimit": 0,
+      "dailySellLimit": 0,
+      "category": "weapons"
+    },
+    {
+      "itemId": "Armor_Chestplate_Iron",
+      "buyPrice": 200,
+      "sellPrice": 100,
+      "stock": -1,
+      "maxStock": -1,
+      "buyEnabled": true,
+      "sellEnabled": true,
+      "dailyBuyLimit": 0,
+      "dailySellLimit": 0,
+      "category": "armor"
+    }
+  ]
+}

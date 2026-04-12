@@ -1,0 +1,182 @@
+{
+  "features": {
+    "playerShops": true,
+    "adminShops": true,
+    "tax": false,
+    "rent": false,
+    "ratings": true,
+    "featured": true,
+    "shopOfTheWeek": true,
+    "notifications": true,
+    "directory": true,
+    "buyback": true,
+    "search": true,
+    "shopTransfer": true,
+    "autoClose": true
+  },
+
+  "playerShops": {
+    "maxShopsPerPlayer": 3,
+    "maxItemsPerShop": 50,
+    "creationCost": 500,
+    "renameCost": 100,
+    "deleteRefundPercent": 50,
+    "defaultShopOpen": false,
+    "creationCooldownSeconds": 3600,
+    "requireCategoryOnCreate": false,
+    "autoCloseOnEmptyStock": true,
+    "autoCloseAfterInactiveDays": 30,
+    "autoDeleteAfterInactiveDays": 90,
+    "allowBuyback": true,
+    "buybackPricePercent": 50,
+    "transferEnabled": true,
+    "transferCost": 200,
+    "stockFromInventoryOnly": true,
+    "minPrice": 1,
+    "maxPrice": 1000000,
+    "allowOfflineSales": true,
+    "rankShops": {
+      "ks.shop.limit.shops.1": 1,
+      "ks.shop.limit.shops.3": 3,
+      "ks.shop.limit.shops.5": 5,
+      "ks.shop.limit.shops.10": 10
+    },
+    "rankItems": {
+      "ks.shop.limit.items.25": 25,
+      "ks.shop.limit.items.50": 50,
+      "ks.shop.limit.items.100": 100
+    }
+  },
+
+  "adminShops": {
+    "shopsDirectory": "admin-shops",
+    "autoExtractDefaults": true,
+    "allowSell": true,
+    "defaultSellPricePercent": 50,
+    "defaultItemsPerPage": 9,
+    "dailyRotationEnabled": false,
+    "dailyRotationSize": 6,
+    "showSoldOutItems": true,
+    "restockEnabled": false,
+    "restockIntervalMinutes": 1440,
+    "maxPurchasesPerDayDefault": 0
+  },
+
+  "economy": {
+    "currencyDisplayName": "Gold",
+    "currencyIconItemId": "Ingredient_Bar_Gold",
+    "economyProvider": "",
+    "decimalPlaces": 0
+  },
+
+  "tax": {
+    "enabled": false,
+    "transactionTaxRate": 0.05,
+    "minTaxAmount": 1,
+    "maxTaxAmount": 0,
+    "buyerPaysTax": false,
+    "sellerPaysTax": true,
+    "adminShopTaxRate": 0.0,
+    "displayTaxInPrice": true,
+    "taxExemptItems": []
+  },
+
+  "rent": {
+    "enabled": false,
+    "dailyRentAmount": 50,
+    "gracePeriodDays": 3,
+    "autoCloseOnUnpaid": true,
+    "autoDeleteOnUnpaidDays": 7,
+    "rentNotificationBeforeDays": 1,
+    "rentExemptForNewShopsDays": 7
+  },
+
+  "ratings": {
+    "enabled": true,
+    "requirePurchaseToRate": true,
+    "minPurchasesBeforeRating": 1,
+    "allowRatingOwnShop": false,
+    "ratingCooldownHours": 24,
+    "minRatingsToDisplay": 3
+  },
+
+  "featured": {
+    "enabled": true,
+    "maxFeaturedShops": 6,
+    "defaultDurationDays": 7,
+    "autoFeatureTopRated": false,
+    "autoFeatureMinRating": 4.5,
+    "autoFeatureMinSales": 50,
+    "playerSelfFeatureEnabled": false,
+    "selfFeatureCost": 1000
+  },
+
+  "notifications": {
+    "enabled": true,
+    "batchOnLogin": true,
+    "maxBatchedNotifications": 50,
+    "saleNotification": true,
+    "outOfStockNotification": true,
+    "rentDueNotification": true,
+    "ratingReceivedNotification": true
+  },
+
+  "npc": {
+    "enabled": true,
+    "shopkeeperNameVisible": true,
+    "shopkeeperNameFormat": "{shop_name}",
+    "shopkeeperInteractRange": 5.0,
+    "shopkeeperInvulnerable": true,
+    "defaultSkinUsername": "Shopkeeper",
+    "offsetBehindBlock": 1.0,
+    "rotateTowardsPlayers": true
+  },
+
+  "directory": {
+    "shopsPerPage": 8,
+    "defaultSortBy": "rating",
+    "showEmptyShops": false,
+    "showClosedShops": false,
+    "searchMinLength": 2,
+    "enableCategoryFilter": true,
+    "enablePriceRangeFilter": true
+  },
+
+  "database": {
+    "type": "sqlite",
+    "sqlite": {
+      "path": "shops.db"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "database": "hytale",
+      "username": "root",
+      "password": "",
+      "tablePrefix": "ks_shops_"
+    }
+  },
+
+  "categories": [
+    { "id": "weapons", "icon": "Iron_Sword", "displayNameKey": "shop.category.weapons" },
+    { "id": "armor", "icon": "Iron_Chestplate", "displayNameKey": "shop.category.armor" },
+    { "id": "tools", "icon": "Iron_Pickaxe", "displayNameKey": "shop.category.tools" },
+    { "id": "resources", "icon": "Ingredient_Bar_Gold", "displayNameKey": "shop.category.resources" },
+    { "id": "potions", "icon": "Potion_Health", "displayNameKey": "shop.category.potions" },
+    { "id": "food", "icon": "Apple", "displayNameKey": "shop.category.food" },
+    { "id": "building", "icon": "Stone_Brick", "displayNameKey": "shop.category.building" },
+    { "id": "misc", "icon": "Emerald", "displayNameKey": "shop.category.misc" }
+  ],
+
+  "itemBlacklist": [],
+
+  "general": {
+    "language": "en-US",
+    "pluginPrefix": "[KS-Shops]",
+    "prefixColor": "#FFD700",
+    "autoSaveIntervalSeconds": 60,
+    "shopNameMaxLength": 48,
+    "shopDescriptionMaxLength": 256,
+    "debug": false
+  }
+}

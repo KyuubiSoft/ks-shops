@@ -1,0 +1,18 @@
+{
+  "Group": "${group}",
+  "Name": "shops",
+  "Version": "${version}",
+  "Description": "${description}",
+  "ServerVersion": "${serverVersion}",
+  "Authors": [
+    {
+      "Name": "KyuubiSoft"
+    }
+  ],
+  "Main": "com.kyuubisoft.shops.ShopPlugin",
+  "IncludesAssetPack": true,
+  "OptionalDependencies": {
+    "kyuubisoft:core": "*",
+    "kyuubisoft:claims": "*"
+  }
+}

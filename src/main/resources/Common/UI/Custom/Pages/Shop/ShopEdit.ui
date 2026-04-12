@@ -1,0 +1,595 @@
+// ShopEdit UI -- Owner editor with drag&drop item management (960x680)
+$C = "../../Common.ui";
+
+@ShopSlotStyle = ItemGridStyle(
+    SlotSpacing: 4,
+    SlotSize: 48,
+    SlotIconSize: 40,
+    SlotBackground: "../../Pages/Bank/BankSlot.png"
+);
+
+@SubTabBtnStyle = ButtonStyle(
+    Default: (Background: (Color: #1c2835)),
+    Hovered: (Background: (Color: #2a3a4a)),
+    Pressed: (Background: (Color: #1a2a38)),
+    Sounds: $C.@ButtonSounds,
+);
+
+$C.@PageOverlay {
+    Group #EditLayout {
+        LayoutMode: CenterMiddle;
+
+        $C.@DecoratedContainer #EditPanel {
+            Anchor: (Width: 960, Height: 680);
+
+            // ==================== TITLE BAR ====================
+            #Title {
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 48);
+                    Padding: (Left: 16, Right: 16);
+
+                    Label #ShopTitle {
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center, RenderUppercase: true, LetterSpacing: 2, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 12);
+                        Text: "SHOP EDITOR";
+                        FlexWeight: 1;
+                        Padding: (Top: 6);
+                    }
+
+                    Group { Anchor: (Width: 8); }
+
+                    // Currency balance
+                    Group #CurrencyDisplay {
+                        Anchor: (Width: 120, Height: 32);
+                        LayoutMode: Left;
+                        Padding: (Top: 5);
+
+                        ItemIcon #CurrencyIcon {
+                            Anchor: (Width: 22, Height: 22);
+                            ItemId: "Ingredient_Bar_Gold";
+                        }
+                        Group { Anchor: (Width: 6); }
+                        Label #CurrencyBalance {
+                            Style: (FontSize: 14, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center);
+                            Text: "0";
+                            FlexWeight: 1;
+                        }
+                    }
+
+                    Group { Anchor: (Width: 8); }
+
+                    // Toggle open/closed button
+                    Button #ToggleOpenBtn {
+                        Anchor: (Width: 90, Height: 30);
+                        Style: ButtonStyle(Default: (Background: (Color: #2a6e2a40)), Hovered: (Background: (Color: #3a8e3a60)), Pressed: (Background: (Color: #1a5e1a80)));
+                        Label #ToggleOpenLbl {
+                            Style: (FontSize: 11, TextColor: #44ff44, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                            Text: "OPEN";
+                        }
+                    }
+                }
+            }
+
+            // ==================== CONTENT ====================
+            #Content {
+                Group #ContentInner {
+                    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+                    LayoutMode: Left;
+
+                    // ==================== LEFT PANEL: Item Grids ====================
+                    Group #LeftPanel {
+                        Anchor: (Width: 520);
+                        LayoutMode: Top;
+                        Padding: (Left: 16, Top: 8, Right: 8, Bottom: 12);
+
+                        // Shop Items Header
+                        Label #ShopItemsLabel {
+                            Anchor: (Width: 488, Height: 22);
+                            Style: (FontSize: 11, TextColor: #e8c547, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true, RenderUppercase: true);
+                            Text: "SHOP ITEMS";
+                        }
+                        Group { Anchor: (Width: 488, Height: 4); }
+
+                        // Shop Item Grid (4 columns, 3 rows = 12 slots per page)
+                        ItemGrid #ShopGrid {
+                            Anchor: (Width: 220, Height: 160);
+                            SlotsPerRow: 4;
+                            Style: @ShopSlotStyle;
+                            Background: #1a2332(0);
+                            Padding: 0;
+                        }
+
+                        // Shop Grid Page Navigation
+                        Group #ShopPageNav {
+                            Anchor: (Width: 488, Height: 32);
+                            LayoutMode: Left;
+                            Padding: (Top: 4);
+
+                            Group { FlexWeight: 1; }
+                            Button #PrevPageBtn {
+                                Anchor: (Width: 65, Height: 24);
+                                Style: ButtonStyle(Default: (Background: (Color: #222233)), Hovered: (Background: (Color: #333344)), Pressed: (Background: (Color: #444455)));
+                                Label #PrevPageLbl { Style: (FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "< PREV"; }
+                            }
+                            Group { Anchor: (Width: 8); }
+                            Label #PageInfo {
+                                Anchor: (Width: 80, Height: 24);
+                                Style: (FontSize: 11, TextColor: #e8c547, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                                Text: "1 / 1";
+                            }
+                            Group { Anchor: (Width: 8); }
+                            Button #NextPageBtn {
+                                Anchor: (Width: 65, Height: 24);
+                                Style: ButtonStyle(Default: (Background: (Color: #222233)), Hovered: (Background: (Color: #333344)), Pressed: (Background: (Color: #444455)));
+                                Label #NextPageLbl { Style: (FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "NEXT >"; }
+                            }
+                            Group { FlexWeight: 1; }
+                        }
+
+                        // Separator
+                        Group { Anchor: (Width: 488, Height: 6); }
+                        Group { Anchor: (Width: 488, Height: 1); Background: #ffffff(0.08); }
+                        Label #InventoryLabel {
+                            Anchor: (Width: 488, Height: 18);
+                            Style: (FontSize: 10, TextColor: #667788, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+                            Text: "YOUR INVENTORY";
+                        }
+                        Group { Anchor: (Width: 488, Height: 4); }
+
+                        // Player Inventory (9 cols, 3 rows)
+                        ItemGrid #InvGrid {
+                            Anchor: (Width: 488, Height: 160);
+                            SlotsPerRow: 9;
+                            Style: @ShopSlotStyle;
+                            Background: #1a2332(0);
+                            Padding: 0;
+                        }
+
+                        Group { Anchor: (Width: 488, Height: 4); }
+
+                        // Hotbar (9 cols, 1 row)
+                        ItemGrid #HotbarGrid {
+                            Anchor: (Width: 488, Height: 52);
+                            SlotsPerRow: 9;
+                            Style: @ShopSlotStyle;
+                            Background: #1a2332(0);
+                            Padding: 0;
+                        }
+                    }
+
+                    // ==================== VERTICAL SEPARATOR ====================
+                    Group { Anchor: (Width: 1, Top: 8, Bottom: 8); Background: (Color: #ffffff15); }
+
+                    // ==================== RIGHT PANEL: Settings / Revenue / History ====================
+                    Group #RightPanel {
+                        FlexWeight: 1;
+                        LayoutMode: Top;
+                        Padding: (Left: 12, Top: 8, Right: 16, Bottom: 12);
+
+                        // Sub-tab bar
+                        Group #SubTabs {
+                            Anchor: (Left: 0, Right: 0, Height: 32);
+                            LayoutMode: Left;
+                            Padding: (Bottom: 6);
+
+                            Button #SettingsTab {
+                                FlexWeight: 1;
+                                Anchor: (Height: 26);
+                                Style: @SubTabBtnStyle;
+                                Label #SettingsTabLbl { Style: (FontSize: 10, TextColor: #e8c547, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "SETTINGS"; }
+                            }
+                            Group { Anchor: (Width: 4); }
+                            Button #RevenueTab {
+                                FlexWeight: 1;
+                                Anchor: (Height: 26);
+                                Style: @SubTabBtnStyle;
+                                Label #RevenueTabLbl { Style: (FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "REVENUE"; }
+                            }
+                            Group { Anchor: (Width: 4); }
+                            Button #HistoryTab {
+                                FlexWeight: 1;
+                                Anchor: (Height: 26);
+                                Style: @SubTabBtnStyle;
+                                Label #HistoryTabLbl { Style: (FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "HISTORY"; }
+                            }
+                        }
+
+                        // Scrollable content area for panels
+                        Group #PanelArea {
+                            FlexWeight: 1;
+                            Anchor: (Left: 0, Right: 0);
+                            LayoutMode: TopScrolling;
+                            ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+                            // ==================== SETTINGS PANEL ====================
+                            Group #SettingsPanel {
+                                Anchor: (Left: 0, Right: 0);
+                                LayoutMode: Top;
+
+                                // Shop Name
+                                Label #EditNameLabel {
+                                    Anchor: (Height: 16);
+                                    Style: (FontSize: 9, TextColor: #00bfff, RenderBold: true, RenderUppercase: true);
+                                    Text: "SHOP NAME";
+                                }
+                                Group { Anchor: (Height: 3); }
+                                $C.@TextField #EditNameField {
+                                    @PlaceholderText = "Shop name...";
+                                    Anchor: (Left: 0, Right: 0, Height: 28);
+                                    MaxLength: 48;
+                                }
+
+                                Group { Anchor: (Height: 8); }
+
+                                // Description
+                                Label #EditDescLabel {
+                                    Anchor: (Height: 16);
+                                    Style: (FontSize: 9, TextColor: #00bfff, RenderBold: true, RenderUppercase: true);
+                                    Text: "DESCRIPTION";
+                                }
+                                Group { Anchor: (Height: 3); }
+                                $C.@TextField #EditDescField {
+                                    @PlaceholderText = "Description...";
+                                    Anchor: (Left: 0, Right: 0, Height: 28);
+                                    MaxLength: 256;
+                                }
+
+                                Group { Anchor: (Height: 8); }
+
+                                // Category
+                                Label #EditCategoryLabel {
+                                    Anchor: (Height: 16);
+                                    Style: (FontSize: 9, TextColor: #00bfff, RenderBold: true, RenderUppercase: true);
+                                    Text: "CATEGORY";
+                                }
+                                Group { Anchor: (Height: 3); }
+                                $C.@DropdownBox #EditCategoryDropdown {
+                                    Anchor: (Left: 0, Right: 0, Height: $C.@DropdownBoxHeight);
+
+                                    DropdownEntry { Value: "weapons"; Text: "Weapons"; }
+                                    DropdownEntry { Value: "armor"; Text: "Armor"; }
+                                    DropdownEntry { Value: "tools"; Text: "Tools"; }
+                                    DropdownEntry { Value: "resources"; Text: "Resources"; }
+                                    DropdownEntry { Value: "potions"; Text: "Potions"; }
+                                    DropdownEntry { Value: "food"; Text: "Food"; }
+                                    DropdownEntry { Value: "building"; Text: "Building"; }
+                                    DropdownEntry { Value: "misc"; Text: "Misc"; }
+                                }
+
+                                Group { Anchor: (Height: 10); }
+
+                                // Separator
+                                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+
+                                Group { Anchor: (Height: 8); }
+
+                                // Selected Item Section Header
+                                Label #ItemSectionLabel {
+                                    Anchor: (Height: 18);
+                                    Style: (FontSize: 10, TextColor: #44ff44, RenderBold: true, RenderUppercase: true);
+                                    Text: "SELECTED ITEM";
+                                }
+
+                                Group { Anchor: (Height: 4); }
+
+                                // No item selected hint
+                                Label #NoItemSelected {
+                                    Anchor: (Left: 0, Right: 0, Height: 30);
+                                    Style: (FontSize: 11, TextColor: #555555, HorizontalAlignment: Center, VerticalAlignment: Center);
+                                    Text: "Click an item in the shop grid to edit";
+                                }
+
+                                // Item Edit Section (hidden until a slot is selected)
+                                Group #ItemEditSection {
+                                    Visible: false;
+                                    Anchor: (Left: 0, Right: 0);
+                                    LayoutMode: Top;
+                                    Padding: (Left: 4, Right: 4);
+
+                                    // Selected item name
+                                    Label #SelectedItemName {
+                                        Anchor: (Height: 22);
+                                        Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
+                                        Text: "";
+                                    }
+
+                                    Group { Anchor: (Height: 6); }
+
+                                    // Price field
+                                    Group {
+                                        Anchor: (Left: 0, Right: 0, Height: 30);
+                                        LayoutMode: Left;
+
+                                        Label {
+                                            Anchor: (Width: 50, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+                                            Text: "Price:";
+                                        }
+                                        $C.@TextField #PriceField {
+                                            @PlaceholderText = "0";
+                                            Anchor: (Width: 100, Height: 28);
+                                            MaxLength: 10;
+                                        }
+                                        Group { Anchor: (Width: 8); }
+                                        ItemIcon #PriceCoinIcon {
+                                            Anchor: (Width: 16, Height: 16);
+                                            ItemId: "Ingredient_Bar_Gold";
+                                        }
+                                    }
+
+                                    Group { Anchor: (Height: 6); }
+
+                                    // Trade Mode buttons
+                                    Group {
+                                        Anchor: (Left: 0, Right: 0, Height: 28);
+                                        LayoutMode: Left;
+
+                                        Label {
+                                            Anchor: (Width: 50, Height: 26);
+                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+                                            Text: "Mode:";
+                                        }
+                                        Button #ModeBuyBtn {
+                                            Anchor: (Width: 60, Height: 24);
+                                            Style: ButtonStyle(Default: (Background: (Color: #1c2835)), Hovered: (Background: (Color: #2a3a4a)), Pressed: (Background: (Color: #1a2a38)));
+                                            Label #ModeBuyLbl { Style: (FontSize: 10, TextColor: #44cc44, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "BUY"; }
+                                        }
+                                        Group { Anchor: (Width: 4); }
+                                        Button #ModeSellBtn {
+                                            Anchor: (Width: 60, Height: 24);
+                                            Style: ButtonStyle(Default: (Background: (Color: #1c2835)), Hovered: (Background: (Color: #2a3a4a)), Pressed: (Background: (Color: #1a2a38)));
+                                            Label #ModeSellLbl { Style: (FontSize: 10, TextColor: #cc8844, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "SELL"; }
+                                        }
+                                        Group { Anchor: (Width: 4); }
+                                        Button #ModeBothBtn {
+                                            Anchor: (Width: 60, Height: 24);
+                                            Style: ButtonStyle(Default: (Background: (Color: #1c2835)), Hovered: (Background: (Color: #2a3a4a)), Pressed: (Background: (Color: #1a2a38)));
+                                            Label #ModeBothLbl { Style: (FontSize: 10, TextColor: #7caacc, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "BOTH"; }
+                                        }
+                                    }
+
+                                    Group { Anchor: (Height: 6); }
+
+                                    // Stock limit
+                                    Group {
+                                        Anchor: (Left: 0, Right: 0, Height: 30);
+                                        LayoutMode: Left;
+
+                                        Label {
+                                            Anchor: (Width: 80, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+                                            Text: "Stock Limit:";
+                                        }
+                                        $C.@TextField #StockLimitField {
+                                            @PlaceholderText = "-1";
+                                            Anchor: (Width: 80, Height: 28);
+                                            MaxLength: 6;
+                                        }
+                                        Group { Anchor: (Width: 6); }
+                                        Label #StockLimitHint {
+                                            Style: (FontSize: 9, TextColor: #555555, VerticalAlignment: Center);
+                                            Text: "(-1 = unlimited)";
+                                        }
+                                    }
+
+                                    Group { Anchor: (Height: 8); }
+
+                                    // Remove item button
+                                    $C.@CancelTextButton #RemoveItemBtn {
+                                        @Anchor = (Width: 160, Height: 28);
+                                        @Text = "REMOVE ITEM";
+                                    }
+                                }
+                            }
+
+                            // ==================== REVENUE PANEL ====================
+                            Group #RevenuePanel {
+                                Visible: false;
+                                Anchor: (Left: 0, Right: 0);
+                                LayoutMode: Top;
+                                Padding: (Top: 8);
+
+                                Label #RevenueSectionLabel {
+                                    Anchor: (Height: 18);
+                                    Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, RenderUppercase: true);
+                                    Text: "REVENUE OVERVIEW";
+                                }
+
+                                Group { Anchor: (Height: 8); }
+
+                                // Total Revenue
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "Total Revenue"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #TotalRevenue { Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: "0"; }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                // Today
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "Today"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #TodayRevenue { Style: (FontSize: 13, TextColor: #44ff44, VerticalAlignment: Center, RenderBold: true); Text: "0"; }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                // This Week
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "This Week"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #WeekRevenue { Style: (FontSize: 13, TextColor: #7caacc, VerticalAlignment: Center, RenderBold: true); Text: "0"; }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                // Tax Paid
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "Tax Paid"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #TaxPaid { Style: (FontSize: 13, TextColor: #cc4444, VerticalAlignment: Center, RenderBold: true); Text: "0"; }
+                                }
+
+                                Group { Anchor: (Height: 12); }
+
+                                // Total Sales count
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "Total Sales"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #TotalSales { Style: (FontSize: 13, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true); Text: "0"; }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                // Average Rating
+                                Group { Anchor: (Left: 0, Right: 0, Height: 36); LayoutMode: Left;
+                                    Background: (TexturePath: "../../Common/OptionBackgroundPatch.png", Border: 16);
+                                    Padding: (Left: 10, Right: 10);
+                                    Label { Anchor: (Width: 120, Height: 36); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); Text: "Rating"; }
+                                    Group { FlexWeight: 1; }
+                                    Label #AvgRating { Style: (FontSize: 13, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: "N/A"; }
+                                }
+                            }
+
+                            // ==================== HISTORY PANEL ====================
+                            Group #HistoryPanel {
+                                Visible: false;
+                                Anchor: (Left: 0, Right: 0);
+                                LayoutMode: Top;
+                                Padding: (Top: 8);
+
+                                Label #HistorySectionLabel {
+                                    Anchor: (Height: 18);
+                                    Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, RenderUppercase: true);
+                                    Text: "TRANSACTION HISTORY";
+                                }
+
+                                Group { Anchor: (Height: 6); }
+
+                                // 8 pre-created transaction rows
+                                Group #TxRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx0IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx0Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx0Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx0Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx1IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx1Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx1Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx1Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx2IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx2Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx2Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx2Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx3IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx3Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx3Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx3Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx4IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx4Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx4Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx4Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx5IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx5Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx5Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx5Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow6 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx6IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx6Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx6Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx6Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+                                Group #TxRow7 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 38); LayoutMode: Left; Padding: (Left: 4, Right: 4, Top: 2, Bottom: 2);
+                                    Group #Tx7IconBg { Anchor: (Width: 34, Height: 34); Background: #44ff4425; LayoutMode: CenterMiddle; ItemIcon #Tx7Icon { Anchor: (Width: 28, Height: 28); } }
+                                    Group { Anchor: (Width: 6); }
+                                    Group { FlexWeight: 1; LayoutMode: Top; Padding: (Top: 2, Bottom: 2);
+                                        Label #Tx7Detail { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #cccccc, VerticalAlignment: Center); }
+                                        Label #Tx7Time { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #556677, VerticalAlignment: Center); }
+                                    }
+                                }
+
+                                // Empty label
+                                Label #HistEmptyLabel {
+                                    Anchor: (Left: 0, Right: 0, Height: 60);
+                                    Style: (FontSize: 11, TextColor: #555555, HorizontalAlignment: Center, VerticalAlignment: Center);
+                                    Text: "No transactions yet";
+                                    Visible: false;
+                                }
+
+                                Group { Anchor: (Height: 6); }
+
+                                // History Pagination
+                                Group #HistNavBar {
+                                    Anchor: (Left: 0, Right: 0, Height: 28);
+                                    LayoutMode: Left;
+
+                                    Button #HistPrevBtn {
+                                        Anchor: (Width: 60, Height: 24);
+                                        Style: ButtonStyle(Default: (Background: (Color: #222233)), Hovered: (Background: (Color: #333344)), Pressed: (Background: (Color: #444455)));
+                                        Label #HistPrevLbl { Style: (FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "PREV"; }
+                                    }
+                                    Label #HistPageInfo {
+                                        FlexWeight: 1;
+                                        Anchor: (Height: 24);
+                                        Style: (FontSize: 10, TextColor: #888888, HorizontalAlignment: Center, VerticalAlignment: Center);
+                                        Text: "1 / 1";
+                                    }
+                                    Button #HistNextBtn {
+                                        Anchor: (Width: 60, Height: 24);
+                                        Style: ButtonStyle(Default: (Background: (Color: #222233)), Hovered: (Background: (Color: #333344)), Pressed: (Background: (Color: #444455)));
+                                        Label #HistNextLbl { Style: (FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "NEXT"; }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ==================== SAVE BUTTON ====================
+                        Group { Anchor: (Height: 8); }
+                        Group {
+                            Anchor: (Left: 0, Right: 0, Height: 38);
+                            LayoutMode: CenterMiddle;
+
+                            $C.@TextButton #SaveBtn {
+                                @Anchor = (Width: 200, Height: 34);
+                                @Text = "SAVE CHANGES";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+$C.@BackButton {}
