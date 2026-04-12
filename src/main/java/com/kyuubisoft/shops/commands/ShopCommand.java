@@ -26,6 +26,7 @@ import com.kyuubisoft.shops.service.ShopService;
 import com.kyuubisoft.shops.service.ShopSessionManager;
 import com.kyuubisoft.shops.ui.ShopBrowsePage;
 import com.kyuubisoft.shops.ui.ShopDirectoryPage;
+import com.kyuubisoft.shops.ui.ShopEditPage;
 import com.kyuubisoft.shops.ui.ShopNotificationsPage;
 
 import java.util.List;
@@ -332,16 +333,18 @@ public class ShopCommand extends AbstractCommandCollection {
                 return;
             }
 
-            // Open the shop interaction as owner (opens editor page)
+            // Open the shop editor page with ContainerWindow for drag&drop
             final ShopData targetShop = nearest;
             CoreBridge.runWithI18n(playerRef, () -> {
                 try {
-                    // TODO: Replace with ShopEditPage when implemented
-                    ShopBrowsePage page = new ShopBrowsePage(playerRef, player, plugin, targetShop);
-                    player.getPageManager().openCustomPage(ref, store, page);
+                    ShopEditPage editPage = new ShopEditPage(playerRef, player, plugin, targetShop);
+                    com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow window =
+                        new com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow(editPage.getStagingContainer());
+                    player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
                     player.sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.edit.opened", targetShop.getName())).color("#55FF55"));
                 } catch (Exception e) {
+                    e.printStackTrace();
                     sessionManager.unlockEditor(targetShop.getId(), playerUuid);
                     player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
                 }
