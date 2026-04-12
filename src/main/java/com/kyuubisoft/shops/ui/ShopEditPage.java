@@ -59,7 +59,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
 
-    static final int SHOP_SLOTS_PER_PAGE = 12;
+    static final int SHOP_SLOTS_PER_PAGE = 45; // 9 cols x 5 rows, matching 488x260 grid
     private static final int HISTORY_PER_PAGE = 8;
 
     private static final String[] CATEGORIES = {
