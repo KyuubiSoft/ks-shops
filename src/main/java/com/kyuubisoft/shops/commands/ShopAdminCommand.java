@@ -56,6 +56,7 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         addSubCommand(new LogCmd());
         addSubCommand(new BlacklistCmd());
         addSubCommand(new ReloadCmd());
+        addSubCommand(new RespawnNpcsCmd());
     }
 
     // ==================== ADMIN COMMANDS ====================
@@ -434,6 +435,39 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 ctx.sender().sendMessage(Message.raw(plugin.getI18n().get("shop.admin.reload.success")).color("#44FF44"));
             } catch (Exception e) {
                 ctx.sender().sendMessage(Message.raw("Reload failed: " + e.getMessage()).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /kssa respawnnpcs - despawns and respawns every shop NPC in the caller's
+     * current world. Handy after a mod update changes the NPC role/skin or
+     * when entities got stuck after a crash. Uses ShopData as the source of
+     * truth so any drift between DB and live entity gets corrected.
+     */
+    private class RespawnNpcsCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        RespawnNpcsCmd() {
+            super("respawnnpcs", "Despawn + respawn all shop NPCs in your current world");
+            requirePermission("ks.shop.admin");
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            if (world == null) {
+                ctx.sender().sendMessage(Message.raw("No world context available").color("#FF5555"));
+                return;
+            }
+            try {
+                int count = plugin.getNpcManager().respawnAll(world);
+                if (count == 0) {
+                    ctx.sender().sendMessage(Message.raw("No shops to respawn in " + world.getName()).color("#FFD700"));
+                } else {
+                    ctx.sender().sendMessage(Message.raw("Respawning " + count + " shop NPC(s) in " + world.getName() + "...").color("#44FF44"));
+                }
+            } catch (Exception e) {
+                ctx.sender().sendMessage(Message.raw("Respawn failed: " + e.getMessage()).color("#FF5555"));
             }
         }
     }

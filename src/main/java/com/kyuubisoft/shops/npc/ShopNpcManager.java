@@ -666,6 +666,52 @@ public class ShopNpcManager {
     }
 
     /**
+     * Bulk despawn + respawn for every player shop in the given world. Returns
+     * the number of shops scheduled for respawn. Intended for admin use: lets
+     * an operator recover from stuck/missing NPCs without restarting the
+     * server. The respawn uses the current ShopData state (position, skin,
+     * name tag), so any desync between the DB and the live entity is fixed
+     * in one pass.
+     */
+    public int respawnAll(World world) {
+        if (world == null) return 0;
+        String worldName = world.getName();
+        if (worldName == null) return 0;
+
+        // Collect every shop whose stored world matches, not just the ones
+        // currently tracked in shopNpcIds (stale entities after a crash might
+        // not be in the tracking map yet).
+        List<ShopData> shopsInWorld = new ArrayList<>();
+        for (ShopData shop : shopManager.getAllShops()) {
+            if (shop.isAdminShop() || shop.getOwnerUuid() == null) continue;
+            if (worldName.equals(shop.getWorldName())) {
+                shopsInWorld.add(shop);
+            }
+        }
+
+        if (shopsInWorld.isEmpty()) {
+            LOGGER.info("respawnAll: no shops in world " + worldName);
+            return 0;
+        }
+
+        world.execute(() -> {
+            for (ShopData shop : shopsInWorld) {
+                try {
+                    despawnNpcInternal(shop.getId(), world);
+                    Vector3d pos = new Vector3d(shop.getPosX(), shop.getPosY(), shop.getPosZ());
+                    spawnNpcInternalAt(shop, world, pos, shop.getNpcRotY());
+                } catch (Exception e) {
+                    LOGGER.warning("respawnAll: failed for shop '" + shop.getName()
+                        + "': " + e.getMessage());
+                }
+            }
+            LOGGER.info("respawnAll: processed " + shopsInWorld.size() + " shops in " + worldName);
+        });
+
+        return shopsInWorld.size();
+    }
+
+    /**
      * Respawns the NPC for a shop (despawn + spawn).
      * Used when a shop is renamed, moved, or its NPC skin changes.
      *
