@@ -60,7 +60,7 @@ $C = "../../Common.ui";
         LayoutMode: CenterMiddle;
 
         Label #Name {
-          Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 10);
+          Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "";
           Padding: (Horizontal: 6);
         }
@@ -172,7 +172,7 @@ $C.@PageOverlay {
           Padding: (Left: 15, Right: 15, Top: 2);
 
           Label #InfoOwner {
-            Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 9);
+            Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center);
             Text: "";
             FlexWeight: 1;
           }

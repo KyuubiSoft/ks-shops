@@ -29,7 +29,7 @@ $C.@PageOverlay {
                     Padding: (Left: 16, Right: 16);
 
                     Label #ShopTitle {
-                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center, RenderUppercase: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 12);
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, VerticalAlignment: Center, RenderUppercase: true);
                         Text: "SHOP EDITOR";
                         FlexWeight: 1;
                         Padding: (Top: 6);
@@ -301,7 +301,7 @@ $C.@PageOverlay {
 
                                         Label #BuyPriceLabel {
                                             Anchor: (Width: 140, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #44cc44, VerticalAlignment: Center, RenderBold: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Style: (FontSize: 10, TextColor: #44cc44, VerticalAlignment: Center, RenderBold: true);
                                             Text: "Sell to customers at";
                                         }
                                         $C.@TextField #BuyPriceField {
@@ -322,7 +322,7 @@ $C.@PageOverlay {
 
                                         Label #SellPriceLabel {
                                             Anchor: (Width: 140, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #cc8844, VerticalAlignment: Center, RenderBold: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Style: (FontSize: 10, TextColor: #cc8844, VerticalAlignment: Center, RenderBold: true);
                                             Text: "Buy from customers at";
                                         }
                                         $C.@TextField #SellPriceField {
@@ -343,7 +343,7 @@ $C.@PageOverlay {
 
                                         Label #BuyQuotaLabel {
                                             Anchor: (Width: 140, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center);
                                             Text: "Buyback quota";
                                         }
                                         $C.@TextField #BuyQuotaField {
@@ -399,7 +399,7 @@ $C.@PageOverlay {
 
                                         Label #StockLimitLabel {
                                             Anchor: (Width: 140, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
                                             Text: "Stock";
                                         }
                                         $C.@TextField #StockLimitField {

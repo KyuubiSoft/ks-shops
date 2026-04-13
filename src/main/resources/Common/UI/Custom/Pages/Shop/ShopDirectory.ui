@@ -66,13 +66,13 @@ $C = "../../Common.ui";
 
           Label #DName {
             Anchor: (Height: 20);
-            Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 9);
+            Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
             Text: "";
           }
 
           Label #DOwner {
             Anchor: (Height: 16);
-            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
             Text: "";
           }
 
