@@ -26,6 +26,7 @@ import com.kyuubisoft.shops.service.DirectoryService;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
@@ -75,11 +76,23 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     private List<ShopData> filteredShops = new ArrayList<>();
     private int totalResults = 0;
 
+    private final UUID onlyOwnerUuid; // set via the /ksshop myshops entry point
+
     public ShopDirectoryPage(PlayerRef playerRef, Player player, ShopPlugin plugin) {
+        this(playerRef, player, plugin, null);
+    }
+
+    /**
+     * When {@code onlyOwnerUuid} is non-null, the directory is locked to showing
+     * only shops owned by that player (used by /ksshop myshops). Tab switching
+     * is suppressed and the title changes to "YOUR SHOPS".
+     */
+    public ShopDirectoryPage(PlayerRef playerRef, Player player, ShopPlugin plugin, UUID onlyOwnerUuid) {
         super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, DirData.CODEC);
         this.playerRef = playerRef;
         this.player = player;
         this.plugin = plugin;
+        this.onlyOwnerUuid = onlyOwnerUuid;
     }
 
     // ==================== BUILD ====================
@@ -148,6 +161,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== TAB SWITCHING ====================
 
     private void handleTabSwitch(String tab) {
+        // In myshops mode, tab switching is a no-op: we only ever show the
+        // caller's own shops.
+        if (onlyOwnerUuid != null) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
         if (tab.equals(currentTab)) {
             this.sendUpdate(new UICommandBuilder(), false);
             return;
@@ -273,6 +292,29 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== QUERY EXECUTION ====================
 
     private void executeQuery() {
+        // /ksshop myshops entry point: bypass DirectoryService entirely and return
+        // just the shops owned by the requesting player. Applies the same category
+        // and rating filters as the main directory so the filter bar still works.
+        if (onlyOwnerUuid != null) {
+            List<ShopData> owned = plugin.getShopManager().getShopsByOwner(onlyOwnerUuid);
+            String needle = searchQuery.isEmpty() ? null : searchQuery.toLowerCase();
+            List<ShopData> matching = new ArrayList<>();
+            for (ShopData s : owned) {
+                if (!currentCategory.isEmpty() && !currentCategory.equalsIgnoreCase(s.getCategory())) continue;
+                if (currentRatingFilter > 0 && s.getAverageRating() < currentRatingFilter) continue;
+                if (needle != null) {
+                    String name = s.getName() != null ? s.getName().toLowerCase() : "";
+                    if (!name.contains(needle)) continue;
+                }
+                matching.add(s);
+            }
+            totalResults = matching.size();
+            int start = Math.min(currentPage * CARDS_PER_PAGE, matching.size());
+            int end = Math.min(start + CARDS_PER_PAGE, matching.size());
+            filteredShops = new ArrayList<>(matching.subList(start, end));
+            return;
+        }
+
         DirectoryService directory = plugin.getDirectoryService();
 
         String query = searchQuery.isEmpty() ? null : searchQuery;
@@ -351,7 +393,13 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         ShopI18n i18n = plugin.getI18n();
 
         // ---- Title ----
-        ui.set("#DirTitle.Text", i18n.get(playerRef, "shop.directory.title"));
+        // In myshops mode the title changes to "YOUR SHOPS" and the tab bar is
+        // locked on the "all" (but pre-filtered) state.
+        if (onlyOwnerUuid != null) {
+            ui.set("#DirTitle.Text", i18n.get(playerRef, "shop.directory.title.myshops"));
+        } else {
+            ui.set("#DirTitle.Text", i18n.get(playerRef, "shop.directory.title"));
+        }
 
         // ---- Filter / search state ----
         // Reflect the current Java filter state in the UI widgets so users always see
@@ -420,14 +468,17 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         int startIndex = currentPage * CARDS_PER_PAGE;
 
         for (int i = 0; i < CARDS_PER_PAGE; i++) {
-            String prefix = "#ShopGrid #DCard" + i;
+            String prefix = "#DCard" + i;
             int actualIndex = startIndex + i;
 
             if (actualIndex < filteredShops.size()) {
                 ShopData shop = filteredShops.get(actualIndex);
                 ui.set(prefix + ".Visible", true);
 
-                // Avatar: prefer the owner-chosen icon, fall back to the first shop item
+                // Avatar: prefer the owner-chosen icon, fall back to the first shop item.
+                // Flat 2-level selector (omit #ShopGrid prefix) — nested 3-level
+                // selectors can fail silently on ItemSlot.ItemId for macro-instanced
+                // cards.
                 String iconId = shop.getDisplayIconItemId();
                 if (iconId != null) {
                     ui.set(prefix + " #DAvatar.ItemId", iconId);

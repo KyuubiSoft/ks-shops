@@ -753,13 +753,12 @@ public class ShopCommand extends AbstractCommandCollection {
 
     private class MyShopsCmd extends AbstractPlayerCommand {
         @Override protected boolean canGeneratePermission() { return false; }
-        MyShopsCmd() { super("myshops", "List your shops"); }
+        MyShopsCmd() { super("myshops", "Open a visual list of your shops"); }
 
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
             Player player = ctx.senderAs(Player.class);
-
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
 
@@ -769,21 +768,13 @@ public class ShopCommand extends AbstractCommandCollection {
                 return;
             }
 
-            int maxShops = plugin.getShopConfig().getData().playerShops.maxShopsPerPlayer;
-            player.sendMessage(Message.raw(
-                i18n.get(playerRef, "shop.myshops.header", ownedShops.size(), maxShops)).color("#FFD700"));
-
-            for (ShopData shop : ownedShops) {
-                String status = shop.isOpen()
-                    ? i18n.get(playerRef, "shop.myshops.status.open")
-                    : i18n.get(playerRef, "shop.myshops.status.closed");
-                String statusColor = shop.isOpen() ? "#55FF55" : "#FF5555";
-
-                int itemCount = shop.getItems().size();
-                String line = " - " + shop.getName() + " [" + status + "] ("
-                    + itemCount + " " + i18n.get(playerRef, "shop.myshops.items") + ")";
-
-                player.sendMessage(Message.raw(line).color("#96a9be"));
+            try {
+                com.kyuubisoft.shops.ui.ShopDirectoryPage page =
+                    new com.kyuubisoft.shops.ui.ShopDirectoryPage(playerRef, player, plugin, playerUuid);
+                player.getPageManager().openCustomPage(ref, store, page);
+            } catch (Exception e) {
+                e.printStackTrace();
+                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             }
         }
     }

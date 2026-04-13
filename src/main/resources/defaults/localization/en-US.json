@@ -1,5 +1,5 @@
 {
-  "_localization_version": "10",
+  "_localization_version": "11",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -256,6 +256,7 @@
   "shop.browse.confirm.no": "Cancel",
 
   "shop.directory.title": "SHOP DIRECTORY",
+  "shop.directory.title.myshops": "YOUR SHOPS",
   "shop.directory.by": "by {0}",
   "shop.directory.admin_shop": "Admin Shop",
   "shop.directory.no_ratings": "No ratings",
