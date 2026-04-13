@@ -24,18 +24,21 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.config.ShopConfig;
 import com.kyuubisoft.shops.data.ShopData;
+import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 
 import javax.annotation.Nonnull;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -1127,10 +1130,20 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         ui.set("#TotalRevenue.Text", plugin.getEconomyBridge().format(shopData.getTotalRevenue()));
         ui.set("#TaxPaid.Text", plugin.getEconomyBridge().format(shopData.getTotalTaxPaid()));
 
-        // Today and week revenue are approximated from total
-        // (full per-period tracking would require additional DB queries)
-        ui.set("#TodayRevenue.Text", "--");
-        ui.set("#WeekRevenue.Text", "--");
+        // Per-period revenue from the transactions table (BUY only, summed).
+        long now = System.currentTimeMillis();
+        long todayStart = now - 24L * 60 * 60 * 1000;  // last 24h
+        long weekStart = now - 7L * 24 * 60 * 60 * 1000;  // last 7 days
+        try {
+            double todayRev = plugin.getDatabase().getRevenueForShopSince(shopData.getId(), todayStart);
+            double weekRev = plugin.getDatabase().getRevenueForShopSince(shopData.getId(), weekStart);
+            ui.set("#TodayRevenue.Text", plugin.getEconomyBridge().format(todayRev));
+            ui.set("#WeekRevenue.Text", plugin.getEconomyBridge().format(weekRev));
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] per-period revenue load failed: " + e.getMessage());
+            ui.set("#TodayRevenue.Text", "--");
+            ui.set("#WeekRevenue.Text", "--");
+        }
 
         // Total sales (from player data)
         PlayerRef ownerRef = playerRef;
@@ -1156,27 +1169,91 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== HISTORY PANEL ====================
 
     private void buildHistoryPanel(UICommandBuilder ui) {
-        // Transaction history is loaded from the DB.
-        // Since ShopDatabase does not have a getTransactions(shopId) method yet,
-        // we show a placeholder. The rows are pre-created in the UI for future use.
-        // TODO: Add ShopDatabase.getTransactionsForShop(UUID shopId, int offset, int limit)
-        //       and populate the TxRow0-TxRow7 entries here.
-
-        boolean hasHistory = false;
+        int totalTx;
+        List<ShopDatabase.TransactionRecord> rows;
+        try {
+            totalTx = plugin.getDatabase().countTransactionsForShop(shopData.getId());
+            rows = plugin.getDatabase().loadTransactionsForShop(
+                shopData.getId(),
+                historyPage * HISTORY_PER_PAGE,
+                HISTORY_PER_PAGE);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] history load failed: " + e.getMessage());
+            totalTx = 0;
+            rows = Collections.emptyList();
+        }
 
         for (int i = 0; i < HISTORY_PER_PAGE; i++) {
-            ui.set("#TxRow" + i + ".Visible", false);
+            if (i < rows.size()) {
+                ShopDatabase.TransactionRecord tx = rows.get(i);
+                ui.set("#TxRow" + i + ".Visible", true);
+                // Icon (ItemIcon widget expects ItemId, matching ShopNotificationsPage/ShopBrowsePage)
+                try {
+                    ui.set("#Tx" + i + "Icon.ItemId", tx.itemId);
+                } catch (Exception ignored) {}
+                // Detail line: "<buyer> bought 5x Iron Sword for 250G"
+                String itemLabel = tx.itemId != null ? tx.itemId.replace('_', ' ') : "?";
+                String detail;
+                if ("BUY".equals(tx.type)) {
+                    String buyer = tx.buyerName != null ? tx.buyerName : "someone";
+                    detail = buyer + " bought " + tx.quantity + "x " + itemLabel + " for " + tx.totalPrice + "G";
+                } else if ("SELL".equals(tx.type)) {
+                    // sellItem uses buyer_name for the player in logTransaction
+                    String seller = tx.buyerName != null ? tx.buyerName : "someone";
+                    detail = seller + " sold " + tx.quantity + "x " + itemLabel + " for " + tx.totalPrice + "G";
+                } else {
+                    detail = tx.type + " " + tx.quantity + "x " + itemLabel;
+                }
+                ui.set("#Tx" + i + "Detail.Text", detail);
+                ui.set("#Tx" + i + "Time.Text", formatRelativeTime(tx.timestamp));
+                // Tint buy=green, sell=amber
+                String bg = "BUY".equals(tx.type) ? "#44ff4425" : "#ffaa0025";
+                ui.set("#Tx" + i + "IconBg.Background", bg);
+            } else {
+                ui.set("#TxRow" + i + ".Visible", false);
+            }
         }
 
+        boolean hasHistory = totalTx > 0;
+        ui.set("#HistEmptyLabel.Visible", !hasHistory);
         if (!hasHistory) {
-            ui.set("#HistEmptyLabel.Visible", true);
             ui.set("#HistEmptyLabel.Text", "No transactions yet");
-        } else {
-            ui.set("#HistEmptyLabel.Visible", false);
         }
 
-        ui.set("#HistNavBar.Visible", false);
-        ui.set("#HistPageInfo.Text", "1 / 1");
+        if (hasHistory) {
+            int totalPages = Math.max(1, (totalTx + HISTORY_PER_PAGE - 1) / HISTORY_PER_PAGE);
+            if (historyPage >= totalPages) historyPage = totalPages - 1;
+            ui.set("#HistNavBar.Visible", totalPages > 1);
+            ui.set("#HistPageInfo.Text", (historyPage + 1) + " / " + totalPages);
+        } else {
+            ui.set("#HistNavBar.Visible", false);
+            ui.set("#HistPageInfo.Text", "1 / 1");
+        }
+    }
+
+    /**
+     * Formats a timestamp into a relative time string like "5m ago", "2h ago", "3d ago".
+     * Mirrors the helpers in ShopCommand.HistoryCmd and ShopNotificationsPage.
+     */
+    private String formatRelativeTime(long timestamp) {
+        long now = System.currentTimeMillis();
+        long diff = now - timestamp;
+        if (diff < 0) return "just now";
+
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+        if (minutes < 1) return "just now";
+        if (minutes < 60) return minutes + "m ago";
+
+        long hours = TimeUnit.MILLISECONDS.toHours(diff);
+        if (hours < 24) return hours + "h ago";
+
+        long days = TimeUnit.MILLISECONDS.toDays(diff);
+        if (days < 30) return days + "d ago";
+
+        long months = days / 30;
+        if (months < 12) return months + "mo ago";
+
+        return (days / 365) + "y ago";
     }
 
     // ==================== STAGING ====================

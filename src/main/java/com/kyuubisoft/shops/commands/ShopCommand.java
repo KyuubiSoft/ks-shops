@@ -23,6 +23,7 @@ import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopType;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.service.CollectResult;
 import com.kyuubisoft.shops.service.CreateShopResult;
 import com.kyuubisoft.shops.service.ShopManager;
 import com.kyuubisoft.shops.service.ShopService;
@@ -76,6 +77,24 @@ public class ShopCommand extends AbstractCommandCollection {
         }
     }
 
+    // P3 polish: Pending ownership transfer confirmations per player.
+    private final java.util.Map<UUID, TransferConfirm> pendingTransfers =
+        new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long TRANSFER_CONFIRM_WINDOW_MS = 60_000L;
+
+    private static final class TransferConfirm {
+        final UUID shopId;
+        final String targetName;
+        final UUID targetUuid;
+        final long expiresAt;
+        TransferConfirm(UUID shopId, String targetName, UUID targetUuid, long expiresAt) {
+            this.shopId = shopId;
+            this.targetName = targetName;
+            this.targetUuid = targetUuid;
+            this.expiresAt = expiresAt;
+        }
+    }
+
     public ShopCommand(ShopPlugin plugin) {
         super("ksshop", "KyuubiSoft Shop System");
         addAliases("shop", "market");
@@ -97,6 +116,8 @@ public class ShopCommand extends AbstractCommandCollection {
         addSubCommand(new NotificationsCmd());
         addSubCommand(new CollectCmd());
         addSubCommand(new DepositCmd());
+        addSubCommand(new StatsCmd());
+        addSubCommand(new TransferCmd());
     }
 
     // ==================== PLAYER COMMANDS ====================
@@ -131,6 +152,8 @@ public class ShopCommand extends AbstractCommandCollection {
             player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.myshops")).color("#96a9be"));
             player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.collect")).color("#96a9be"));
             player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.history")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.stats")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.transfer")).color("#96a9be"));
         }
     }
 
@@ -1008,14 +1031,42 @@ public class ShopCommand extends AbstractCommandCollection {
             ShopI18n i18n = plugin.getI18n();
             ShopService shopService = plugin.getShopService();
 
-            double collected = shopService.collectEarnings(playerRef);
-            if (collected <= 0) {
+            CollectResult result = shopService.collectEarnings(playerRef);
+
+            if (result.isEconomyFailure()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.collect.economy_failed")).color("#FF5555"));
+                return;
+            }
+
+            if (result.isEmpty() || result.getTotal() <= 0) {
                 player.sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.collect.nothing")).color("#FFD700"));
-            } else {
-                String formatted = plugin.getEconomyBridge().format(collected);
+                return;
+            }
+
+            // Header
+            String totalFmt = plugin.getEconomyBridge().format(result.getTotal());
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.collect.breakdown_header", totalFmt,
+                    String.valueOf(result.getEntries().size()))
+            ).color("#55FF55"));
+
+            // Per-shop lines (max 10 to avoid chat flood)
+            int shown = 0;
+            for (CollectResult.ShopEntry entry : result.getEntries()) {
+                if (shown >= 10) break;
+                String amountFmt = plugin.getEconomyBridge().format(entry.amount);
                 player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.collect.success", formatted)).color("#55FF55"));
+                    i18n.get(playerRef, "shop.collect.breakdown_line", entry.shopName, amountFmt)
+                ).color("#96a9be"));
+                shown++;
+            }
+            if (result.getEntries().size() > 10) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.collect.breakdown_more",
+                        String.valueOf(result.getEntries().size() - 10))
+                ).color("#888888"));
             }
         }
     }
@@ -1092,6 +1143,247 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.deposit.failed")).color("#FF5555"));
             }
+        }
+    }
+
+    /**
+     * P3 polish: {@code /ksshop stats} — personal shop statistics overview.
+     *
+     * <p>Aggregates revenue/tax/rating/sales across every shop the player owns and
+     * shows pending (uncollected) earnings. Rating is a weighted average:
+     * {@code sum(avgRating * count) / sum(count)}. Sale count is queried directly
+     * against {@code shop_transactions} via
+     * {@link ShopDatabase#countSalesForOwner(UUID)}.
+     */
+    private class StatsCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        StatsCmd() { super("stats", "View your shop statistics"); }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            UUID playerUuid = playerRef.getUuid();
+
+            List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
+            if (ownedShops.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.stats.no_shops")).color("#FFD700"));
+                return;
+            }
+
+            int maxShops = plugin.getShopConfig().getData().playerShops.maxShopsPerPlayer;
+
+            double totalRevenue = 0;
+            double totalTax = 0;
+            double pendingEarnings = 0;
+            double ratingStarSum = 0;
+            int ratingCountSum = 0;
+            for (ShopData s : ownedShops) {
+                totalRevenue += s.getTotalRevenue();
+                totalTax += s.getTotalTaxPaid();
+                pendingEarnings += s.getShopBalance();
+                ratingStarSum += s.getAverageRating() * s.getTotalRatings();
+                ratingCountSum += s.getTotalRatings();
+            }
+
+            int totalSales = plugin.getDatabase().countSalesForOwner(playerUuid);
+            double avgRating = ratingCountSum > 0 ? ratingStarSum / ratingCountSum : 0.0;
+
+            var econ = plugin.getEconomyBridge();
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.stats.header")).color("#FFD700"));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.stats.shops_owned",
+                    ownedShops.size(), maxShops)).color("#bfcdd5"));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.stats.total_revenue",
+                    econ.format(totalRevenue))).color("#bfcdd5"));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.stats.total_tax",
+                    econ.format(totalTax))).color("#bfcdd5"));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.stats.total_sales",
+                    totalSales)).color("#bfcdd5"));
+            if (ratingCountSum > 0) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.stats.avg_rating",
+                        String.format("%.1f", avgRating), ratingCountSum)).color("#bfcdd5"));
+            } else {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.stats.no_ratings")).color("#96a9be"));
+            }
+            if (pendingEarnings > 0) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.stats.pending",
+                        econ.format(pendingEarnings))).color("#55FF55"));
+            }
+        }
+    }
+
+    /**
+     * P3 polish: {@code /ksshop transfer <shopId> <playerName> [confirm]} —
+     * transfers ownership of a player-owned shop to another online player.
+     *
+     * <p>Uses an in-memory 60-second confirmation window keyed by the sender's
+     * UUID (mirrors {@link DeleteCmd}). Requires the target to be online so we
+     * can validate they exist and notify them of the ownership change.
+     */
+    private class TransferCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        TransferCmd() {
+            super("transfer", "Transfer shop ownership to another player");
+            withRequiredArg("shopId", "Shop ID or name", ArgTypes.STRING);
+            withRequiredArg("playerName", "Target player name", ArgTypes.STRING);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            if (!player.hasPermission("ks.shop.user.edit", true)) {
+                player.sendMessage(Message.raw(
+                    plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+                return;
+            }
+
+            if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
+
+            ShopI18n i18n = plugin.getI18n();
+            ShopManager shopManager = plugin.getShopManager();
+            UUID playerUuid = playerRef.getUuid();
+
+            // Parse arguments: /ksshop transfer <shopId> <targetName> [confirm]
+            String[] parts = ctx.getInputString().split("\\s+", 5);
+            String shopIdentifier = parts.length > 2 ? parts[2].trim() : "";
+            String targetName = parts.length > 3 ? parts[3].trim() : "";
+            boolean confirm = parts.length > 4 && "confirm".equalsIgnoreCase(parts[4].trim());
+
+            if (shopIdentifier.isEmpty() || targetName.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.invalid_arguments",
+                        "/ksshop transfer <shopId> <playerName>")).color("#FF5555"));
+                return;
+            }
+
+            // Resolve shop: UUID first, then case-insensitive name lookup (mirrors VisitCmd).
+            ShopData shop = null;
+            try {
+                UUID uuid = UUID.fromString(shopIdentifier);
+                shop = shopManager.getShop(uuid);
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to name lookup
+            }
+            if (shop == null) {
+                for (ShopData candidate : shopManager.getAllShops()) {
+                    if (candidate.getName() != null
+                            && candidate.getName().equalsIgnoreCase(shopIdentifier)) {
+                        shop = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (shop == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.shop_not_found", shopIdentifier))
+                    .color("#FF5555"));
+                return;
+            }
+
+            // Ownership check.
+            if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(playerUuid)) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.not_owner")).color("#FF5555"));
+                return;
+            }
+
+            // Resolve target player by name — must be online.
+            PlayerRef targetRef = null;
+            for (PlayerRef candidate : world.getPlayerRefs()) {
+                if (candidate != null && targetName.equalsIgnoreCase(candidate.getUsername())) {
+                    targetRef = candidate;
+                    break;
+                }
+            }
+
+            if (targetRef == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.target_offline")).color("#FF5555"));
+                return;
+            }
+
+            UUID targetUuid = targetRef.getUuid();
+            if (targetUuid == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.target_not_found", targetName))
+                    .color("#FF5555"));
+                return;
+            }
+
+            // Reject self-transfer.
+            if (targetUuid.equals(playerUuid)) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.self_target")).color("#FF5555"));
+                return;
+            }
+
+            UUID shopId = shop.getId();
+            String shopName = shop.getName();
+            String resolvedTargetName = targetRef.getUsername();
+
+            // Expire any stale confirmation first.
+            TransferConfirm pending = pendingTransfers.get(playerUuid);
+            long now = System.currentTimeMillis();
+            if (pending != null && pending.expiresAt < now) {
+                pendingTransfers.remove(playerUuid);
+                pending = null;
+            }
+
+            if (confirm && pending != null
+                    && pending.shopId.equals(shopId)
+                    && pending.targetUuid.equals(targetUuid)) {
+                // Execute the transfer.
+                pendingTransfers.remove(playerUuid);
+
+                boolean ok = plugin.getShopService().transferShop(
+                    shopId, targetUuid, resolvedTargetName);
+                if (!ok) {
+                    player.sendMessage(Message.raw(
+                        i18n.get(playerRef, "shop.transfer.failed")).color("#FF5555"));
+                    return;
+                }
+
+                // Respawn the NPC so its nameplate/skin reflects the new owner.
+                try {
+                    plugin.getNpcManager().respawnNpc(shop);
+                } catch (Exception ignored) {
+                    // Non-fatal — the transfer itself already persisted.
+                }
+
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.confirmed_sender",
+                        shopName, resolvedTargetName)).color("#55FF55"));
+
+                // Notify the new owner if they are still online.
+                try {
+                    targetRef.sendMessage(Message.raw(
+                        i18n.get(targetRef, "shop.transfer.confirmed_target",
+                            playerRef.getUsername(), shopName)).color("#55FF55"));
+                } catch (Exception ignored) {
+                    // Target may have logged out between resolution and send — ignore.
+                }
+                return;
+            }
+
+            // Stage a new confirmation.
+            pendingTransfers.put(playerUuid,
+                new TransferConfirm(shopId, resolvedTargetName, targetUuid,
+                    now + TRANSFER_CONFIRM_WINDOW_MS));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.transfer.confirm_prompt",
+                    shopIdentifier, resolvedTargetName, shopName)).color("#FFAA00"));
         }
     }
 

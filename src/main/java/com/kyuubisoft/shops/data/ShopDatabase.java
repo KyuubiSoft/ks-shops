@@ -535,6 +535,105 @@ public class ShopDatabase {
         return transactions;
     }
 
+    /**
+     * Sums total_price of all BUY transactions for a shop since the given timestamp.
+     * Used for per-period revenue charts (today, this week).
+     */
+    public double getRevenueForShopSince(UUID shopId, long sinceTimestamp) {
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT COALESCE(SUM(total_price), 0) AS total FROM shop_transactions " +
+                "WHERE shop_id = ? AND type = 'BUY' AND timestamp >= ?",
+                shopId.toString(), sinceTimestamp);
+            try {
+                if (rs.next()) return rs.getDouble("total");
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to sum revenue for shop " + shopId + ": " + e.getMessage());
+        }
+        return 0.0;
+    }
+
+    /**
+     * Loads transactions for a specific shop, paginated. Newest first.
+     */
+    public List<TransactionRecord> loadTransactionsForShop(UUID shopId, int offset, int limit) {
+        List<TransactionRecord> transactions = new ArrayList<>();
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT * FROM shop_transactions " +
+                "WHERE shop_id = ? " +
+                "ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                shopId.toString(), limit, offset);
+            try {
+                while (rs.next()) {
+                    transactions.add(new TransactionRecord(
+                        rs.getString("shop_id"),
+                        rs.getString("buyer_uuid"),
+                        rs.getString("buyer_name"),
+                        rs.getString("seller_uuid"),
+                        rs.getString("item_id"),
+                        rs.getInt("quantity"),
+                        rs.getInt("price_per_unit"),
+                        rs.getInt("total_price"),
+                        rs.getInt("tax_amount"),
+                        rs.getString("type"),
+                        rs.getLong("timestamp")
+                    ));
+                }
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load tx for shop " + shopId + ": " + e.getMessage());
+        }
+        return transactions;
+    }
+
+    /**
+     * Counts total transactions for a shop. Used for pagination.
+     */
+    public int countTransactionsForShop(UUID shopId) {
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT COUNT(*) AS cnt FROM shop_transactions WHERE shop_id = ?",
+                shopId.toString());
+            try {
+                if (rs.next()) return rs.getInt("cnt");
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to count tx for shop " + shopId + ": " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * Counts total completed sales where the given player was the seller.
+     * A "sale" is a BUY transaction (customer buying from the shop) logged
+     * with {@code seller_uuid = ownerUuid}. Used by the player stats command
+     * to show how many items the shop owner has sold across all their shops.
+     */
+    public int countSalesForOwner(UUID ownerUuid) {
+        if (ownerUuid == null) return 0;
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT COUNT(*) AS cnt FROM shop_transactions WHERE seller_uuid = ? AND type = 'BUY'",
+                ownerUuid.toString());
+            try {
+                if (rs.next()) return rs.getInt("cnt");
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to count sales for " + ownerUuid + ": " + e.getMessage());
+        }
+        return 0;
+    }
+
     // ==================== PLAYER DATA ====================
 
     public PlayerShopData loadPlayerData(UUID playerUuid) {

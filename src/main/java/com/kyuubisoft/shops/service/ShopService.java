@@ -28,6 +28,7 @@ import com.kyuubisoft.shops.event.ShopTransactionEvent;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.util.PlayerInventoryAccess;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -606,6 +607,65 @@ public class ShopService {
         return true;
     }
 
+    // ==================== SHOP TRANSFER ====================
+
+    /**
+     * Transfers ownership of a player shop to another player. Does NOT check
+     * ownership, permissions, or the target's shop limit — callers must validate
+     * those before invoking this method (see TransferCmd in ShopCommand).
+     *
+     * <p>Updates the in-memory shop's owner UUID/name, bumps {@code lastActivity},
+     * persists via {@link ShopDatabase#saveShop(ShopData)}, and keeps the
+     * {@link PlayerShopData} maps for both players in sync. The NPC is not
+     * respawned here — the command layer triggers a respawn to refresh the
+     * nameplate/skin after the owner change.
+     *
+     * @param shopId        the shop to transfer
+     * @param newOwnerUuid  the UUID of the new owner
+     * @param newOwnerName  the display name of the new owner (used for NPC nameplate)
+     * @return true on success
+     */
+    public boolean transferShop(UUID shopId, UUID newOwnerUuid, String newOwnerName) {
+        if (shopId == null || newOwnerUuid == null) return false;
+
+        ShopData shop = shopManager.getShop(shopId);
+        if (shop == null) return false;
+        if (!shop.isPlayerShop()) {
+            LOGGER.warning("transferShop rejected: shop " + shopId + " is not a player shop");
+            return false;
+        }
+
+        UUID oldOwnerUuid = shop.getOwnerUuid();
+
+        shop.setOwnerUuid(newOwnerUuid);
+        shop.setOwnerName(newOwnerName);
+        shop.setLastActivity(System.currentTimeMillis());
+
+        try {
+            database.saveShop(shop);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to persist transferred shop " + shopId + ": " + e.getMessage());
+            return false;
+        }
+
+        // Keep the per-player shop index in sync so /ksshop myshops reflects the change.
+        if (oldOwnerUuid != null) {
+            PlayerShopData oldData = plugin.getPlayerData(oldOwnerUuid);
+            if (oldData != null) oldData.removeOwnedShop(shopId);
+        }
+        PlayerShopData newData = plugin.getPlayerData(newOwnerUuid);
+        if (newData != null) newData.addOwnedShop(shopId);
+
+        // Release any editor lock held by the previous owner.
+        if (oldOwnerUuid != null) {
+            sessionManager.unlockEditor(shopId, oldOwnerUuid);
+        }
+
+        LOGGER.info("Shop transferred: '" + shop.getName() + "' (" + shopId + ") -> "
+            + newOwnerName + " (" + newOwnerUuid + ")");
+        return true;
+    }
+
     // ==================== SHOP UI ====================
 
     /**
@@ -652,49 +712,55 @@ public class ShopService {
 
     /**
      * Collects earnings from all owned shop balances.
-     * Iterates all shops owned by the player, sums their shopBalance,
-     * deposits into the player's wallet, and resets shop balances to 0.
+     * Iterates all shops owned by the player, captures a per-shop breakdown,
+     * deposits the total into the player's wallet, and resets shop balances to 0.
      *
-     * @return the total amount collected
+     * @return a {@link CollectResult} describing the outcome (total, per-shop entries, failure flags)
      */
-    public double collectEarnings(PlayerRef player) {
-        if (player == null) return 0.0;
+    public CollectResult collectEarnings(PlayerRef player) {
+        if (player == null) return CollectResult.empty();
 
         UUID playerUuid = player.getUuid();
 
         // --- Validate economy ---
         if (!economyBridge.isAvailable()) {
             LOGGER.warning("Collect earnings rejected: economy provider not available");
-            return 0.0;
+            return CollectResult.economyFailure();
         }
 
-        // --- Sum balances from all owned shops ---
+        // --- Capture per-shop amounts BEFORE resetting ---
         List<ShopData> ownedShops = shopManager.getShopsByOwner(playerUuid);
-        double totalToCollect = 0;
+        List<CollectResult.ShopEntry> entries = new ArrayList<>();
+        double totalToCollect = 0.0;
         for (ShopData shop : ownedShops) {
-            totalToCollect += shop.getShopBalance();
+            double bal = shop.getShopBalance();
+            if (bal > 0) {
+                entries.add(new CollectResult.ShopEntry(shop.getId(), shop.getName(), bal));
+                totalToCollect += bal;
+            }
         }
 
-        if (totalToCollect <= 0) return 0.0;
+        if (totalToCollect <= 0.0) return CollectResult.empty();
 
         // --- Deposit total to player wallet ---
         boolean deposited = economyBridge.deposit(playerUuid, totalToCollect);
         if (!deposited) {
             LOGGER.warning("Collect earnings failed: deposit to " + playerUuid + " failed");
-            return 0.0;
+            return CollectResult.economyFailure();
         }
 
-        // --- Reset all shop balances to 0 ---
-        for (ShopData shop : ownedShops) {
-            if (shop.getShopBalance() > 0) {
+        // --- Reset shop balances only for shops that contributed ---
+        for (CollectResult.ShopEntry entry : entries) {
+            ShopData shop = shopManager.getShop(entry.shopId);
+            if (shop != null) {
                 shop.setShopBalance(0);
                 database.saveShop(shop);
             }
         }
 
         LOGGER.info("Earnings collected: " + player.getUsername() + " received "
-            + economyBridge.format(totalToCollect) + " from " + ownedShops.size() + " shop(s)");
-        return totalToCollect;
+            + economyBridge.format(totalToCollect) + " from " + entries.size() + " shop(s)");
+        return CollectResult.success(totalToCollect, entries);
     }
 
     // ==================== SHOP BALANCE DEPOSIT ====================

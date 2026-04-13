@@ -1,5 +1,5 @@
 {
-  "_localization_version": "4",
+  "_localization_version": "6",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -121,6 +121,10 @@
   "shop.collect.success": "Collected {0} from your shop balances!",
   "shop.collect.empty": "No earnings to collect.",
   "shop.collect.nothing": "No shop earnings to collect.",
+  "shop.collect.economy_failed": "Collection failed: the economy provider is unavailable.",
+  "shop.collect.breakdown_header": "Collected {0} from {1} shop(s):",
+  "shop.collect.breakdown_line": " - {0}: {1}",
+  "shop.collect.breakdown_more": "...and {0} more shops.",
 
   "shop.deposit.success": "Deposited {0} into shop '{1}'!",
   "shop.deposit.failed": "Deposit failed! Check your balance.",
@@ -183,5 +187,27 @@
   "shop.edit.hint.buy_from_customers": "What you pay when a customer sells this item to your shop",
   "shop.edit.hint.buyback_quota": "How many more of this item your shop will buy from customers",
   "shop.edit.hint.stock_available": "Current stock. -1 = unlimited",
-  "shop.edit.unsaved_warning": "Shop closed without saving — changes discarded."
+  "shop.edit.unsaved_warning": "Shop closed without saving — changes discarded.",
+
+  "shop.help.stats": "/ksshop stats - View your shop statistics",
+  "shop.help.transfer": "/ksshop transfer <shopId> <player> - Transfer shop ownership",
+
+  "shop.stats.header": "**KS-Shops - Your Stats**",
+  "shop.stats.no_shops": "You don't own any shops yet.",
+  "shop.stats.shops_owned": "Shops owned: {0} / {1}",
+  "shop.stats.total_revenue": "Total revenue: {0}",
+  "shop.stats.total_tax": "Total tax paid: {0}",
+  "shop.stats.total_sales": "Total sales: {0}",
+  "shop.stats.avg_rating": "Avg rating: {0} / 5.0 ({1} ratings)",
+  "shop.stats.no_ratings": "Avg rating: no ratings yet",
+  "shop.stats.pending": "Pending earnings: {0} (use /ksshop collect)",
+
+  "shop.transfer.not_owner": "You don't own this shop.",
+  "shop.transfer.target_offline": "The target player must be online.",
+  "shop.transfer.target_not_found": "Player `{0}` not found.",
+  "shop.transfer.self_target": "You can't transfer a shop to yourself.",
+  "shop.transfer.confirm_prompt": "Type `/ksshop transfer {0} {1} confirm` within 60 seconds to transfer shop `{2}` to {1}. They will own it and all its items.",
+  "shop.transfer.confirmed_sender": "Shop `{0}` transferred to {1}.",
+  "shop.transfer.confirmed_target": "{0} has transferred the shop `{1}` to you. Use /ksshop edit to manage it.",
+  "shop.transfer.failed": "Transfer failed."
 }

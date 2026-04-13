@@ -32,8 +32,10 @@ public class ShopI18n {
      * - v2: Priority 1 bug fixes — 30+ keys for create/edit/rename/myshops/status/visit/notifications/error/help
      * - v3: Priority 2 bug fixes — create flow disabled/economy/claim keys, edit labels, unsaved warning
      * - v4: Priority 2 bug fixes — getting started help block, search/delete/rate command implementations
+     * - v5: Priority 3 polish — collect earnings per-shop breakdown + economy failure message
+     * - v6: Priority 3 polish — /ksshop stats and /ksshop transfer subcommands
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 4;
+    private static final int CURRENT_LOCALIZATION_VERSION = 6;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
