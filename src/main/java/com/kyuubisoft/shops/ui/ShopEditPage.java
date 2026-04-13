@@ -94,6 +94,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private int selectedSlot = -1;
     private boolean saved = false;
 
+    // BUG #11: Track whether the owner has made any pending edits that would be lost on dismiss.
+    // Set true by every mutation path (drop, remove, price/quota/stock/mode/name/desc edits);
+    // cleared to false on successful save. Checked in onDismiss() to warn the owner via chat
+    // if they close the editor with unsaved changes.
+    private boolean dirty = false;
+
     // Edited fields (staged until Save)
     private String editedName;
     private String editedDesc;
@@ -280,10 +286,16 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         if (data.field != null) {
             switch (data.field) {
                 case "name" -> {
-                    if (data.nameVal != null) editedName = data.nameVal.trim();
+                    if (data.nameVal != null) {
+                        editedName = data.nameVal.trim();
+                        dirty = true; // BUG #11
+                    }
                 }
                 case "desc" -> {
-                    if (data.descVal != null) editedDesc = data.descVal.trim();
+                    if (data.descVal != null) {
+                        editedDesc = data.descVal.trim();
+                        dirty = true; // BUG #11
+                    }
                 }
                 case "price" -> {
                     if (data.priceVal != null) handlePriceChange(data.priceVal);
@@ -309,6 +321,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Category dropdown change (no Field key, just raw @Category)
         if (data.categoryVal != null && !data.categoryVal.isEmpty()) {
             editedCategory = data.categoryVal;
+            dirty = true; // BUG #11
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
@@ -390,6 +403,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 meta.sellEnabled = true;
             }
         }
+        dirty = true; // BUG #11
 
         refreshUI();
     }
@@ -411,6 +425,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
             StagedItemMeta meta = getOrCreateMeta(selectedSlot);
             meta.buyPrice = price;
+            dirty = true; // BUG #11
         } catch (NumberFormatException ignored) {}
     }
 
@@ -424,6 +439,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
             StagedItemMeta meta = getOrCreateMeta(selectedSlot);
             meta.sellPrice = price;
+            dirty = true; // BUG #11
         } catch (NumberFormatException ignored) {}
     }
 
@@ -434,6 +450,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             if (quota < 0) quota = 0;
             StagedItemMeta meta = getOrCreateMeta(selectedSlot);
             meta.buyQuota = quota;
+            dirty = true; // BUG #11
         } catch (NumberFormatException ignored) {}
     }
 
@@ -443,6 +460,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             int limit = Integer.parseInt(limitStr);
             StagedItemMeta meta = getOrCreateMeta(selectedSlot);
             meta.maxStock = limit;
+            dirty = true; // BUG #11
         } catch (NumberFormatException ignored) {}
     }
 
@@ -536,6 +554,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         }
 
         saved = true;
+        dirty = false; // BUG #11: successful save clears pending-changes state
 
         // Unlock editor session
         plugin.getSessionManager().unlockEditor(shopData.getId(), playerRef.getUuid());
@@ -634,6 +653,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         }
 
         selectedSlot = -1;
+        dirty = true; // BUG #11
         // FIX 5: Removing an item clears the selection -- push UI back to "no item selected".
         pushItemFields = true;
         refreshUI();
@@ -690,6 +710,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             try {
                 com.kyuubisoft.shops.util.PlayerInventoryAccess.of(p).markChanged();
             } catch (Exception ignored) {}
+        }
+
+        // BUG #11: Any drop that touches the shop grid (either direction) is a
+        // pending edit. Mark dirty so onDismiss warns about unsaved changes.
+        if (srcSection == 0 || destSectionId == 0) {
+            dirty = true;
         }
 
         LOGGER.info("[ShopEdit] Moved item from section " + srcSection + "[" + sourceSlot
@@ -1018,6 +1044,18 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== SETTINGS PANEL ====================
 
     private void buildSettingsPanel(UICommandBuilder ui) {
+        // BUG #10: Localize the owner-facing labels for the price/quota/stock/mode
+        // fields. These used to read "Buy Price" / "Sell Price" / "Want Qty" — which
+        // is customer-perspective wording on a page the shop owner uses to edit their
+        // own shop. Rephrase as "Sell to customers at" / "Buy from customers at" /
+        // "Buyback quota" / "Stock" so the owner can reason about the economics.
+        ShopI18n i18n = plugin.getI18n();
+        ui.set("#BuyPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.sell_to_customers"));
+        ui.set("#SellPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.buy_from_customers"));
+        ui.set("#BuyQuotaLabel.Text", i18n.get(playerRef, "shop.edit.label.buyback_quota"));
+        ui.set("#StockLimitLabel.Text", i18n.get(playerRef, "shop.edit.label.stock_available"));
+        ui.set("#ModeLabel.Text", i18n.get(playerRef, "shop.edit.label.mode"));
+
         // FIX 5: Only push text-field values to the client when the server has a "fresh"
         // value the client doesn't know yet. Otherwise refreshUI() triggered by an unrelated
         // event (e.g. mode click) would clobber whatever the user is currently typing.
@@ -1257,7 +1295,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         com.kyuubisoft.shops.util.PlayerInventoryAccess inv =
             com.kyuubisoft.shops.util.PlayerInventoryAccess.of(p);
 
-        boolean dirty = false;
+        boolean invChanged = false;
         for (Map.Entry<String, Integer> entry : originalItemCounts.entrySet()) {
             String itemId = entry.getKey();
             int originalQty = entry.getValue();
@@ -1277,10 +1315,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                     LOGGER.warning("[ShopEdit] Dupe prevention: could not remove " + remaining
                         + "x " + itemId + " from player inventory (items already spent?)");
                 }
-                dirty = true;
+                invChanged = true;
             }
         }
-        if (dirty) {
+        if (invChanged) {
             inv.markChanged();
         }
     }
@@ -1316,6 +1354,21 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             super.onDismiss(ref, store);
         } catch (Exception e) {
             LOGGER.warning("[ShopEdit] onDismiss error: " + e.getMessage());
+        }
+
+        // BUG #11: If the owner closed the editor with unsaved changes, send a
+        // chat warning so they know their edits were discarded. This is a
+        // non-blocking notification: we don't prevent the dismiss or pop a
+        // confirm dialog — the owner can simply reopen the editor.
+        if (!saved && dirty) {
+            try {
+                Player p = store.getComponent(ref, Player.getComponentType());
+                if (p != null) {
+                    p.sendMessage(Message.raw(
+                        plugin.getI18n().get(playerRef, "shop.edit.unsaved_warning")
+                    ).color("#ffaa00"));
+                }
+            } catch (Exception ignored) {}
         }
 
         // If not saved, return new items to player inventory

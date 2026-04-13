@@ -424,12 +424,19 @@ public class ShopService {
     /**
      * Creates a new player-owned shop at the given world position.
      *
-     * @return the created ShopData, or null on failure
+     * <p>Returns a {@link CreateShopResult} wrapping either the created shop
+     * or a specific i18n error key so callers can surface targeted failure
+     * messages to the player instead of a generic "failed" string.</p>
+     *
+     * @return a {@link CreateShopResult} — never null; call {@link CreateShopResult#isSuccess()}
+     *         to distinguish success from failure
      */
-    public ShopData createPlayerShop(PlayerRef owner, String name, String category,
-                                     String description, String worldName,
-                                     double x, double y, double z) {
-        if (owner == null || name == null || name.isBlank()) return null;
+    public CreateShopResult createPlayerShop(PlayerRef owner, String name, String category,
+                                             String description, String worldName,
+                                             double x, double y, double z) {
+        if (owner == null || name == null || name.isBlank()) {
+            return CreateShopResult.error("shop.create.name_too_short");
+        }
 
         UUID ownerUuid = owner.getUuid();
         ShopConfig.ConfigData cfg = config.getData();
@@ -437,13 +444,13 @@ public class ShopService {
         // --- Validate player shop feature is enabled ---
         if (!cfg.features.playerShops) {
             LOGGER.fine("Create rejected: player shops disabled");
-            return null;
+            return CreateShopResult.error("shop.create.disabled");
         }
 
         // --- Validate economy ---
         if (!economyBridge.isAvailable()) {
             LOGGER.warning("Create rejected: economy provider not available");
-            return null;
+            return CreateShopResult.error("shop.create.economy_unavailable");
         }
 
         // --- Validate max shops not reached ---
@@ -451,22 +458,25 @@ public class ShopService {
         if (ownedShops.size() >= cfg.playerShops.maxShopsPerPlayer) {
             LOGGER.fine("Create rejected: player " + owner.getUsername()
                 + " reached max shops (" + cfg.playerShops.maxShopsPerPlayer + ")");
-            return null;
+            return CreateShopResult.error("shop.create.max_reached");
         }
 
         // --- Validate name length ---
         String trimmedName = name.trim();
-        if (trimmedName.length() < cfg.playerShops.nameMinLength
-            || trimmedName.length() > cfg.playerShops.nameMaxLength) {
-            LOGGER.fine("Create rejected: name length invalid (" + trimmedName.length() + ")");
-            return null;
+        if (trimmedName.length() < cfg.playerShops.nameMinLength) {
+            LOGGER.fine("Create rejected: name too short (" + trimmedName.length() + ")");
+            return CreateShopResult.error("shop.create.name_too_short");
+        }
+        if (trimmedName.length() > cfg.playerShops.nameMaxLength) {
+            LOGGER.fine("Create rejected: name too long (" + trimmedName.length() + ")");
+            return CreateShopResult.error("shop.create.name_too_long");
         }
 
         // --- Validate name uniqueness ---
         for (ShopData existing : shopManager.getAllShops()) {
             if (existing.getName().equalsIgnoreCase(trimmedName)) {
                 LOGGER.fine("Create rejected: name already taken '" + trimmedName + "'");
-                return null;
+                return CreateShopResult.error("shop.create.name_taken");
             }
         }
 
@@ -479,7 +489,7 @@ public class ShopService {
         if (cfg.playerShops.requireClaim && cfg.features.claimsIntegration) {
             if (!ClaimsBridge.isPlayerClaim(ownerUuid, worldName, x, z)) {
                 LOGGER.fine("Create rejected: player does not own claim at position");
-                return null;
+                return CreateShopResult.error("shop.create.claim_required");
             }
         }
 
@@ -489,14 +499,14 @@ public class ShopService {
             if (!economyBridge.has(ownerUuid, creationCost)) {
                 LOGGER.fine("Create rejected: insufficient funds for creation cost ("
                     + creationCost + ")");
-                return null;
+                return CreateShopResult.error("shop.create.not_enough");
             }
 
             // Withdraw creation cost
             boolean withdrawn = economyBridge.withdraw(ownerUuid, creationCost);
             if (!withdrawn) {
                 LOGGER.warning("Create failed: withdraw of creation cost failed");
-                return null;
+                return CreateShopResult.error("shop.create.failed");
             }
         }
 
@@ -530,7 +540,7 @@ public class ShopService {
 
         LOGGER.info("Shop created: '" + trimmedName + "' by " + owner.getUsername()
             + " at " + worldName + " [" + (int) x + ", " + (int) y + ", " + (int) z + "]");
-        return shopData;
+        return CreateShopResult.success(shopData);
     }
 
     // ==================== SHOP DELETION ====================

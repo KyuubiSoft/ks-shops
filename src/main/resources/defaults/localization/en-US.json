@@ -1,7 +1,14 @@
 {
-  "_localization_version": "2",
+  "_localization_version": "4",
 
   "shop.help.header": "=== KS-Shops Help ===",
+  "shop.help.gs.header": "**KS-Shops - Getting Started**",
+  "shop.help.gs.step1": "1. Craft a Shop_Block from the crafting menu (oak, birch, dark, mossy, red, or stone variants).",
+  "shop.help.gs.step2": "2. Place the block where you want your shop, then run /ksshop create <name>.",
+  "shop.help.gs.step3": "3. Open the editor with /ksshop edit, drag items into the shop grid, set prices on each slot, pick BUY/SELL/BOTH mode, then save.",
+  "shop.help.gs.step4": "4. Deposit coins to the shop (so it can buy from customers), then /ksshop open to accept visitors.",
+  "shop.help.gs.step5": "5. Collect your earnings anytime with /ksshop collect.",
+  "shop.help.gs.spacer": "",
   "shop.help.create": "/ksshop create <name> - Create a new shop",
   "shop.help.edit": "/ksshop edit [shopId] - Open shop editor",
   "shop.help.delete": "/ksshop delete <shopId> - Delete your shop",
@@ -33,12 +40,18 @@
   "shop.create.not_enough": "You don't have enough funds to create a shop.",
   "shop.create.block_required": "You need to be standing next to a Shop Block. Place a Shop Stall block first, then run this command while standing on or next to it.",
   "shop.create.no_block_nearby": "No Shop Block found nearby. Place a Shop Stall block within 3 blocks and try again.",
+  "shop.create.disabled": "Player shops are currently disabled on this server.",
+  "shop.create.economy_unavailable": "The economy system is unavailable. Please try again later.",
+  "shop.create.claim_required": "You can only create shops on land you have claimed.",
 
   "shop.delete.success": "Shop '{0}' deleted.",
   "shop.delete.refund": "Refunded {0} {1}.",
   "shop.delete.not_found": "Shop '{0}' not found.",
-  "shop.delete.not_owner": "You are not the owner of this shop.",
+  "shop.delete.not_owner": "You don't own this shop.",
   "shop.delete.confirm": "Type the command again within 10 seconds to confirm deletion.",
+  "shop.delete.confirm_prompt": "Type `/ksshop delete {0} confirm` within 60 seconds to permanently delete your shop `{1}`. This cannot be undone.",
+  "shop.delete.confirmed": "Shop `{0}` deleted.",
+  "shop.delete.failed": "Failed to delete shop.",
 
   "shop.edit.opened": "Editing shop '{0}'.",
   "shop.edit.not_found": "Shop not found.",
@@ -75,10 +88,13 @@
   "shop.sell.no_items": "You don't have this item.",
   "shop.sell.no_funds": "This shop doesn't have enough funds to buy that item.",
 
-  "shop.rate.success": "Rated '{0}' {1}/5 stars.",
+  "shop.rate.success": "Rated `{0}` with {1} star(s).",
   "shop.rate.own_shop": "You cannot rate your own shop.",
   "shop.rate.cooldown": "You can only rate once per {0} hours.",
   "shop.rate.purchase_required": "You must purchase from this shop before rating.",
+  "shop.rate.invalid_stars": "Rating must be between 1 and 5.",
+  "shop.rate.must_purchase": "You must buy from this shop before you can rate it.",
+  "shop.rate.failed": "Failed to submit rating.",
 
   "shop.myshops.header": "=== Your Shops ({0}/{1}) ===",
   "shop.myshops.entry": "{0} | {1} | {2} items | Earned: {3}",
@@ -97,6 +113,10 @@
 
   "shop.visit.id_required": "Please provide a shop ID or name. Usage: /ksshop visit <shopId>",
   "shop.visit.not_found": "No shop found matching '{0}'.",
+
+  "shop.search.empty_query": "Please enter a search query.",
+  "shop.search.no_results": "No shops found for `{0}`.",
+  "shop.search.header": "Found {0} shop(s) matching `{1}`:",
 
   "shop.collect.success": "Collected {0} from your shop balances!",
   "shop.collect.empty": "No earnings to collect.",
@@ -152,5 +172,16 @@
   "shop.category.potions": "Potions",
   "shop.category.food": "Food",
   "shop.category.building": "Building",
-  "shop.category.misc": "Miscellaneous"
+  "shop.category.misc": "Miscellaneous",
+
+  "shop.edit.label.sell_to_customers": "Sell to customers at",
+  "shop.edit.label.buy_from_customers": "Buy from customers at",
+  "shop.edit.label.buyback_quota": "Buyback quota",
+  "shop.edit.label.stock_available": "Stock",
+  "shop.edit.label.mode": "Mode",
+  "shop.edit.hint.sell_to_customers": "What buyers pay when they buy this item from your shop",
+  "shop.edit.hint.buy_from_customers": "What you pay when a customer sells this item to your shop",
+  "shop.edit.hint.buyback_quota": "How many more of this item your shop will buy from customers",
+  "shop.edit.hint.stock_available": "Current stock. -1 = unlimited",
+  "shop.edit.unsaved_warning": "Shop closed without saving — changes discarded."
 }

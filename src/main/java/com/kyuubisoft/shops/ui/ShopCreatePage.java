@@ -21,6 +21,7 @@ import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.config.ShopConfig;
 import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.service.CreateShopResult;
 
 import javax.annotation.Nonnull;
 import java.util.logging.Logger;
@@ -209,12 +210,13 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
             LOGGER.warning("[ShopCreate] Failed to get player position: " + e.getMessage());
         }
 
-        ShopData created = plugin.getShopService().createPlayerShop(
+        CreateShopResult result = plugin.getShopService().createPlayerShop(
             playerRef, shopName, category, description,
             worldName, x, y, z
         );
 
-        if (created != null) {
+        if (result.isSuccess()) {
+            ShopData created = result.getShop();
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.success", created.getName())
             ).color("#55FF55"));
@@ -226,8 +228,11 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
                 LOGGER.warning("[ShopCreate] Failed to close page: " + e.getMessage());
             }
         } else {
+            String errorKey = result.getErrorKey() != null
+                ? result.getErrorKey()
+                : "shop.create.failed";
             player.sendMessage(Message.raw(
-                i18n.get(playerRef, "shop.create.failed")
+                i18n.get(playerRef, errorKey)
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
         }

@@ -23,6 +23,7 @@ import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopType;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.service.CreateShopResult;
 import com.kyuubisoft.shops.service.ShopManager;
 import com.kyuubisoft.shops.service.ShopService;
 import com.kyuubisoft.shops.service.ShopSessionManager;
@@ -61,6 +62,20 @@ public class ShopCommand extends AbstractCommandCollection {
 
     private final ShopPlugin plugin;
 
+    // BUG #12: Pending delete confirmations per player (re-run with "confirm" within window).
+    private final java.util.Map<UUID, DeleteConfirm> pendingDeletes =
+        new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long DELETE_CONFIRM_WINDOW_MS = 60_000L;
+
+    private static final class DeleteConfirm {
+        final UUID shopId;
+        final long expiresAt;
+        DeleteConfirm(UUID shopId, long expiresAt) {
+            this.shopId = shopId;
+            this.expiresAt = expiresAt;
+        }
+    }
+
     public ShopCommand(ShopPlugin plugin) {
         super("ksshop", "KyuubiSoft Shop System");
         addAliases("shop", "market");
@@ -95,16 +110,27 @@ public class ShopCommand extends AbstractCommandCollection {
                               PlayerRef playerRef, World world) {
             Player player = ctx.senderAs(Player.class);
             ShopI18n i18n = plugin.getI18n();
-            player.sendMessage(Message.raw(i18n.get("shop.help.header")).color("#FFD700"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.create")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.edit")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.browse")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.search")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.visit")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.rate")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.myshops")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.collect")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get("shop.help.history")).color("#96a9be"));
+
+            // BUG #8 fix: Getting-started block so new players know the basic flow
+            // before they see the raw command list.
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.header")).color("#FFD700"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step1")).color("#bfcdd5"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step2")).color("#bfcdd5"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step3")).color("#bfcdd5"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step4")).color("#bfcdd5"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step5")).color("#bfcdd5"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.spacer")).color("#bfcdd5"));
+
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.header")).color("#FFD700"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.create")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.edit")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.browse")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.search")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.visit")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.rate")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.myshops")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.collect")).color("#96a9be"));
+            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.history")).color("#96a9be"));
         }
     }
 
@@ -140,9 +166,55 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
-            String query = ctx.getInputString().split("\\s+", 3).length > 2 ? ctx.getInputString().split("\\s+", 3)[2] : "";
-            // TODO: Search via DirectoryService
-            player.sendMessage(Message.raw("Searching for: " + query).color("#FFD700"));
+
+            // BUG #12 fix: Actual item/shop name search (replaces the coming-soon stub).
+            ShopI18n i18n = plugin.getI18n();
+            ShopManager shopManager = plugin.getShopManager();
+
+            String[] parts = ctx.getInputString().split("\\s+", 3);
+            String rawQuery = parts.length > 2 ? parts[2] : "";
+            String needle = rawQuery.trim().toLowerCase();
+            if (needle.isBlank()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.search.empty_query")).color("#FF5555"));
+                return;
+            }
+
+            // Collect unique shops that match either by name or by item id.
+            java.util.LinkedHashSet<ShopData> matches = new java.util.LinkedHashSet<>();
+            for (ShopData shop : shopManager.getAllShops()) {
+                if (!shop.isOpen()) continue;
+                if (shop.getName() != null && shop.getName().toLowerCase().contains(needle)) {
+                    matches.add(shop);
+                    if (matches.size() >= 10) break;
+                    continue;
+                }
+                for (com.kyuubisoft.shops.data.ShopItem item : shop.getItems()) {
+                    if (item.getItemId() != null
+                            && item.getItemId().toLowerCase().contains(needle)) {
+                        matches.add(shop);
+                        break;
+                    }
+                }
+                if (matches.size() >= 10) break;
+            }
+
+            if (matches.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.search.no_results", rawQuery)).color("#FFAA00"));
+                return;
+            }
+
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.search.header", matches.size(), rawQuery)).color("#FFD700"));
+            for (ShopData shop : matches) {
+                String typeLabel = shop.isAdminShop()
+                    ? "[ADMIN]"
+                    : "[" + (shop.getOwnerName() != null ? shop.getOwnerName() : "?") + "]";
+                player.sendMessage(Message.raw(
+                    " - " + typeLabel + " " + shop.getName()
+                        + " (" + shop.getItems().size() + " items)").color("#96a9be"));
+            }
         }
     }
 
@@ -274,14 +346,19 @@ public class ShopCommand extends AbstractCommandCollection {
             double z = shopBlockPos.z + 0.5;
 
             // Create the shop via ShopService (handles validation, cost, limits)
-            ShopData newShop = shopService.createPlayerShop(
+            CreateShopResult result = shopService.createPlayerShop(
                 playerRef, shopName, "", "", worldName, x, y, z
             );
 
-            if (newShop == null) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
+            if (!result.isSuccess()) {
+                String errorKey = result.getErrorKey() != null
+                    ? result.getErrorKey()
+                    : "shop.create.failed";
+                player.sendMessage(Message.raw(i18n.get(playerRef, errorKey)).color("#FF5555"));
                 return;
             }
+
+            ShopData newShop = result.getShop();
 
             // Register in NPC world index and spawn NPC
             plugin.getNpcManager().registerShopInWorld(newShop);
@@ -389,8 +466,95 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
-            // TODO: Delete shop with confirmation
-            player.sendMessage(Message.raw("Shop deletion coming soon...").color("#FFD700"));
+
+            if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
+
+            // BUG #12 fix: Full two-step confirm delete flow (replaces coming-soon stub).
+            ShopI18n i18n = plugin.getI18n();
+            ShopManager shopManager = plugin.getShopManager();
+            UUID playerUuid = playerRef.getUuid();
+
+            // Parse arguments: /ksshop delete <shopId> [confirm]
+            String[] parts = ctx.getInputString().split("\\s+", 4);
+            String shopIdentifier = parts.length > 2 ? parts[2].trim() : "";
+            boolean confirm = parts.length > 3 && "confirm".equalsIgnoreCase(parts[3].trim());
+
+            if (shopIdentifier.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.visit.id_required")).color("#FF5555"));
+                return;
+            }
+
+            // Resolve the shop: UUID first, then by case-insensitive name.
+            ShopData shop = null;
+            try {
+                UUID uuid = UUID.fromString(shopIdentifier);
+                shop = shopManager.getShop(uuid);
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to name lookup
+            }
+            if (shop == null) {
+                for (ShopData candidate : shopManager.getAllShops()) {
+                    if (candidate.getName() != null
+                            && candidate.getName().equalsIgnoreCase(shopIdentifier)) {
+                        shop = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (shop == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.delete.not_found", shopIdentifier)).color("#FF5555"));
+                return;
+            }
+
+            // Ownership check — players can only delete shops they own.
+            if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(playerUuid)) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.delete.not_owner")).color("#FF5555"));
+                return;
+            }
+
+            UUID shopId = shop.getId();
+            String shopName = shop.getName();
+
+            // Check for an active confirm window.
+            DeleteConfirm pending = pendingDeletes.get(playerUuid);
+            long now = System.currentTimeMillis();
+            if (pending != null && pending.expiresAt < now) {
+                pendingDeletes.remove(playerUuid);
+                pending = null;
+            }
+
+            if (confirm && pending != null && pending.shopId.equals(shopId)) {
+                // Perform the delete. Despawn NPC first so there is no orphan entity.
+                pendingDeletes.remove(playerUuid);
+
+                try {
+                    plugin.getNpcManager().despawnNpc(shopId);
+                } catch (Exception e) {
+                    // Non-fatal — fall through to delete the shop regardless.
+                }
+
+                boolean deleted = plugin.getShopService().deletePlayerShop(playerRef, shopId);
+                if (!deleted) {
+                    player.sendMessage(Message.raw(
+                        i18n.get(playerRef, "shop.delete.failed")).color("#FF5555"));
+                    return;
+                }
+
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.delete.confirmed", shopName)).color("#55FF55"));
+                return;
+            }
+
+            // Stage a new confirmation.
+            pendingDeletes.put(playerUuid,
+                new DeleteConfirm(shopId, now + DELETE_CONFIRM_WINDOW_MS));
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.delete.confirm_prompt", shopIdentifier, shopName))
+                .color("#FFAA00"));
         }
     }
 
@@ -618,8 +782,99 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
-            // TODO: Submit rating
-            player.sendMessage(Message.raw("Rating coming soon...").color("#FFD700"));
+
+            if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
+
+            // BUG #12 fix: Actual rating submission (replaces coming-soon stub).
+            ShopI18n i18n = plugin.getI18n();
+            ShopManager shopManager = plugin.getShopManager();
+            ShopDatabase database = plugin.getDatabase();
+            UUID raterUuid = playerRef.getUuid();
+
+            // Parse args: /ksshop rate <shopId> <stars>
+            String[] parts = ctx.getInputString().split("\\s+", 4);
+            String shopIdentifier = parts.length > 2 ? parts[2].trim() : "";
+            String starsStr = parts.length > 3 ? parts[3].trim() : "";
+
+            if (shopIdentifier.isEmpty() || starsStr.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.invalid_arguments",
+                        "/ksshop rate <shopId> <1-5>")).color("#FF5555"));
+                return;
+            }
+
+            int stars;
+            try {
+                stars = Integer.parseInt(starsStr);
+            } catch (NumberFormatException e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rate.invalid_stars")).color("#FF5555"));
+                return;
+            }
+            if (stars < 1 || stars > 5) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rate.invalid_stars")).color("#FF5555"));
+                return;
+            }
+
+            // Resolve shop: UUID first, then name.
+            ShopData shop = null;
+            try {
+                UUID uuid = UUID.fromString(shopIdentifier);
+                shop = shopManager.getShop(uuid);
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to name lookup
+            }
+            if (shop == null) {
+                for (ShopData candidate : shopManager.getAllShops()) {
+                    if (candidate.getName() != null
+                            && candidate.getName().equalsIgnoreCase(shopIdentifier)) {
+                        shop = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (shop == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.shop_not_found", shopIdentifier))
+                    .color("#FF5555"));
+                return;
+            }
+
+            // Owners cannot rate their own shops.
+            if (shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(raterUuid)) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rate.own_shop")).color("#FF5555"));
+                return;
+            }
+
+            // NOTE: requirePurchaseToRate is not present in the current Ratings config,
+            // so we skip the purchase gate. If/when that field is added, this is where
+            // we'd check plugin.getDatabase().hasPlayerPurchasedFromShop(...).
+
+            UUID shopId = shop.getId();
+            try {
+                // Insert (or replace on PK (rater_uuid, shop_id)) the rating row.
+                com.kyuubisoft.shops.data.ShopRating rating = new com.kyuubisoft.shops.data.ShopRating(
+                    raterUuid, playerRef.getUsername(), shopId,
+                    stars, "", System.currentTimeMillis());
+                database.saveRating(rating);
+
+                // Recalculate average/count from the full rating set and persist.
+                java.util.List<com.kyuubisoft.shops.data.ShopRating> allRatings =
+                    database.loadRatings(shopId);
+                shop.recalculateRating(allRatings);
+                database.saveShop(shop);
+            } catch (Exception e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rate.failed")).color("#FF5555"));
+                return;
+            }
+
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.rate.success", shop.getName(), stars))
+                .color("#55FF55"));
         }
     }
 

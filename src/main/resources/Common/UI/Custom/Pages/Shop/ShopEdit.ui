@@ -294,19 +294,19 @@ $C.@PageOverlay {
 
                                     Group { Anchor: (Height: 6); }
 
-                                    // Buy Price (customer pays this when buying)
+                                    // Buy Price (customer pays this when buying from shop = owner's income)
                                     Group {
                                         Anchor: (Left: 0, Right: 0, Height: 30);
                                         LayoutMode: Left;
 
-                                        Label {
-                                            Anchor: (Width: 80, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #44cc44, VerticalAlignment: Center, RenderBold: true);
-                                            Text: "Buy Price:";
+                                        Label #BuyPriceLabel {
+                                            Anchor: (Width: 140, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #44cc44, VerticalAlignment: Center, RenderBold: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Text: "Sell to customers at";
                                         }
                                         $C.@TextField #BuyPriceField {
                                             @PlaceholderText = "0";
-                                            Anchor: (Width: 80, Height: 28);
+                                            Anchor: (Width: 70, Height: 28);
                                             MaxLength: 10;
                                         }
                                         Group { Anchor: (Width: 6); }
@@ -315,19 +315,19 @@ $C.@PageOverlay {
 
                                     Group { Anchor: (Height: 4); }
 
-                                    // Sell Price (shop pays this when buying from customer)
+                                    // Sell Price (shop pays this when buying from customer = owner's cost / buyback)
                                     Group {
                                         Anchor: (Left: 0, Right: 0, Height: 30);
                                         LayoutMode: Left;
 
-                                        Label {
-                                            Anchor: (Width: 80, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #cc8844, VerticalAlignment: Center, RenderBold: true);
-                                            Text: "Sell Price:";
+                                        Label #SellPriceLabel {
+                                            Anchor: (Width: 140, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #cc8844, VerticalAlignment: Center, RenderBold: true, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Text: "Buy from customers at";
                                         }
                                         $C.@TextField #SellPriceField {
                                             @PlaceholderText = "0";
-                                            Anchor: (Width: 80, Height: 28);
+                                            Anchor: (Width: 70, Height: 28);
                                             MaxLength: 10;
                                         }
                                         Group { Anchor: (Width: 6); }
@@ -341,19 +341,19 @@ $C.@PageOverlay {
                                         Anchor: (Left: 0, Right: 0, Height: 30);
                                         LayoutMode: Left;
 
-                                        Label {
-                                            Anchor: (Width: 80, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center);
-                                            Text: "Want Qty:";
+                                        Label #BuyQuotaLabel {
+                                            Anchor: (Width: 140, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Text: "Buyback quota";
                                         }
                                         $C.@TextField #BuyQuotaField {
                                             @PlaceholderText = "0";
-                                            Anchor: (Width: 80, Height: 28);
+                                            Anchor: (Width: 70, Height: 28);
                                             MaxLength: 10;
                                         }
                                         Group { Anchor: (Width: 6); }
-                                        Label {
-                                            Anchor: (Width: 60, Height: 28);
+                                        Label #BuyQuotaHint {
+                                            Anchor: (Width: 70, Height: 28);
                                             Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center);
                                             Text: "(0=unlim)";
                                         }
@@ -366,10 +366,10 @@ $C.@PageOverlay {
                                         Anchor: (Left: 0, Right: 0, Height: 28);
                                         LayoutMode: Left;
 
-                                        Label {
+                                        Label #ModeLabel {
                                             Anchor: (Width: 50, Height: 26);
                                             Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
-                                            Text: "Mode:";
+                                            Text: "Mode";
                                         }
                                         Button #ModeBuyBtn {
                                             Anchor: (Width: 60, Height: 24);
@@ -397,18 +397,19 @@ $C.@PageOverlay {
                                         Anchor: (Left: 0, Right: 0, Height: 30);
                                         LayoutMode: Left;
 
-                                        Label {
-                                            Anchor: (Width: 80, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
-                                            Text: "Stock Limit:";
+                                        Label #StockLimitLabel {
+                                            Anchor: (Width: 140, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center, ShrinkTextToFit: true, MinShrinkTextToFitFontSize: 8);
+                                            Text: "Stock";
                                         }
                                         $C.@TextField #StockLimitField {
                                             @PlaceholderText = "-1";
-                                            Anchor: (Width: 80, Height: 28);
+                                            Anchor: (Width: 70, Height: 28);
                                             MaxLength: 6;
                                         }
                                         Group { Anchor: (Width: 6); }
                                         Label #StockLimitHint {
+                                            Anchor: (Width: 90, Height: 28);
                                             Style: (FontSize: 9, TextColor: #555555, VerticalAlignment: Center);
                                             Text: "(-1 = unlimited)";
                                         }

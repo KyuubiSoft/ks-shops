@@ -29,8 +29,11 @@ public class ShopI18n {
     /**
      * Localization version history:
      * - v1: Initial release — all shop messages, commands, UI
+     * - v2: Priority 1 bug fixes — 30+ keys for create/edit/rename/myshops/status/visit/notifications/error/help
+     * - v3: Priority 2 bug fixes — create flow disabled/economy/claim keys, edit labels, unsaved warning
+     * - v4: Priority 2 bug fixes — getting started help block, search/delete/rate command implementations
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 1;
+    private static final int CURRENT_LOCALIZATION_VERSION = 4;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
