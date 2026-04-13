@@ -41,7 +41,7 @@ public class ShopI18n {
      *       referenced by ShopBrowsePage, ShopDirectoryPage, ShopRatingPage, ShopNotificationsPage
      *       and the new filter/tab label + search placeholder keys used by ShopDirectoryPage
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 9;
+    private static final int CURRENT_LOCALIZATION_VERSION = 10;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
