@@ -1023,12 +1023,19 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
      */
     private ItemGridSlot safeSlot(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return new ItemGridSlot();
-        double maxDur = stack.getMaxDurability();
-        if (maxDur > 0) {
-            double dur = Math.max(stack.getDurability(), 1.0);
-            return new ItemGridSlot(new ItemStack(stack.getItemId(), stack.getQuantity(), dur, maxDur, null));
+        String itemId = stack.getItemId();
+        if (itemId == null || itemId.isBlank()) return new ItemGridSlot();
+        try {
+            double maxDur = stack.getMaxDurability();
+            if (maxDur > 0) {
+                double dur = Math.max(stack.getDurability(), 1.0);
+                return new ItemGridSlot(new ItemStack(itemId, stack.getQuantity(), dur, maxDur, null));
+            }
+            return new ItemGridSlot(new ItemStack(itemId, stack.getQuantity()));
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] safeSlot failed for item '" + itemId + "': " + e.getMessage());
+            return new ItemGridSlot();
         }
-        return new ItemGridSlot(new ItemStack(stack.getItemId(), stack.getQuantity()));
     }
 
     // ==================== SHOP PAGINATION ====================
