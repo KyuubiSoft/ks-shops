@@ -475,16 +475,26 @@ public class ShopNpcManager {
 
         if (skinUsername == null || skinUsername.isEmpty()) return;
 
-        // Skin application requires Core's SkinManager — use CoreBridge
-        // In standalone mode, NPCs use the default player model without custom skin
-        if (!CoreBridge.isCoreAvailable()) {
-            LOGGER.fine("Core not available — using default player model for shop NPC");
+        // Standalone: use our own ShopSkinManager (PlayerDB + CosmeticsModule).
+        // No Core dependency needed.
+        com.kyuubisoft.shops.skin.ShopSkinManager skinManager = plugin.getSkinManager();
+        if (skinManager == null) {
+            LOGGER.fine("ShopSkinManager not initialized - skipping skin apply for " + shop.getName());
             return;
         }
 
-        // TODO: Apply skin via CoreBridge reflection to SkinManager
-        // CoreBridge does not currently expose SkinManager — add when needed
-        LOGGER.fine("Skin application for shop NPCs requires Core SkinManager integration");
+        final String resolvedUsername = skinUsername;
+        skinManager.fetchAndApplySkin(resolvedUsername, 1.0f, entityRef, world::execute)
+            .thenAccept(skin -> {
+                if (skin != null) {
+                    LOGGER.fine("Applied skin '" + resolvedUsername + "' to shop NPC: " + shop.getName());
+                }
+            })
+            .exceptionally(ex -> {
+                LOGGER.warning("Skin fetch/apply failed for shop '" + shop.getName()
+                    + "' (username=" + resolvedUsername + "): " + ex.getMessage());
+                return null;
+            });
     }
 
     /**

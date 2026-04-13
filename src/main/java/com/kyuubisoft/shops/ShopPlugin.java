@@ -57,6 +57,7 @@ public class ShopPlugin extends JavaPlugin {
     private DirectoryService directoryService;
     private ShopNpcManager npcManager;
     private MailboxService mailboxService;
+    private com.kyuubisoft.shops.skin.ShopSkinManager skinManager;
 
     private final Map<String, PlayerShopData> playerData = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
@@ -94,6 +95,11 @@ public class ShopPlugin extends JavaPlugin {
 
             // 3b. Mailbox service (depends on database)
             mailboxService = new MailboxService(database);
+
+            // 3c. Standalone skin manager (PlayerDB + CosmeticsModule, no Core dep)
+            skinManager = new com.kyuubisoft.shops.skin.ShopSkinManager();
+            skinManager.loadDiskCache(getDataDirectory());
+            LOGGER.info("Shop skin manager initialized (cache: " + skinManager.getCacheSize() + " entries)");
 
             // 4. Economy bridge
             economyBridge = new ShopEconomyBridge();
@@ -363,6 +369,7 @@ public class ShopPlugin extends JavaPlugin {
     public DirectoryService getDirectoryService() { return directoryService; }
     public ShopNpcManager getNpcManager() { return npcManager; }
     public MailboxService getMailboxService() { return mailboxService; }
+    public com.kyuubisoft.shops.skin.ShopSkinManager getSkinManager() { return skinManager; }
     public Map<String, PlayerShopData> getPlayerDataMap() { return playerData; }
 
     public PlayerShopData getPlayerData(UUID uuid) {
