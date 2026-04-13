@@ -293,7 +293,7 @@ public class ShopNpcManager {
             entityRefs.put(shopId, entityRef);
 
             String npcEntityId;
-            UUID npcEntityUuid;
+            UUID npcEntityUuid = null;
             if (npcEntity != null) {
                 npcEntityUuid = npcEntity.getUuid();
                 npcEntityId = npcEntityUuid.toString();
@@ -307,6 +307,12 @@ public class ShopNpcManager {
             shopNpcIds.put(shopId, npcEntityId);
             npcToShopMap.put(npcEntityId, shopId);
             shop.setNpcEntityId(npcEntityId);
+
+            // Protect the NPC from Core's Citizens orphan scan (which would otherwise
+            // delete any NPC using KS_NPC_* roles that isn't in its own registry).
+            if (npcEntityUuid != null) {
+                CoreBridge.protectNpcFromCitizens(npcEntityUuid);
+            }
 
             applySkinIfAvailable(shop, entityRef, world, store);
 
@@ -415,6 +421,12 @@ public class ShopNpcManager {
 
             // Update ShopData with the NPC entity ID
             shop.setNpcEntityId(npcEntityId);
+
+            // Protect the NPC from Core's Citizens orphan scan (same role prefix,
+            // different ownership). Safe no-op if Core is not loaded.
+            if (npcEntityUuid != null) {
+                CoreBridge.protectNpcFromCitizens(npcEntityUuid);
+            }
 
             // Set nameplate text to shop name
             // NOTE: Nameplate is handled by the NPC role system.
@@ -555,6 +567,11 @@ public class ShopNpcManager {
      * Cleans up all tracking maps for a shop's NPC.
      */
     private void cleanupTracking(UUID shopId, String npcEntityId) {
+        // Release Citizens protection for the entity UUID (safe no-op if Core absent).
+        UUID entityUuid = entityUuids.get(shopId);
+        if (entityUuid != null) {
+            CoreBridge.unprotectNpcFromCitizens(entityUuid);
+        }
         shopNpcIds.remove(shopId);
         entityRefs.remove(shopId);
         entityUuids.remove(shopId);

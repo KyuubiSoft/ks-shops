@@ -139,6 +139,49 @@ public class CoreBridge {
         }
     }
 
+    // ==================== NPC PROTECTION ====================
+
+    /**
+     * Registers an NPC UUID with Core's Citizens service so its orphan scan
+     * skips the entity. Shops NPCs share citizen roles (KS_NPC_Interactable_Role)
+     * but are owned by this mod; without this call Citizens would consider them
+     * orphans and delete them during the next scan.
+     *
+     * Fails silently if Core is not loaded.
+     */
+    public static void protectNpcFromCitizens(java.util.UUID npcUuid) {
+        if (npcUuid == null) return;
+        if (!isCoreAvailable()) return;
+        try {
+            Class<?> coreApi = Class.forName("com.kyuubisoft.core.api.CoreAPI");
+            Method protect = coreApi.getMethod("protectNpcUuid", java.util.UUID.class);
+            protect.invoke(null, npcUuid);
+        } catch (NoSuchMethodException e) {
+            LOGGER.fine("Core's CoreAPI does not expose protectNpcUuid yet - shop NPC "
+                + npcUuid + " may be removed by orphan scan.");
+        } catch (Exception e) {
+            LOGGER.warning("Failed to protect shop NPC " + npcUuid + " from Citizens: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Removes the NPC UUID from Core's Citizens protected-set. Call when the
+     * shop NPC is permanently despawned (e.g. shop deleted).
+     */
+    public static void unprotectNpcFromCitizens(java.util.UUID npcUuid) {
+        if (npcUuid == null) return;
+        if (!isCoreAvailable()) return;
+        try {
+            Class<?> coreApi = Class.forName("com.kyuubisoft.core.api.CoreAPI");
+            Method unprotect = coreApi.getMethod("unprotectNpcUuid", java.util.UUID.class);
+            unprotect.invoke(null, npcUuid);
+        } catch (NoSuchMethodException e) {
+            // Silently tolerated - older Core without the API
+        } catch (Exception e) {
+            LOGGER.fine("Failed to unprotect shop NPC " + npcUuid + " from Citizens: " + e.getMessage());
+        }
+    }
+
     // ==================== RESET ====================
 
     /**
