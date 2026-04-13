@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block.name",
-    "Description": "items.Shop_Block.description"
+    "Name": "Shop Block (Oak)",
+    "Description": "Place to open a player shop. Craft prices and manage stock at a Carpentrybench."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

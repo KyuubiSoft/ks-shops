@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block_Birch.name",
-    "Description": "items.Shop_Block_Birch.description"
+    "Name": "Shop Block (Birch)",
+    "Description": "Birch variant of the Shop Block."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

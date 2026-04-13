@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block_Mossy.name",
-    "Description": "items.Shop_Block_Mossy.description"
+    "Name": "Shop Block (Mossy)",
+    "Description": "Mossy variant of the Shop Block."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

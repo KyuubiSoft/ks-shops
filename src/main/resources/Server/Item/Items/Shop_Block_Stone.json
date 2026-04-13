@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block_Stone.name",
-    "Description": "items.Shop_Block_Stone.description"
+    "Name": "Shop Block (Stone)",
+    "Description": "Stone variant of the Shop Block."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

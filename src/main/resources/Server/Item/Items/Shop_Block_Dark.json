@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block_Dark.name",
-    "Description": "items.Shop_Block_Dark.description"
+    "Name": "Shop Block (Mahogany)",
+    "Description": "Mahogany variant of the Shop Block."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

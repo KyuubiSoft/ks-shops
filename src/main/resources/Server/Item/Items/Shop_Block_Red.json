@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Shop_Block_Red.name",
-    "Description": "items.Shop_Block_Red.description"
+    "Name": "Shop Block (Cherry)",
+    "Description": "Cherry variant of the Shop Block."
   },
   "Icon": "Icons/ItemsGenerated/shop_block.png",
   "Categories": ["Blocks.Deco"],

@@ -1,7 +1,7 @@
 {
   "TranslationProperties": {
-    "Name": "items.Mailbox_Block.name",
-    "Description": "items.Mailbox_Block.description"
+    "Name": "Mailbox",
+    "Description": "Place to receive your shop earnings and purchases."
   },
   "Icon": "Icons/ItemsGenerated/mailbox_block.png",
   "Categories": ["Blocks.Deco"],
