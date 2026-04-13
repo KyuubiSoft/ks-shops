@@ -216,6 +216,6 @@ public class ShopBlockBlockInteraction extends SimpleBlockInteraction {
 
     @Override
     protected Interaction generatePacket() {
-        return null;
+        return new com.hypixel.hytale.protocol.SimpleBlockInteraction();
     }
 }
