@@ -950,6 +950,62 @@ public class ShopService {
         return migrated;
     }
 
+    // ==================== SHOP BLOCK -> NPC MIGRATION ====================
+
+    /**
+     * One-shot migration that converts every pre-existing block-anchored player
+     * shop into a standalone NPC shop.
+     *
+     * <p>Before this change, player shops were bound to a physical {@code Shop_Block}
+     * variant placed in the world. {@code ShopData.posX/Y/Z} pointed at the block
+     * and the shop's NPC (if any) spawned at an offset behind it. The block is now
+     * deprecated — shops are created by right-clicking a Shop_NPC_Token and the
+     * resulting NPC IS the interaction point.
+     *
+     * <p>Existing shops with block-anchored positions continue to function as-is:
+     * the NPC will spawn at {@code posX/posY/posZ} on the next world-init event via
+     * the normal lazy spawn path. This migration only marks them as "migrated" so
+     * we can log a single summary line and avoid re-running on every startup.
+     *
+     * <p>Idempotency is enforced via a hidden file marker
+     * {@code .shops_npc_migration_done} in the plugin data folder. If the marker
+     * exists the method is a no-op.
+     *
+     * @return number of shops flagged as migrated
+     */
+    public int migrateShopBlocksToNpcShops() {
+        java.nio.file.Path marker = plugin.getDataDirectory().resolve(".shops_npc_migration_done");
+        if (java.nio.file.Files.exists(marker)) {
+            LOGGER.fine("Shop NPC migration: marker present, skipping.");
+            return 0;
+        }
+
+        int migrated = 0;
+        for (ShopData shop : shopManager.getAllShops()) {
+            if (shop.isAdminShop() || shop.getOwnerUuid() == null) continue;
+            // Any player shop that has a world + coordinates is considered migratable.
+            if (shop.getWorldName() == null || shop.getWorldName().isEmpty()) continue;
+            // Clear any stale npcEntityId so the next lazy spawn re-registers cleanly.
+            shop.setNpcEntityId(null);
+            try {
+                database.saveShop(shop);
+            } catch (Exception e) {
+                LOGGER.warning("Shop NPC migration: save failed for shop '" + shop.getName()
+                    + "': " + e.getMessage());
+            }
+            migrated++;
+        }
+
+        try {
+            java.nio.file.Files.createFile(marker);
+        } catch (java.io.IOException e) {
+            LOGGER.warning("Failed to create shop NPC migration marker: " + e.getMessage());
+        }
+
+        LOGGER.info(i18n.get("shop.migration.npc_migrated", migrated));
+        return migrated;
+    }
+
     // ==================== RENT COLLECTION ====================
 
     /**

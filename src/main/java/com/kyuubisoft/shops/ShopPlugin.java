@@ -149,16 +149,12 @@ public class ShopPlugin extends JavaPlugin {
             ShopBlockInteraction shopInteraction = new ShopBlockInteraction(this);
             getEventRegistry().registerGlobal(PlayerInteractEvent.class, shopInteraction::onPlayerInteract);
 
-            // 7c. Custom block interaction codec for shop blocks (F-key on shop block)
-            try {
-                getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC)
-                    .register("shop_block_use",
-                        com.kyuubisoft.shops.interaction.ShopBlockBlockInteraction.class,
-                        com.kyuubisoft.shops.interaction.ShopBlockBlockInteraction.CODEC);
-                LOGGER.info("Registered shop_block_use interaction codec");
-            } catch (Exception e) {
-                LOGGER.warning("Failed to register shop_block_use interaction: " + e.getMessage());
-            }
+            // 7c. (LEGACY) Shop_Block placement flow is fully replaced by the NPC-only
+            // Shop_NPC_Token flow below. The ShopBlockBlockInteraction class is kept on
+            // disk so any legacy Shop_Block still placed in an existing world logs a
+            // handled warning instead of crashing — but we no longer register its codec.
+            // Any pre-existing block-anchored shops are auto-migrated to standalone NPCs
+            // in the one-shot startup migration below.
 
             // 7d. Custom block interaction codec for mailbox blocks (F-key on mailbox block)
             try {
@@ -169,6 +165,27 @@ public class ShopPlugin extends JavaPlugin {
                 LOGGER.info("Registered mailbox_block_use interaction codec");
             } catch (Exception e) {
                 LOGGER.warning("Failed to register mailbox_block_use interaction: " + e.getMessage());
+            }
+
+            // 7e. Shop NPC Token — right-click a "Shop Business License" to spawn a
+            // standalone shop NPC at the player's position. This replaces /ksshop
+            // create and the Shop_Block placement flow.
+            try {
+                getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC)
+                    .register("shop_npc_token_use",
+                        com.kyuubisoft.shops.interaction.ShopNpcTokenInteraction.class,
+                        com.kyuubisoft.shops.interaction.ShopNpcTokenInteraction.CODEC);
+                LOGGER.info("Registered shop_npc_token_use interaction codec");
+            } catch (Exception e) {
+                LOGGER.warning("Failed to register shop_npc_token_use interaction: " + e.getMessage());
+            }
+
+            // 7f. One-shot migration: auto-convert pre-existing block-anchored shops
+            // into standalone NPC shops. Guarded by a marker file in the data folder.
+            try {
+                shopService.migrateShopBlocksToNpcShops();
+            } catch (Exception e) {
+                LOGGER.warning("Shop NPC migration threw: " + e.getMessage());
             }
 
             // 8. Core bridge (optional NPC skins, economy providers)

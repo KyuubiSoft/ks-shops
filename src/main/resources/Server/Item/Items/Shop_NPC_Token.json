@@ -1,0 +1,45 @@
+{
+  "TranslationProperties": {
+    "Name": "Shop Business License",
+    "Description": "Use to place a shop NPC at your current location. Press F on the NPC to manage your shop."
+  },
+  "Quality": "Rare",
+  "Icon": "Icons/ItemsGenerated/shop_npc_token.png",
+  "Categories": ["Misc"],
+  "Scale": 0.3,
+  "CustomModelScale": 0.3,
+  "PlayerAnimationsId": "Item",
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "shop_npc_token_use"
+        }
+      ]
+    }
+  },
+  "Tags": {
+    "Type": ["Scroll", "Shop"],
+    "Family": ["Shop"]
+  },
+  "MaxStack": 1,
+  "DropOnDeath": false,
+  "Recipe": {
+    "Input": [
+      { "ItemId": "Ingredient_Plank_Oak", "Quantity": 8 },
+      { "ItemId": "Ingredient_Bar_Iron", "Quantity": 2 },
+      { "ItemId": "Ingredient_Bar_Gold", "Quantity": 2 },
+      { "ItemId": "Ingredient_Leather_Medium", "Quantity": 1 }
+    ],
+    "Output": [
+      { "ItemId": "Shop_NPC_Token", "Quantity": 1 }
+    ],
+    "BenchRequirement": [
+      {
+        "Type": "Crafting",
+        "Id": "Carpentrybench"
+      }
+    ],
+    "OutputQuantity": 1
+  }
+}

@@ -197,6 +197,130 @@ public class ShopNpcManager {
     }
 
     /**
+     * Spawns a shop NPC at an explicit world position, bypassing the block-offset math.
+     *
+     * Used by the Shop_NPC_Token interaction and by the startup migration that
+     * converts pre-NPC-only shops (which used to be anchored on Shop_Block
+     * positions) into standalone NPC shops.
+     *
+     * MUST be called inside {@code world.execute()} — callers are responsible
+     * for dispatching to the world thread.
+     *
+     * @param shop     the shop whose NPC is being spawned
+     * @param world    the target world (already resolved)
+     * @param position the exact spawn coordinates
+     * @param rotY     yaw (radians) — typically the owner's facing direction
+     */
+    public void spawnNpcAtPosition(ShopData shop, World world, Vector3d position, float rotY) {
+        if (shop == null || world == null || position == null) return;
+
+        // Persist the new coords so future lookups/despawns match what we spawned.
+        shop.setWorldName(world.getName());
+        shop.setPosX(position.x);
+        shop.setPosY(position.y);
+        shop.setPosZ(position.z);
+        shop.setNpcRotY(rotY);
+
+        // Mark the world as initialized so subsequent spawnNpc() calls know it's live.
+        spawnedWorlds.add(world.getName());
+        registerShopInWorld(shop);
+
+        try {
+            spawnNpcInternalAt(shop, world, position, rotY);
+        } catch (Exception e) {
+            LOGGER.warning("spawnNpcAtPosition failed for shop " + shop.getId()
+                + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Direct-position spawn helper used by {@link #spawnNpcAtPosition}.
+     * Mirrors {@link #spawnNpcInternal} but skips the block-offset math.
+     * MUST be called from the world thread.
+     */
+    private void spawnNpcInternalAt(ShopData shop, World world, Vector3d position, float rotY) {
+        UUID shopId = shop.getId();
+
+        // Already spawned? Despawn first.
+        if (shopNpcIds.containsKey(shopId)) {
+            despawnNpcInternal(shopId, world);
+        }
+
+        try {
+            NPCPlugin npcPlugin = NPCPlugin.get();
+            if (npcPlugin == null) {
+                LOGGER.warning("NPCPlugin not available — cannot spawn shop NPC for " + shop.getName());
+                return;
+            }
+
+            Vector3f npcRotation = new Vector3f(0.0f, rotY, 0.0f);
+
+            // Resolve role
+            String roleName = NPC_ROLE_INTERACTABLE;
+            int roleIndex = npcPlugin.getIndex(roleName);
+            if (roleIndex < 0) {
+                roleName = NPC_ROLE_IDLE;
+                roleIndex = npcPlugin.getIndex(roleName);
+            }
+            if (roleIndex < 0) {
+                LOGGER.warning("No suitable NPC role found for shop NPC ("
+                    + NPC_ROLE_INTERACTABLE + " / " + NPC_ROLE_IDLE + ")");
+                return;
+            }
+
+            var store = world.getEntityStore().getStore();
+
+            var result = npcPlugin.spawnEntity(
+                store,
+                roleIndex,
+                position,
+                npcRotation,
+                null,
+                (npcEntity, holder, st) -> {
+                    holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE);
+                },
+                null
+            );
+
+            if (result == null || result.first() == null) {
+                LOGGER.warning("NPC spawn returned null for shop " + shop.getName());
+                return;
+            }
+
+            Ref<EntityStore> entityRef = result.first();
+            NPCEntity npcEntity = result.second();
+
+            entityRefs.put(shopId, entityRef);
+
+            String npcEntityId;
+            UUID npcEntityUuid;
+            if (npcEntity != null) {
+                npcEntityUuid = npcEntity.getUuid();
+                npcEntityId = npcEntityUuid.toString();
+                entityUuids.put(shopId, npcEntityUuid);
+            } else {
+                npcEntityId = "shop_npc_" + shopId;
+                LOGGER.warning("NPC entity is null after spawn for shop " + shop.getName()
+                    + " — using fallback ID");
+            }
+
+            shopNpcIds.put(shopId, npcEntityId);
+            npcToShopMap.put(npcEntityId, shopId);
+            shop.setNpcEntityId(npcEntityId);
+
+            applySkinIfAvailable(shop, entityRef, world, store);
+
+            LOGGER.info("Standalone shop NPC spawned: '" + shop.getName() + "' at ["
+                + String.format("%.1f, %.1f, %.1f", position.x, position.y, position.z)
+                + "] in world '" + world.getName() + "'");
+        } catch (Exception e) {
+            LOGGER.warning("spawnNpcInternalAt failed for shop " + shop.getName()
+                + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Internal NPC spawn — MUST be called inside world.execute()!
      *
      * Spawn flow:
@@ -464,6 +588,32 @@ public class ShopNpcManager {
     /**
      * Respawns the NPC for a shop (despawn + spawn).
      * Used when a shop is renamed, moved, or its NPC skin changes.
+     *
+     * The caller MUST provide the live World reference and dispatch this
+     * inside {@code world.execute()} so entity operations run on the world
+     * thread. If the world is null, we still issue a despawn (tracking-only
+     * cleanup) so the skin-change path at least stops referencing the old NPC.
+     */
+    public void respawnNpc(ShopData shop, World world) {
+        if (shop == null) return;
+        UUID shopId = shop.getId();
+
+        if (world != null) {
+            world.execute(() -> {
+                despawnNpcInternal(shopId, world);
+                Vector3d position = new Vector3d(
+                    shop.getPosX(), shop.getPosY(), shop.getPosZ());
+                spawnNpcInternalAt(shop, world, position, shop.getNpcRotY());
+            });
+        } else {
+            despawnNpc(shopId);
+        }
+    }
+
+    /**
+     * Legacy world-less respawn used when the caller does not have a World
+     * reference handy. Cleans up tracking but does not re-spawn the entity —
+     * the next player-enters-world event will re-spawn via lazy init.
      */
     public void respawnNpc(ShopData shop) {
         if (shop == null) return;

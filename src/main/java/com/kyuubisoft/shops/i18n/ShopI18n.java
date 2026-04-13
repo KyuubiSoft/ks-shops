@@ -40,8 +40,10 @@ public class ShopI18n {
      * - v9: Directory / browse / rating / notification polish — adds all missing UI keys
      *       referenced by ShopBrowsePage, ShopDirectoryPage, ShopRatingPage, ShopNotificationsPage
      *       and the new filter/tab label + search placeholder keys used by ShopDirectoryPage
+     * - v12: NPC-only shop creation refactor — Shop_NPC_Token interaction keys,
+     *        NPC skin picker labels, shop block -> NPC migration log string
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 11;
+    private static final int CURRENT_LOCALIZATION_VERSION = 12;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

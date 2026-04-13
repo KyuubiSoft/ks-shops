@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import com.kyuubisoft.shops.ShopPlugin;
@@ -128,6 +129,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private String editedDesc;
     private String editedCategory;
     private String editedIconItemId;
+    private String editedNpcSkin;
 
     // FIX 1: Snapshot of original shop items at open time (multiset by itemId).
     // Used by getStagingOnlyItems() to determine which items are NEW in the staging
@@ -163,6 +165,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         String rawCategory = shopData.getCategory();
         this.editedCategory = isValidCategory(rawCategory) ? rawCategory : "misc";
         this.editedIconItemId = shopData.getIconItemId();
+        this.editedNpcSkin = shopData.getNpcSkinUsername() != null ? shopData.getNpcSkinUsername() : "";
 
         // Create staging container matching the grid (9 cols x 5 rows = 45 slots)
         int containerSlots = SHOP_SLOTS_PER_PAGE; // 45
@@ -307,6 +310,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "nextPage" -> handleNextPage();
                 case "histPrev" -> handleHistPrev();
                 case "histNext" -> handleHistNext();
+                case "apply_skin" -> handleApplySkin();
                 // Drag & drop completed: refresh grids to reflect container changes
                 case "shopDrop", "invDrop", "hotbarDrop" -> refreshUI();
                 default -> this.sendUpdate(new UICommandBuilder(), false);
@@ -343,6 +347,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 }
                 case "stockLimit" -> {
                     if (data.stockLimitVal != null) handleStockLimitChange(data.stockLimitVal);
+                }
+                case "npcSkin" -> {
+                    if (data.npcSkinVal != null) {
+                        editedNpcSkin = data.npcSkinVal.trim();
+                        dirty = true;
+                    }
                 }
             }
             // For text fields, just acknowledge without full refresh
@@ -461,6 +471,47 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         } catch (NumberFormatException e) {
             this.sendUpdate(new UICommandBuilder(), false);
         }
+    }
+
+    // ==================== NPC SKIN APPLY ====================
+
+    /**
+     * Commits the edited NPC skin username to the shop, persists the change,
+     * and respawns the NPC so the new skin is visible immediately.
+     *
+     * The skin field is a plain text input — Hytale's Core skin API accepts a
+     * Minecraft-style username and resolves it via the configured skin source.
+     * If the username is blank, the NPC falls back to the default skin.
+     */
+    private void handleApplySkin() {
+        ShopI18n i18n = plugin.getI18n();
+        String newSkin = editedNpcSkin != null ? editedNpcSkin.trim() : "";
+
+        // Normalise empty to null so the manager uses the default/owner fallback.
+        shopData.setNpcSkinUsername(newSkin.isEmpty() ? null : newSkin);
+        shopData.markDirty();
+        dirty = true;
+
+        // Persist immediately so a crash before save does not lose the skin.
+        try {
+            plugin.getDatabase().saveShop(shopData);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] Failed to persist NPC skin: " + e.getMessage());
+        }
+
+        // Respawn the NPC so the skin takes effect on the live entity. The
+        // respawnNpc(shop, world) path dispatches to the world thread internally.
+        try {
+            World world = player.getWorld();
+            plugin.getNpcManager().respawnNpc(shopData, world);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] NPC respawn failed after skin change: " + e.getMessage());
+        }
+
+        player.sendMessage(Message.raw(
+            i18n.get(playerRef, "shop.edit.skin.applied")).color("#55FF55"));
+
+        refreshUI();
     }
 
     // ==================== PRICE / STOCK CHANGE ====================
@@ -941,6 +992,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             events.addEventBinding(CustomUIEventBindingType.Activating, "#IconPick" + i,
                 EventData.of("IconPick", String.valueOf(i)), false);
         }
+
+        // Shop NPC skin field: live-sync typed value into editedNpcSkin
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#NpcSkinField",
+            EventData.of("Field", "npcSkin")
+                .append("@NpcSkin", "#NpcSkinField.Value"));
+
+        // Apply-skin button: commits the skin and respawns the NPC with it
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ApplySkinBtn",
+            EventData.of("Button", "apply_skin"), false);
     }
 
     // ==================== BUILD UI ====================
@@ -1136,6 +1196,16 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             ui.set("#EditNameField.Value", editedName);
             ui.set("#EditDescField.Value", editedDesc);
             ui.set("#EditCategoryDropdown.Value", editedCategory);
+            ui.set("#NpcSkinField.Value", editedNpcSkin != null ? editedNpcSkin : "");
+        }
+
+        // Localised labels for the NPC skin panel. Kept ASCII-clean.
+        ui.set("#NpcSkinLabel.Text", i18n.get(playerRef, "shop.edit.label.skin"));
+        ui.set("#ApplySkinLbl.Text", i18n.get(playerRef, "shop.edit.skin.apply"));
+        if (editedNpcSkin == null || editedNpcSkin.isBlank()) {
+            ui.set("#NpcSkinStatusLabel.Text", "CURRENT: (default)");
+        } else {
+            ui.set("#NpcSkinStatusLabel.Text", "CURRENT: " + editedNpcSkin);
         }
 
         // Selected item section
@@ -1680,6 +1750,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("@Category", Codec.STRING),
                 (data, value) -> data.categoryVal = value,
                 data -> data.categoryVal)
+            .addField(new KeyedCodec<>("@NpcSkin", Codec.STRING),
+                (data, value) -> data.npcSkinVal = value,
+                data -> data.npcSkinVal)
             // Grid drop/click events (native ItemGrid interaction)
             .addField(new KeyedCodec<>("Action", Codec.STRING),
                 (data, value) -> data.action = value,
@@ -1709,6 +1782,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String buyQuotaVal;
         private String stockLimitVal;
         private String categoryVal;
+        private String npcSkinVal;
         // Grid interaction fields
         private String action;
         private Integer slotIndex;

@@ -1,6 +1,5 @@
 package com.kyuubisoft.shops.commands;
 
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -13,7 +12,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 
@@ -343,7 +341,8 @@ public class ShopCommand extends AbstractCommandCollection {
                 return;
             }
 
-            // Get player position for shop placement
+            // Get player position for shop placement. The NPC spawns at the player's
+            // exact coordinates (no Shop_Block scan — the new flow is NPC-only).
             TransformComponent tc = player.getTransformComponent();
             if (tc == null) {
                 player.sendMessage(Message.raw(i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
@@ -352,24 +351,16 @@ public class ShopCommand extends AbstractCommandCollection {
             Vector3d pos = tc.getPosition();
             String worldName = world.getName();
 
-            // BUG #9 fix: Scan for a nearby Shop_Block variant instead of using raw
-            // player position. This ensures the NPC spawns on top of the stall the
-            // player placed and that ShopBlockBlockInteraction.findShopAtBlock() can
-            // match the block when other players interact with it.
-            Vector3i shopBlockPos = findNearbyShopBlock(world, pos);
-            if (shopBlockPos == null) {
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.create.no_block_nearby")).color("#FF5555"));
-                return;
-            }
-
-            double x = shopBlockPos.x + 0.5;
-            double y = shopBlockPos.y;
-            double z = shopBlockPos.z + 0.5;
+            // Pull the player's yaw so the NPC faces the owner by default.
+            float rotY = 0.0f;
+            try {
+                var rotation = tc.getRotation();
+                if (rotation != null) rotY = rotation.y;
+            } catch (Throwable ignored) {}
 
             // Create the shop via ShopService (handles validation, cost, limits)
             CreateShopResult result = shopService.createPlayerShop(
-                playerRef, shopName, "", "", worldName, x, y, z
+                playerRef, shopName, "", "", worldName, pos.x, pos.y, pos.z
             );
 
             if (!result.isSuccess()) {
@@ -381,10 +372,15 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             ShopData newShop = result.getShop();
+            newShop.setNpcRotY(rotY);
 
-            // Register in NPC world index and spawn NPC
+            // Register in NPC world index and spawn a standalone NPC at the
+            // player's feet. World.execute() hops onto the entity thread.
+            final com.hypixel.hytale.math.vector.Vector3d spawnPos = pos;
+            final float finalRotY = rotY;
             plugin.getNpcManager().registerShopInWorld(newShop);
-            plugin.getNpcManager().spawnNpc(newShop);
+            world.execute(() ->
+                plugin.getNpcManager().spawnNpcAtPosition(newShop, world, spawnPos, finalRotY));
 
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.success", newShop.getName())).color("#55FF55"));
@@ -1398,62 +1394,4 @@ public class ShopCommand extends AbstractCommandCollection {
         return nearest;
     }
 
-    /**
-     * Scans a small cube around the player for a Shop_Block variant and returns
-     * the closest match's block coordinates. Returns {@code null} if none of the
-     * surrounding blocks are a Shop_Block.
-     *
-     * <p>This prevents BUG #9 where {@code /ksshop create} would otherwise place
-     * the shop at the player's feet, desynchronising the shop from the Shop Stall
-     * block the player placed and preventing {@code ShopBlockBlockInteraction}
-     * from matching the block (which uses a 2-block distance check).
-     *
-     * @param world  the world the player is in
-     * @param origin the player's current position
-     * @return the Vector3i coordinates of the nearest Shop_Block, or null
-     */
-    private Vector3i findNearbyShopBlock(World world, Vector3d origin) {
-        int ox = (int) Math.floor(origin.x);
-        int oy = (int) Math.floor(origin.y);
-        int oz = (int) Math.floor(origin.z);
-
-        Vector3i best = null;
-        double bestDistSq = Double.MAX_VALUE;
-
-        // Scan a 7x5x7 cube (3 horizontal, -2..+2 vertical) around the player.
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                for (int dz = -3; dz <= 3; dz++) {
-                    int bx = ox + dx;
-                    int by = oy + dy;
-                    int bz = oz + dz;
-                    Vector3i candidate = new Vector3i(bx, by, bz);
-
-                    BlockType type;
-                    try {
-                        type = world.getBlockType(candidate);
-                    } catch (Exception e) {
-                        // Chunk not loaded or out-of-bounds — skip silently.
-                        continue;
-                    }
-                    if (type == null) continue;
-
-                    String id = type.getId();
-                    if (id == null) continue;
-                    if (!id.startsWith("Shop_Block")) continue;
-
-                    double ddx = (bx + 0.5) - origin.x;
-                    double ddy = (by + 0.5) - origin.y;
-                    double ddz = (bz + 0.5) - origin.z;
-                    double distSq = ddx * ddx + ddy * ddy + ddz * ddz;
-                    if (distSq < bestDistSq) {
-                        bestDistSq = distSq;
-                        best = candidate;
-                    }
-                }
-            }
-        }
-
-        return best;
-    }
 }

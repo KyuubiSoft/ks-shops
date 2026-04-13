@@ -1,10 +1,10 @@
 {
-  "_localization_version": "11",
+  "_localization_version": "12",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
-  "shop.help.gs.step1": "1. Craft a Shop_Block from the crafting menu (oak, birch, dark, mossy, red, or stone variants).",
-  "shop.help.gs.step2": "2. Place the block where you want your shop, then run /ksshop create <name>.",
+  "shop.help.gs.step1": "1. Craft a Shop Business License at a Carpentrybench (8 Oak Plank + 2 Iron Bar + 2 Gold Bar + 1 Leather).",
+  "shop.help.gs.step2": "2. Stand where you want your shop and right-click the license. An NPC will spawn at your position.",
   "shop.help.gs.step3": "3. Open the editor with /ksshop edit, drag items into the shop grid, set prices on each slot, pick BUY/SELL/BOTH mode, then save.",
   "shop.help.gs.step4": "4. Deposit coins to the shop (so it can buy from customers), then /ksshop open to accept visitors.",
   "shop.help.gs.step5": "5. Place a Mailbox_Block and press F to claim earnings and any items bought from other shops.",
@@ -216,6 +216,19 @@
   "shop.revenue.buyback_pool": "BUYBACK POOL",
   "shop.stats.pending_mails": "Unclaimed mailbox entries: {0} (place a Mailbox_Block to claim)",
   "shop.migration.legacy_balances": "Migrated {0} legacy shop balances to mailbox.",
+  "shop.migration.npc_migrated": "Migrated {0} shops to standalone NPCs.",
+
+  "shop.token.name": "Shop Business License",
+  "shop.token.description": "Use to place a shop NPC at your current location.",
+  "shop.token.spawned": "Shop created! Press F on the NPC to manage it.",
+  "shop.token.not_enough_shops": "You cannot create any more shops (limit reached).",
+  "shop.token.failed": "Failed to spawn shop NPC: {0}",
+
+  "shop.edit.label.skin": "NPC SKIN",
+  "shop.edit.skin.placeholder": "Minecraft-style username",
+  "shop.edit.skin.apply": "APPLY SKIN",
+  "shop.edit.skin.applied": "NPC skin updated.",
+
 
   "shop.mailbox.title": "Mailbox",
   "shop.mailbox.empty": "Your mailbox is empty.",
