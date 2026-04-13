@@ -186,11 +186,11 @@ public class ShopPlugin extends JavaPlugin {
                 LOGGER.warning("Failed to register shop_npc_token_use interaction: " + e.getMessage());
             }
 
-            // 7g. Standalone shop NPC role + F-key action. Registers our own
-            // "ShopNpcInteract" action and loads the Shop_Keeper_Role.json so the
-            // NPC spawn path does not depend on Core's KS_NPC_Interactable_Role.
-            // Without this block shops would still spawn NPCs, but F-key dispatch
-            // would silently do nothing when Core is absent.
+            // 7g. Standalone shop NPC action type registration (setup phase).
+            // The action class MUST be registered BEFORE the role JSON is loaded,
+            // because builderManager.loadFile() resolves action types eagerly.
+            // Role JSON loading itself happens in start() because assets (Appearance
+            // "Trork", block sets, particle systems) are only available post-setup.
             try {
                 var npcPlugin = com.hypixel.hytale.server.npc.NPCPlugin.get();
                 if (npcPlugin != null) {
@@ -201,7 +201,10 @@ public class ShopPlugin extends JavaPlugin {
                     } catch (Exception e) {
                         LOGGER.warning("Failed to register ShopNpcInteract action: " + e.getMessage());
                     }
-                    loadShopKeeperRole(npcPlugin);
+                    // Extract the role JSON to disk now so the file is ready when
+                    // start() calls builderManager.loadFile(). Extraction does NOT
+                    // trigger asset resolution - that only happens on loadFile().
+                    extractShopKeeperRoleFile();
                 } else {
                     LOGGER.warning("NPCPlugin not available - shop NPC role not loaded");
                 }
@@ -261,6 +264,24 @@ public class ShopPlugin extends JavaPlugin {
         } catch (Exception e) {
             LOGGER.severe("Failed to setup KS-Shops: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void start() {
+        // Shop_Keeper_Role JSON loads here (not in setup) because the role
+        // references engine assets like Appearance "Trork", block sets, and
+        // particle systems that are only registered after setup() completes.
+        // This mirrors how CorePlugin loads its own KS_NPC_*_Role files.
+        try {
+            var npcPlugin = com.hypixel.hytale.server.npc.NPCPlugin.get();
+            if (npcPlugin == null) {
+                LOGGER.warning("NPCPlugin still not available in start() - shop role not loaded");
+                return;
+            }
+            loadShopKeeperRole(npcPlugin);
+        } catch (Exception e) {
+            LOGGER.warning("Shop NPC role start-phase load failed: " + e.getMessage());
         }
     }
 
@@ -382,11 +403,10 @@ public class ShopPlugin extends JavaPlugin {
 
     /**
      * Extracts Shop_Keeper_Role.json from the shops JAR to the plugin data
-     * directory and loads it into NPCPlugin's BuilderManager. Mirrors Core's
-     * citizen role loading pattern so shops does not depend on Core having
-     * already loaded its own roles.
+     * directory without touching NPCPlugin. Called from setup() so the file is
+     * on disk before start() registers it.
      */
-    private void loadShopKeeperRole(com.hypixel.hytale.server.npc.NPCPlugin npcPlugin) {
+    private void extractShopKeeperRoleFile() {
         try {
             java.nio.file.Path rolesDir = getDataDirectory().resolve("npc-roles");
             java.nio.file.Files.createDirectories(rolesDir);
@@ -398,12 +418,35 @@ public class ShopPlugin extends JavaPlugin {
                     return;
                 }
                 byte[] content = is.readAllBytes();
-                // Strip UTF-8 BOM if present
                 if (content.length >= 3 && (content[0] & 0xFF) == 0xEF
                         && (content[1] & 0xFF) == 0xBB && (content[2] & 0xFF) == 0xBF) {
                     content = java.util.Arrays.copyOfRange(content, 3, content.length);
                 }
                 java.nio.file.Files.write(targetFile, content);
+            }
+        } catch (Exception e) {
+            LOGGER.warning("extractShopKeeperRoleFile error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Registers Shop_Keeper_Role.json with NPCPlugin's BuilderManager. MUST run
+     * in start() (not setup), because the role references engine assets
+     * (Appearance "Trork", OpaqueBlockSet, Effect_Death particles, Fence block
+     * set) that are only registered after all plugin setup() phases finish.
+     * Running this in setup() triggers "model does not exist for Appearance"
+     * errors and the role fails to load.
+     */
+    private void loadShopKeeperRole(com.hypixel.hytale.server.npc.NPCPlugin npcPlugin) {
+        try {
+            java.nio.file.Path targetFile = getDataDirectory().resolve("npc-roles").resolve("Shop_Keeper_Role.json");
+            if (!java.nio.file.Files.exists(targetFile)) {
+                // Fallback in case setup() did not extract for whatever reason
+                extractShopKeeperRoleFile();
+                if (!java.nio.file.Files.exists(targetFile)) {
+                    LOGGER.warning("Shop_Keeper_Role.json missing on disk at " + targetFile);
+                    return;
+                }
             }
 
             var builderManager = npcPlugin.getBuilderManager();
