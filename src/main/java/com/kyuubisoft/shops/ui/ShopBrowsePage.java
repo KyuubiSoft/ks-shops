@@ -404,6 +404,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ShopConfig.ConfigData cfg = plugin.getShopConfig().getData();
         double balance = plugin.getEconomyBridge().getBalance(playerRef.getUuid());
 
+        // Ensure item lists are in sync with current shop data
+        rebuildItemLists();
+
         // ---- Title bar ----
         String title = shopData.getName() != null ? shopData.getName() : i18n.get(playerRef, "shop.browse.title");
         ui.set("#Title #ShopTitle.Text", title);
@@ -419,6 +422,13 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         boolean hasSellItems = shopData.getItems().stream().anyMatch(ShopItem::isSellEnabled);
         boolean hasBuyItems = shopData.getItems().stream().anyMatch(ShopItem::isBuyEnabled);
         boolean showTabs = hasBuyItems && hasSellItems;
+
+        // Auto-switch to the only available mode if one tab has no items
+        if (!hasBuyItems && hasSellItems && mode == Mode.BUY) {
+            mode = Mode.SELL;
+        } else if (!hasSellItems && hasBuyItems && mode == Mode.SELL) {
+            mode = Mode.BUY;
+        }
 
         if (showTabs) {
             ui.set("#TabBar.Visible", true);
