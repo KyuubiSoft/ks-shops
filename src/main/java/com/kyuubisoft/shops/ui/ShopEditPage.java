@@ -486,9 +486,25 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private void handleApplySkin() {
         ShopI18n i18n = plugin.getI18n();
         String newSkin = editedNpcSkin != null ? editedNpcSkin.trim() : "";
+        String normalised = newSkin.isEmpty() ? null : newSkin;
 
-        // Normalise empty to null so the manager uses the default/owner fallback.
-        shopData.setNpcSkinUsername(newSkin.isEmpty() ? null : newSkin);
+        // Idempotency: if the skin did not actually change, skip the DB write
+        // and the respawn. Without this guard, clicking APPLY SKIN repeatedly
+        // (or the button firing twice due to double-click) would spawn extra
+        // NPC entities because respawnNpc removes the tracked ref before it
+        // re-creates, and the onPlayerAddedToWorld + apply_skin paths can
+        // race on it.
+        String currentSkin = shopData.getNpcSkinUsername();
+        boolean unchanged = (currentSkin == null && normalised == null)
+            || (currentSkin != null && currentSkin.equals(normalised));
+        if (unchanged) {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.edit.skin.applied")).color("#55FF55"));
+            refreshUI();
+            return;
+        }
+
+        shopData.setNpcSkinUsername(normalised);
         shopData.markDirty();
         dirty = true;
 
