@@ -37,8 +37,11 @@ public class ShopI18n {
      * - v7: Phase 3 mailbox refactor — purchase routes through mailbox, /ksshop collect redirects,
      *       buyback pool label, legacy balance migration string
      * - v8: Phase 2 mailbox UI — page strings, claim labels, item display name
+     * - v9: Directory / browse / rating / notification polish — adds all missing UI keys
+     *       referenced by ShopBrowsePage, ShopDirectoryPage, ShopRatingPage, ShopNotificationsPage
+     *       and the new filter/tab label + search placeholder keys used by ShopDirectoryPage
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 8;
+    private static final int CURRENT_LOCALIZATION_VERSION = 9;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

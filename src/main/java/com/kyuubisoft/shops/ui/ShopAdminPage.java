@@ -306,6 +306,9 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
     // ==================== ALL SHOPS TAB ====================
 
     private void populateShops(UICommandBuilder ui) {
+        // Reflect the current search string in the UI so it survives refreshes.
+        ui.set("#SSearchField.Value", shopsSearch);
+
         ShopManager manager = plugin.getShopManager();
         List<ShopData> allShops = new ArrayList<>(manager.getAllShops());
 
@@ -377,6 +380,9 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
     // ==================== PLAYER SHOPS TAB ====================
 
     private void populatePlayers(UICommandBuilder ui) {
+        // Reflect the current search string in the UI so it survives refreshes.
+        ui.set("#PSearchField.Value", playersSearch);
+
         ShopManager manager = plugin.getShopManager();
         List<ShopData> playerShops = manager.getAllShops().stream()
             .filter(ShopData::isPlayerShop)
@@ -479,6 +485,9 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
     // ==================== TRANSACTIONS TAB ====================
 
     private void populateTransactions(UICommandBuilder ui) {
+        // Reflect the current search string in the UI so it survives refreshes.
+        ui.set("#TSearchField.Value", txSearch);
+
         // Load transactions via database — search by player name if provided
         ShopDatabase db = plugin.getDatabase();
         List<ShopDatabase.TransactionRecord> transactions;

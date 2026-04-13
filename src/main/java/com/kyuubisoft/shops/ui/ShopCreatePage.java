@@ -311,6 +311,11 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
         if (!description.isEmpty()) {
             ui.set("#DescField.Value", description);
         }
+        // Reflect the currently-staged category in the dropdown so users see a
+        // default selection instead of a blank widget on initial open.
+        if (category != null && !category.isEmpty()) {
+            ui.set("#CategoryDropdown.Value", category);
+        }
     }
 
     // ==================== HELPERS ====================

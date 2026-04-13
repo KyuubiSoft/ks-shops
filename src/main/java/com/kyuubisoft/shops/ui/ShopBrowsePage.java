@@ -587,7 +587,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                         int totalCost = item.getSellPrice(); // per 1 unit
                         if (shopData.getShopBalance() < totalCost) {
                             ui.set(prefix + " #Overlay.Visible", true);
-                            ui.set(prefix + " #OverlayText.Text", "SHOP OUT OF FUNDS");
+                            ui.set(prefix + " #OverlayText.Text",
+                                i18n.get(playerRef, "shop.browse.shop_out_of_funds"));
                             ui.set(prefix + " #OverlayText.Style.TextColor", "#ff4444");
                             overlayShown = true;
                         }
@@ -596,7 +597,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     if (!overlayShown && !item.isUnlimitedStock() && item.getMaxStock() > 0
                         && item.getStock() >= item.getMaxStock()) {
                         ui.set(prefix + " #Overlay.Visible", true);
-                        ui.set(prefix + " #OverlayText.Text", "SHOP FULL");
+                        ui.set(prefix + " #OverlayText.Text",
+                            i18n.get(playerRef, "shop.browse.shop_full"));
                         ui.set(prefix + " #OverlayText.Style.TextColor", "#ff4444");
                         overlayShown = true;
                     }

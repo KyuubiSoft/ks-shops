@@ -284,18 +284,20 @@ public class ShopRatingPage extends InteractiveCustomUIPage<ShopRatingPage.Ratin
     // ==================== BUILD UI ====================
 
     private void buildUI(UICommandBuilder ui) {
+        ShopI18n i18n = plugin.getI18n();
+
         // Title
         String shopName = shopData.getName() != null ? shopData.getName() : "Shop";
-        ui.set("#RatingTitle.Text", "RATE: " + shopName.toUpperCase());
+        ui.set("#RatingTitle.Text", i18n.get(playerRef, "shop.rating.title", shopName.toUpperCase()));
 
         // Build star visuals
         buildStars(ui);
 
         // Selected rating text
         if (selectedStars > 0) {
-            ui.set("#SelectedRating.Text", selectedStars + " out of 5 stars");
+            ui.set("#SelectedRating.Text", i18n.get(playerRef, "shop.rating.selected_stars", selectedStars));
         } else {
-            ui.set("#SelectedRating.Text", "Click a star to rate");
+            ui.set("#SelectedRating.Text", i18n.get(playerRef, "shop.rating.click_to_rate"));
         }
 
         // Pre-fill comment field if player already rated
@@ -330,23 +332,21 @@ public class ShopRatingPage extends InteractiveCustomUIPage<ShopRatingPage.Ratin
     }
 
     private void buildAverageRating(UICommandBuilder ui) {
+        ShopI18n i18n = plugin.getI18n();
         double avgRating = shopData.getAverageRating();
         int totalRatings = shopData.getTotalRatings();
 
         if (totalRatings > 0) {
             int maxStars = plugin.getShopConfig().getData().ratings.maxStars;
             int filled = (int) Math.round(avgRating);
-            StringBuilder sb = new StringBuilder();
-            sb.append("Average: ");
+            StringBuilder starBar = new StringBuilder();
             for (int i = 0; i < maxStars; i++) {
-                sb.append(i < filled ? "*" : ".");
+                starBar.append(i < filled ? "*" : ".");
             }
-            sb.append(" (").append(String.format("%.1f", avgRating)).append(")");
-            sb.append(" - ").append(totalRatings).append(" review");
-            if (totalRatings != 1) sb.append("s");
-            ui.set("#AvgRating.Text", sb.toString());
+            ui.set("#AvgRating.Text", i18n.get(playerRef, "shop.rating.average",
+                starBar.toString(), String.format("%.1f", avgRating), totalRatings));
         } else {
-            ui.set("#AvgRating.Text", "No reviews yet");
+            ui.set("#AvgRating.Text", i18n.get(playerRef, "shop.rating.no_reviews"));
         }
     }
 

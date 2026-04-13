@@ -1,5 +1,5 @@
 {
-  "_localization_version": "8",
+  "_localization_version": "9",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -231,5 +231,68 @@
   "shop.mailbox.claim_failed": "Failed to claim mail.",
 
   "items.Mailbox_Block.name": "Mailbox",
-  "items.Mailbox_Block.description": "Place to receive your shop earnings and purchases."
+  "items.Mailbox_Block.description": "Place to receive your shop earnings and purchases.",
+
+  "shop.browse.title": "Shop",
+  "shop.browse.by": "by {0}",
+  "shop.browse.admin_shop": "Admin Shop",
+  "shop.browse.no_ratings": "No ratings yet",
+  "shop.browse.item_count": "{0} items",
+  "shop.browse.rate": "Rate",
+  "shop.browse.tab.buy": "BUY",
+  "shop.browse.tab.sell": "SELL",
+  "shop.browse.page": "Page {0} / {1}",
+  "shop.browse.stock": "Stock: {0}",
+  "shop.browse.daily_limit": "Daily limit: {0}",
+  "shop.browse.out_of_stock": "Out of stock",
+  "shop.browse.not_enough": "Not enough funds",
+  "shop.browse.purchase_failed": "Purchase failed. Please try again.",
+  "shop.browse.sell_failed": "Sale failed. Please try again.",
+  "shop.browse.confirm.buy": "Confirm Purchase",
+  "shop.browse.confirm.sell": "Confirm Sale",
+  "shop.browse.confirm.price": "Price: {0}",
+  "shop.browse.confirm.total": "Total: {0}",
+  "shop.browse.confirm.yes": "Confirm",
+  "shop.browse.confirm.no": "Cancel",
+
+  "shop.directory.title": "SHOP DIRECTORY",
+  "shop.directory.by": "by {0}",
+  "shop.directory.admin_shop": "Admin Shop",
+  "shop.directory.no_ratings": "No ratings",
+  "shop.directory.item_count": "{0} items",
+  "shop.directory.page": "Page {0} / {1}",
+  "shop.directory.result_count": "{0} results",
+  "shop.directory.click_to_browse": "Click to browse this shop",
+  "shop.directory.filter.sort_label": "Sort by:",
+  "shop.directory.filter.category_label": "Category:",
+  "shop.directory.filter.rating_label": "Rating:",
+  "shop.directory.search.placeholder": "Search shops and items...",
+  "shop.directory.tab.all": "ALL",
+  "shop.directory.tab.admin": "ADMIN",
+  "shop.directory.tab.player": "PLAYER",
+  "shop.directory.tab.featured": "FEATURED",
+
+  "shop.rate.select_stars": "Please select a star rating first.",
+
+  "shop.notification.offline_summary": "While you were offline: {0} sale(s), {1} item(s) sold for {2}.",
+  "shop.notification.offline_hint": "Open /ksshop notifications to review the details.",
+  "shop.notifications.marked_read": "All notifications marked as read.",
+
+  "shop.directory.status.open": "OPEN",
+  "shop.directory.status.closed": "CLOSED",
+  "shop.directory.status.featured": "FEATURED",
+
+  "shop.browse.shop_out_of_funds": "SHOP OUT OF FUNDS",
+  "shop.browse.shop_full": "SHOP FULL",
+
+  "shop.rating.title": "RATE: {0}",
+  "shop.rating.click_to_rate": "Click a star to rate",
+  "shop.rating.selected_stars": "{0} out of 5 stars",
+  "shop.rating.average": "Average: {0} ({1}) - {2} review(s)",
+  "shop.rating.no_reviews": "No reviews yet",
+
+  "shop.notifications.empty_header": "NO NEW NOTIFICATIONS",
+  "shop.notifications.empty_body": "All caught up!",
+  "shop.notifications.summary_header": "SINCE LAST LOGIN",
+  "shop.notifications.items_sold": "{0} item(s) sold"
 }

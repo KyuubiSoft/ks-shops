@@ -220,15 +220,16 @@ public class ShopNotificationsPage extends InteractiveCustomUIPage<ShopNotificat
     }
 
     private void buildSummary(UICommandBuilder ui) {
+        ShopI18n i18n = plugin.getI18n();
         if (notifications.isEmpty()) {
-            ui.set("#SummaryHeader.Text", "NO NEW NOTIFICATIONS");
+            ui.set("#SummaryHeader.Text", i18n.get(playerRef, "shop.notifications.empty_header"));
             ui.set("#TotalEarnings.Text", "");
-            ui.set("#ItemsSold.Text", "All caught up!");
+            ui.set("#ItemsSold.Text", i18n.get(playerRef, "shop.notifications.empty_body"));
         } else {
-            ui.set("#SummaryHeader.Text", "SINCE LAST LOGIN");
+            ui.set("#SummaryHeader.Text", i18n.get(playerRef, "shop.notifications.summary_header"));
             String formatted = plugin.getEconomyBridge().format(totalEarnings);
             ui.set("#TotalEarnings.Text", "+" + formatted);
-            ui.set("#ItemsSold.Text", totalItemsSold + " item" + (totalItemsSold != 1 ? "s" : "") + " sold");
+            ui.set("#ItemsSold.Text", i18n.get(playerRef, "shop.notifications.items_sold", totalItemsSold));
         }
     }
 

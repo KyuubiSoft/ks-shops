@@ -354,6 +354,22 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         // ---- Title ----
         ui.set("#DirTitle.Text", i18n.get(playerRef, "shop.directory.title"));
 
+        // ---- Filter / search state ----
+        // Reflect the current Java filter state in the UI widgets so users always see
+        // which sort / category / rating filter is active (even on first open).
+        ui.set("#TabBar #SortDropdown.Value", currentSort);
+        ui.set("#FilterBar #CategoryFilter.Value", currentCategory);
+        ui.set("#FilterBar #RatingFilter.Value", String.valueOf(currentRatingFilter));
+        ui.set("#FilterBar #SearchField.Value", searchQuery);
+        ui.set("#FilterBar #SearchField.PlaceholderText",
+            i18n.get(playerRef, "shop.directory.search.placeholder"));
+
+        // ---- Tab labels (localized) ----
+        ui.set("#TabBar #TabAllLabel.Text", i18n.get(playerRef, "shop.directory.tab.all"));
+        ui.set("#TabBar #TabAdminLabel.Text", i18n.get(playerRef, "shop.directory.tab.admin"));
+        ui.set("#TabBar #TabPlayerLabel.Text", i18n.get(playerRef, "shop.directory.tab.player"));
+        ui.set("#TabBar #TabFeaturedLabel.Text", i18n.get(playerRef, "shop.directory.tab.featured"));
+
         // ---- Tab highlights ----
         buildTabHighlights(ui);
 
@@ -458,13 +474,13 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
                 // Status badge
                 if (shop.isFeatured() && shop.getFeaturedUntil() > System.currentTimeMillis()) {
-                    ui.set(prefix + " #DStatus.Text", "FEATURED");
+                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.featured"));
                     ui.set(prefix + " #DStatus.Style.TextColor", "#ffd700");
                 } else if (shop.isOpen()) {
-                    ui.set(prefix + " #DStatus.Text", "OPEN");
+                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.open"));
                     ui.set(prefix + " #DStatus.Style.TextColor", "#4caf50");
                 } else {
-                    ui.set(prefix + " #DStatus.Text", "CLOSED");
+                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.closed"));
                     ui.set(prefix + " #DStatus.Style.TextColor", "#cc4444");
                 }
 
