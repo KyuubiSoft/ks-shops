@@ -44,8 +44,16 @@ public class ShopNpcManager {
 
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
 
-    /** NPC role name for interactable shop NPCs (IDLE, F-key enabled) */
-    private static final String NPC_ROLE_INTERACTABLE = "KS_NPC_Interactable_Role";
+    /**
+     * NPC role name for shop NPCs. Shipped by shops itself in
+     * citizen-roles/Shop_Keeper_Role.json. Uses a non-KS_NPC_ prefix on purpose
+     * so Citizens' orphan scan (which matches prefixes KS_NPC_, KS_Path_,
+     * Citizen_, Empty_Role) never classifies shop NPCs as citizens in the
+     * first place - no protection hack required, fully standalone.
+     */
+    private static final String NPC_ROLE_INTERACTABLE = "Shop_Keeper_Role";
+    /** Legacy fallback if Shop_Keeper_Role failed to load (e.g. old Core-only env) */
+    private static final String NPC_ROLE_LEGACY_FALLBACK = "KS_NPC_Interactable_Role";
     private static final String NPC_ROLE_IDLE = "KS_NPC_Idle_Role";
 
     /** Offset distance behind the shop block where the NPC spawns */
@@ -255,16 +263,21 @@ public class ShopNpcManager {
 
             Vector3f npcRotation = new Vector3f(0.0f, rotY, 0.0f);
 
-            // Resolve role
+            // Resolve role: prefer our standalone Shop_Keeper_Role, fall back to
+            // Core's KS_NPC_* roles if the shipped JSON somehow failed to load.
             String roleName = NPC_ROLE_INTERACTABLE;
             int roleIndex = npcPlugin.getIndex(roleName);
+            if (roleIndex < 0) {
+                roleName = NPC_ROLE_LEGACY_FALLBACK;
+                roleIndex = npcPlugin.getIndex(roleName);
+            }
             if (roleIndex < 0) {
                 roleName = NPC_ROLE_IDLE;
                 roleIndex = npcPlugin.getIndex(roleName);
             }
             if (roleIndex < 0) {
                 LOGGER.warning("No suitable NPC role found for shop NPC ("
-                    + NPC_ROLE_INTERACTABLE + " / " + NPC_ROLE_IDLE + ")");
+                    + NPC_ROLE_INTERACTABLE + " / " + NPC_ROLE_LEGACY_FALLBACK + " / " + NPC_ROLE_IDLE + ")");
                 return;
             }
 

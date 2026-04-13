@@ -186,6 +186,29 @@ public class ShopPlugin extends JavaPlugin {
                 LOGGER.warning("Failed to register shop_npc_token_use interaction: " + e.getMessage());
             }
 
+            // 7g. Standalone shop NPC role + F-key action. Registers our own
+            // "ShopNpcInteract" action and loads the Shop_Keeper_Role.json so the
+            // NPC spawn path does not depend on Core's KS_NPC_Interactable_Role.
+            // Without this block shops would still spawn NPCs, but F-key dispatch
+            // would silently do nothing when Core is absent.
+            try {
+                var npcPlugin = com.hypixel.hytale.server.npc.NPCPlugin.get();
+                if (npcPlugin != null) {
+                    try {
+                        npcPlugin.registerCoreComponentType("ShopNpcInteract",
+                            com.kyuubisoft.shops.npc.BuilderActionShopInteract::new);
+                        LOGGER.info("Registered ShopNpcInteract NPC action type");
+                    } catch (Exception e) {
+                        LOGGER.warning("Failed to register ShopNpcInteract action: " + e.getMessage());
+                    }
+                    loadShopKeeperRole(npcPlugin);
+                } else {
+                    LOGGER.warning("NPCPlugin not available - shop NPC role not loaded");
+                }
+            } catch (Exception e) {
+                LOGGER.warning("Shop NPC role setup failed: " + e.getMessage());
+            }
+
             // 7f. One-shot migration: auto-convert pre-existing block-anchored shops
             // into standalone NPC shops. Guarded by a marker file in the data folder.
             try {
@@ -354,6 +377,46 @@ public class ShopPlugin extends JavaPlugin {
                     LOGGER.warning("Auto-save failed for player " + data.getUuid() + ": " + e.getMessage());
                 }
             }
+        }
+    }
+
+    /**
+     * Extracts Shop_Keeper_Role.json from the shops JAR to the plugin data
+     * directory and loads it into NPCPlugin's BuilderManager. Mirrors Core's
+     * citizen role loading pattern so shops does not depend on Core having
+     * already loaded its own roles.
+     */
+    private void loadShopKeeperRole(com.hypixel.hytale.server.npc.NPCPlugin npcPlugin) {
+        try {
+            java.nio.file.Path rolesDir = getDataDirectory().resolve("npc-roles");
+            java.nio.file.Files.createDirectories(rolesDir);
+
+            java.nio.file.Path targetFile = rolesDir.resolve("Shop_Keeper_Role.json");
+            try (java.io.InputStream is = getClass().getResourceAsStream("/citizen-roles/Shop_Keeper_Role.json")) {
+                if (is == null) {
+                    LOGGER.warning("Shop_Keeper_Role.json not found in JAR");
+                    return;
+                }
+                byte[] content = is.readAllBytes();
+                // Strip UTF-8 BOM if present
+                if (content.length >= 3 && (content[0] & 0xFF) == 0xEF
+                        && (content[1] & 0xFF) == 0xBB && (content[2] & 0xFF) == 0xBF) {
+                    content = java.util.Arrays.copyOfRange(content, 3, content.length);
+                }
+                java.nio.file.Files.write(targetFile, content);
+            }
+
+            var builderManager = npcPlugin.getBuilderManager();
+            boolean forceReload = npcPlugin.getIndex("Shop_Keeper_Role") >= 0;
+            java.util.List<String> errors = new java.util.ArrayList<>();
+            int roleIndex = builderManager.loadFile(targetFile, forceReload, errors);
+            if (roleIndex >= 0 && errors.isEmpty()) {
+                LOGGER.info("Loaded Shop_Keeper_Role (index=" + roleIndex + ", forceReload=" + forceReload + ")");
+            } else {
+                LOGGER.warning("FAILED to load Shop_Keeper_Role (index=" + roleIndex + "): " + errors);
+            }
+        } catch (Exception e) {
+            LOGGER.warning("loadShopKeeperRole error: " + e.getMessage());
         }
     }
 

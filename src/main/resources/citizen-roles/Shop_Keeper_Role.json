@@ -1,0 +1,44 @@
+{
+  "Type": "Generic",
+  "KnockbackScale": 0.001,
+  "MotionControllerList": [
+    {
+      "Type": "Walk"
+    }
+  ],
+  "Appearance": "Trork",
+  "MaxHealth": { "Compute": "MaxHealth" },
+  "Parameters": {
+    "MaxHealth": {
+      "Value": 100,
+      "Description": "Max health for the shop NPC"
+    }
+  },
+  "InteractionInstruction": {
+      "Instructions": [
+        {
+          "Continue": true,
+          "Sensor": {
+            "Type": "Any"
+          },
+          "Actions": [
+            {
+              "Type": "SetInteractable",
+              "Interactable": true
+            }
+          ]
+        },
+        {
+          "Sensor": {
+            "Type": "HasInteracted"
+          },
+          "Actions": [
+            {
+              "Type": "ShopNpcInteract"
+            }
+          ]
+        }
+      ]
+    },
+    "NameTranslationKey": "Shop_Keeper"
+}
