@@ -41,7 +41,7 @@
     "State": {
       "Definitions": {
         "Open": {
-          "CustomModelAnimation": "Animations/shop_door_open_close.blockyanim"
+          "CustomModelAnimation": "Blocks/shop/door_open_close.blockyanim"
         }
       }
     }
