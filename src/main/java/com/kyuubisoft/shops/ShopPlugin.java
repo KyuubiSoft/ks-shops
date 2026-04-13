@@ -134,6 +134,17 @@ public class ShopPlugin extends JavaPlugin {
             ShopBlockInteraction shopInteraction = new ShopBlockInteraction(this);
             getEventRegistry().registerGlobal(PlayerInteractEvent.class, shopInteraction::onPlayerInteract);
 
+            // 7c. Custom block interaction codec for shop blocks (F-key on shop block)
+            try {
+                getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC)
+                    .register("shop_block_use",
+                        com.kyuubisoft.shops.interaction.ShopBlockBlockInteraction.class,
+                        com.kyuubisoft.shops.interaction.ShopBlockBlockInteraction.CODEC);
+                LOGGER.info("Registered shop_block_use interaction codec");
+            } catch (Exception e) {
+                LOGGER.warning("Failed to register shop_block_use interaction: " + e.getMessage());
+            }
+
             // 8. Core bridge (optional NPC skins, economy providers)
             if (CoreBridge.isCoreAvailable()) {
                 LOGGER.info("Core detected — enabling NPC skin integration.");

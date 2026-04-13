@@ -1,0 +1,19 @@
+Shop_Block.name = Oak Shop Stall
+Shop_Block.description = A wooden shop stall. Place it down and run /ksshop create to set up your store!
+Shop_Block.interaction = Open Shop
+Shop_Block.interaction_close = Close Shop
+
+Shop_Block_Birch.name = Birch Shop Stall
+Shop_Block_Birch.description = A light wooden shop stall made from birch.
+
+Shop_Block_Dark.name = Mahogany Shop Stall
+Shop_Block_Dark.description = An elegant dark wood shop stall.
+
+Shop_Block_Mossy.name = Mossy Shop Stall
+Shop_Block_Mossy.description = A weathered shop stall covered in moss.
+
+Shop_Block_Red.name = Crimson Shop Stall
+Shop_Block_Red.description = A vibrant red-painted shop stall made from cherry wood.
+
+Shop_Block_Stone.name = Stone Shop Stall
+Shop_Block_Stone.description = A sturdy shop stall built from solid stone.

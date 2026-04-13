@@ -1,0 +1,19 @@
+Shop_Block.name = Eichenholz Shop-Stand
+Shop_Block.description = Ein hoelzerner Shop-Stand. Platziere ihn und nutze /ksshop create um deinen Laden zu eroeffnen!
+Shop_Block.interaction = Shop oeffnen
+Shop_Block.interaction_close = Shop schliessen
+
+Shop_Block_Birch.name = Birken Shop-Stand
+Shop_Block_Birch.description = Ein heller Shop-Stand aus Birkenholz.
+
+Shop_Block_Dark.name = Mahagoni Shop-Stand
+Shop_Block_Dark.description = Ein eleganter Shop-Stand aus dunklem Holz.
+
+Shop_Block_Mossy.name = Bemooster Shop-Stand
+Shop_Block_Mossy.description = Ein verwitterter, von Moos ueberwachsener Shop-Stand.
+
+Shop_Block_Red.name = Karmesin Shop-Stand
+Shop_Block_Red.description = Ein leuchtend roter Shop-Stand aus Kirschholz.
+
+Shop_Block_Stone.name = Stein Shop-Stand
+Shop_Block_Stone.description = Ein robuster Shop-Stand aus solidem Stein.
