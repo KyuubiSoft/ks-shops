@@ -1,6 +1,8 @@
 package com.kyuubisoft.shops.commands;
 
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
@@ -57,6 +59,7 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         addSubCommand(new BlacklistCmd());
         addSubCommand(new ReloadCmd());
         addSubCommand(new RespawnNpcsCmd());
+        addSubCommand(new DeleteNearestNpcCmd());
     }
 
     // ==================== ADMIN COMMANDS ====================
@@ -435,6 +438,83 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 ctx.sender().sendMessage(Message.raw(plugin.getI18n().get("shop.admin.reload.success")).color("#44FF44"));
             } catch (Exception e) {
                 ctx.sender().sendMessage(Message.raw("Reload failed: " + e.getMessage()).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /kssa deletenpc - deletes the shop NPC closest to the caller (within
+     * 5 blocks). Force-deletes the shop entirely including NPC, DB row, and
+     * any pending editor session. Player-facing so we can read the caller's
+     * world position without needing a UUID argument.
+     */
+    private class DeleteNearestNpcCmd extends AbstractPlayerCommand {
+        private static final double MAX_RANGE_SQ = 5.0 * 5.0;
+
+        @Override protected boolean canGeneratePermission() { return false; }
+        DeleteNearestNpcCmd() {
+            super("deletenpc", "Delete the shop NPC closest to you (within 5 blocks)");
+            requirePermission("ks.shop.admin");
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            if (world == null) {
+                ctx.sender().sendMessage(Message.raw("No world context available").color("#FF5555"));
+                return;
+            }
+
+            double px, py, pz;
+            try {
+                TransformComponent tc = player.getTransformComponent();
+                if (tc == null || tc.getPosition() == null) {
+                    ctx.sender().sendMessage(Message.raw("Could not read your position").color("#FF5555"));
+                    return;
+                }
+                Vector3d pos = tc.getPosition();
+                px = pos.x; py = pos.y; pz = pos.z;
+            } catch (Exception e) {
+                ctx.sender().sendMessage(Message.raw("Position read failed: " + e.getMessage()).color("#FF5555"));
+                return;
+            }
+
+            String worldName = world.getName();
+            ShopData nearest = null;
+            double nearestDistSq = Double.MAX_VALUE;
+            for (ShopData shop : plugin.getShopManager().getAllShops()) {
+                if (!shop.isPlayerShop()) continue;
+                if (worldName == null || !worldName.equals(shop.getWorldName())) continue;
+                double dx = shop.getPosX() - px;
+                double dy = shop.getPosY() - py;
+                double dz = shop.getPosZ() - pz;
+                double d = dx * dx + dy * dy + dz * dz;
+                if (d < nearestDistSq) {
+                    nearestDistSq = d;
+                    nearest = shop;
+                }
+            }
+
+            if (nearest == null || nearestDistSq > MAX_RANGE_SQ) {
+                ctx.sender().sendMessage(Message.raw(
+                    "No shop NPC within 5 blocks. Move closer or use /kssa deleteplayer <shopId>."
+                ).color("#FFAA00"));
+                return;
+            }
+
+            String shopName = nearest.getName();
+            String ownerName = nearest.getOwnerName() != null ? nearest.getOwnerName() : "unknown";
+            UUID shopId = nearest.getId();
+
+            try {
+                plugin.getNpcManager().despawnNpc(shopId);
+                plugin.getShopManager().deleteShop(shopId);
+                ctx.sender().sendMessage(Message.raw(
+                    "Deleted shop '" + shopName + "' (owner: " + ownerName + ")"
+                ).color("#44FF44"));
+            } catch (Exception e) {
+                ctx.sender().sendMessage(Message.raw("Delete failed: " + e.getMessage()).color("#FF5555"));
             }
         }
     }
