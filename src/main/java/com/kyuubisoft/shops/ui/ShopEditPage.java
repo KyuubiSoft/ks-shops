@@ -602,6 +602,29 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             return;
         }
 
+        // BUG #3 FIX: Before clearing the slot, return the item to the player's
+        // inventory. Previously the item was silently destroyed -- if the owner
+        // accidentally hit "Remove", the items were lost. Also critical for
+        // originalItemCounts accounting: if we don't return the item to the
+        // player, a subsequent discard would still leave the items in DB
+        // (getStagingOnlyItems returns only NET additions), so the owner would
+        // lose them without recourse.
+        ItemStack removed = stagingContainer.getItemStack((short) selectedSlot);
+        if (removed != null && !removed.isEmpty() && player != null) {
+            try {
+                com.kyuubisoft.shops.util.PlayerInventoryAccess inv =
+                    com.kyuubisoft.shops.util.PlayerInventoryAccess.of(player);
+                ItemContainer storage = inv.getStorage();
+                if (storage != null) {
+                    storage.addItemStack(removed);
+                }
+                inv.markChanged();
+            } catch (Exception e) {
+                LOGGER.warning("[ShopEdit] handleRemoveItem: failed to return item to player: "
+                    + e.getMessage());
+            }
+        }
+
         // Clear item from staging container
         stagingContainer.setItemStackForSlot((short) selectedSlot, null);
 
@@ -1202,6 +1225,89 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         LOGGER.info("[ShopEdit] Window closed for shop: " + shopData.getName() + " (saved=" + saved + ")");
     }
 
+    /**
+     * BUG #2 FIX (CRITICAL: dupe prevention):
+     *
+     * When the owner dismisses WITHOUT saving, any items that were in the
+     * original shop but are missing from staging must have been moved to the
+     * player's inventory via drag & drop (which mutates the real player
+     * containers directly). Because we do NOT overwrite shopData on discard,
+     * the DB still believes the shop owns those items -- so the player ends
+     * up with the items in their inventory AND the shop still has them in DB.
+     * Net effect: item duplication (x2 items from nothing).
+     *
+     * Counter-measure: compute the reverse diff (originalCount - currentCount)
+     * per itemId, and remove that many items from the player's hotbar+storage.
+     * This restores the invariant: what's in DB matches what the player has.
+     *
+     * Called from {@link #onDismiss(Ref, Store)} ONLY when saved == false.
+     */
+    private void restoreOriginalShopItemsToStaging(Ref<EntityStore> ref, Store<EntityStore> store) {
+        // Sum current quantities per itemId across the entire staging container
+        Map<String, Integer> currentCounts = new HashMap<>();
+        for (int i = 0; i < stagingContainer.getCapacity(); i++) {
+            ItemStack stack = stagingContainer.getItemStack((short) i);
+            if (stack != null && !stack.isEmpty()) {
+                currentCounts.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
+            }
+        }
+
+        Player p = store.getComponent(ref, Player.getComponentType());
+        if (p == null) return;
+        com.kyuubisoft.shops.util.PlayerInventoryAccess inv =
+            com.kyuubisoft.shops.util.PlayerInventoryAccess.of(p);
+
+        boolean dirty = false;
+        for (Map.Entry<String, Integer> entry : originalItemCounts.entrySet()) {
+            String itemId = entry.getKey();
+            int originalQty = entry.getValue();
+            int currentQty = currentCounts.getOrDefault(itemId, 0);
+            int missing = originalQty - currentQty;
+
+            if (missing > 0) {
+                // Missing items from shop -> they must be in the player's inventory
+                // (the drag&drop path wrote them there directly). Remove that amount
+                // from hotbar + storage; the shop (DB) still owns them.
+                int remaining = missing;
+                remaining = removeFromContainer(inv.getHotbar(), itemId, remaining);
+                if (remaining > 0) {
+                    remaining = removeFromContainer(inv.getStorage(), itemId, remaining);
+                }
+                if (remaining > 0) {
+                    LOGGER.warning("[ShopEdit] Dupe prevention: could not remove " + remaining
+                        + "x " + itemId + " from player inventory (items already spent?)");
+                }
+                dirty = true;
+            }
+        }
+        if (dirty) {
+            inv.markChanged();
+        }
+    }
+
+    /**
+     * Removes up to {@code amount} of {@code itemId} from the given container.
+     * Returns the leftover amount that could not be removed (0 = success).
+     */
+    private int removeFromContainer(ItemContainer container, String itemId, int amount) {
+        if (container == null || amount <= 0) return amount;
+        for (int i = 0; i < container.getCapacity(); i++) {
+            ItemStack stack = container.getItemStack((short) i);
+            if (stack != null && !stack.isEmpty() && itemId.equals(stack.getItemId())) {
+                int take = Math.min(amount, stack.getQuantity());
+                if (take >= stack.getQuantity()) {
+                    container.removeItemStackFromSlot((short) i);
+                } else {
+                    ItemStack reduced = new ItemStack(stack.getItemId(), stack.getQuantity() - take);
+                    container.setItemStackForSlot((short) i, reduced);
+                }
+                amount -= take;
+                if (amount == 0) return 0;
+            }
+        }
+        return amount;
+    }
+
     // ==================== DISMISS ====================
 
     @Override
@@ -1231,6 +1337,23 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 }
             } catch (Exception e) {
                 LOGGER.warning("[ShopEdit] Failed to return items on dismiss: " + e.getMessage());
+            }
+
+            // BUG #2 FIX (CRITICAL: dupe prevention): On discard we also need to
+            // handle the REVERSE direction: items the owner pulled OUT of the
+            // shop grid into their own inventory. Because the drag&drop path
+            // writes directly to the live player containers (and mutates them
+            // via markChanged()), those items are already persisted on the
+            // player. Since we do NOT overwrite shopData on discard, the DB
+            // still thinks the shop owns them -- leading to duplication
+            // (player keeps items + shop DB still lists them). Remove the
+            // missing quantities from the player's inventory to restore the
+            // invariant.
+            try {
+                restoreOriginalShopItemsToStaging(ref, store);
+            } catch (Exception e) {
+                LOGGER.warning("[ShopEdit] Failed to restore original shop items on dismiss: "
+                    + e.getMessage());
             }
         }
 

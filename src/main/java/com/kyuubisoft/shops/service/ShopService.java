@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -25,6 +26,7 @@ import com.kyuubisoft.shops.event.ShopDeleteEvent;
 import com.kyuubisoft.shops.event.ShopEventBus;
 import com.kyuubisoft.shops.event.ShopTransactionEvent;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.util.PlayerInventoryAccess;
 
 import java.util.List;
 import java.util.UUID;
@@ -259,6 +261,15 @@ public class ShopService {
             return false;
         }
 
+        // --- Self-sell prevention (skipped for admin shops which have no owner) ---
+        // Prevents the shop owner from selling their own items to their own shop to
+        // drain the shop balance / extract money. Mirrors the check in purchaseItem().
+        UUID sellerUuid = seller.getUuid();
+        if (!shop.isAdminShop() && shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(sellerUuid)) {
+            LOGGER.fine("Sell rejected: seller is shop owner");
+            return false;
+        }
+
         // --- Find the ShopItem by itemId ---
         ShopItem shopItem = shop.getItem(itemId);
         if (shopItem == null) {
@@ -293,7 +304,6 @@ public class ShopService {
         }
 
         // --- Calculate pricing (FIX 5: tax disabled — collected nowhere, would vanish) ---
-        UUID sellerUuid = seller.getUuid();
         int pricePerUnit = shopItem.getSellPrice();
         int totalPrice = pricePerUnit * quantity;
         int taxAmount = 0;
@@ -1038,11 +1048,14 @@ public class ShopService {
     // ==================== HELPERS ====================
 
     /**
-     * Gives items to a player. Tries to add to Storage first; if the storage is full
-     * the overflow is dropped at the player's feet via SimpleItemContainer.addOrDropItemStack.
-     * Marks both Storage and Hotbar dirty on success.
+     * Gives items to a player. Tries to add to the combined inventory (hotbar-first,
+     * then storage) and respects the transaction remainder — any items that did not
+     * fit are dropped at the player's feet via SimpleItemContainer.addOrDropItemStack.
      *
-     * Pattern mirrors the bank mod (BankService.addItemOrDrop).
+     * Pattern mirrors the bank mod (BankPage.transferBankToInventory).
+     *
+     * BUG FIX: previously ignored the return value of addItemStack, so items silently
+     * vanished when the storage was partially full.
      */
     private void giveItem(PlayerRef playerRef, String itemId, int quantity) {
         if (playerRef == null || itemId == null || quantity <= 0) return;
@@ -1057,26 +1070,46 @@ public class ShopService {
 
             ItemStack stack = new ItemStack(itemId, quantity);
 
-            // Attempt to add to player Storage
-            var storageComp = store.getComponent(ref, InventoryComponent.Storage.getComponentType());
-            if (storageComp != null) {
-                ItemContainer storage = storageComp.getInventory();
-                if (storage != null) {
-                    storage.addItemStack(stack);
-                    storageComp.markDirty();
-
-                    // Also mark Hotbar dirty in case overflow spilled there via combined containers
-                    var hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
-                    if (hotbarComp != null) hotbarComp.markDirty();
-                    return;
-                }
+            // Resolve the Player entity from the store so we can use PlayerInventoryAccess
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player == null) {
+                // Fallback: no player entity — drop the full stack at the entity's position
+                SimpleItemContainer tempContainer = new SimpleItemContainer((short) 0);
+                SimpleItemContainer.addOrDropItemStack(store, ref, tempContainer, stack);
+                LOGGER.fine("giveItem: dropped " + quantity + "x " + itemId
+                    + " for " + playerRef.getUsername() + " (player entity unavailable)");
+                return;
             }
 
-            // Storage unavailable or full — drop at player's feet
+            PlayerInventoryAccess inv = PlayerInventoryAccess.of(player);
+            CombinedItemContainer combined = inv.getCombinedStorageFirst();
+
+            if (combined != null) {
+                // Try to add to the combined storage+hotbar container
+                var transaction = combined.addItemStack(stack);
+                ItemStack remainder = (transaction != null) ? transaction.getRemainder() : stack;
+
+                if (remainder == null || remainder.isEmpty()) {
+                    // Fully added — mark both inventory components dirty
+                    inv.markChanged();
+                    return;
+                }
+
+                // Partial add: some items fit, some did not. Drop the remainder at the
+                // player's feet using the same combined container so addOrDropItemStack
+                // can retry placement once more before dropping.
+                inv.markChanged();
+                SimpleItemContainer.addOrDropItemStack(store, ref, combined, remainder);
+                LOGGER.fine("giveItem: dropped " + remainder.getQuantity() + "x " + itemId
+                    + " for " + playerRef.getUsername() + " (inventory full, remainder dropped)");
+                return;
+            }
+
+            // Combined container unavailable — drop the full stack at the player's feet
             SimpleItemContainer tempContainer = new SimpleItemContainer((short) 0);
             SimpleItemContainer.addOrDropItemStack(store, ref, tempContainer, stack);
             LOGGER.fine("giveItem: dropped " + quantity + "x " + itemId
-                + " for " + playerRef.getUsername() + " (storage unavailable)");
+                + " for " + playerRef.getUsername() + " (combined container unavailable)");
         } catch (Exception e) {
             LOGGER.warning("giveItem failed for " + playerRef.getUsername()
                 + " (" + quantity + "x " + itemId + "): " + e.getMessage());

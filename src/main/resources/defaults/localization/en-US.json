@@ -1,5 +1,5 @@
 {
-  "_localization_version": "1",
+  "_localization_version": "2",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.create": "/ksshop create <name> - Create a new shop",
@@ -13,6 +13,10 @@
   "shop.help.collect": "/ksshop collect - Collect earnings from shop balances",
   "shop.help.deposit": "/ksshop deposit <amount> - Deposit money into shop",
   "shop.help.history": "/ksshop history - Transaction history",
+  "shop.help.open": "/ksshop open - Open your shop for business",
+  "shop.help.close": "/ksshop close - Temporarily close your shop",
+  "shop.help.rename": "/ksshop rename <name> - Rename your shop",
+  "shop.help.notifications": "/ksshop notifications - View offline sale notifications",
 
   "shop.create.success": "Shop '{0}' created successfully!",
   "shop.create.max_reached": "You have reached the maximum number of shops ({0})!",
@@ -22,6 +26,13 @@
   "shop.create.name_taken": "A shop with this name already exists.",
   "shop.create.name_too_long": "Shop name too long (max {0} characters).",
   "shop.create.no_claim": "You can only create shops on your own claimed land.",
+  "shop.create.name_required": "Please provide a shop name. Usage: /ksshop create <name>",
+  "shop.create.failed": "Failed to create shop. Please try again.",
+  "shop.create.name_empty": "Shop name cannot be empty.",
+  "shop.create.name_too_short": "Shop name is too short (min {0} characters).",
+  "shop.create.not_enough": "You don't have enough funds to create a shop.",
+  "shop.create.block_required": "You need to be standing next to a Shop Block. Place a Shop Stall block first, then run this command while standing on or next to it.",
+  "shop.create.no_block_nearby": "No Shop Block found nearby. Place a Shop Stall block within 3 blocks and try again.",
 
   "shop.delete.success": "Shop '{0}' deleted.",
   "shop.delete.refund": "Refunded {0} {1}.",
@@ -33,15 +44,23 @@
   "shop.edit.not_found": "Shop not found.",
   "shop.edit.not_owner": "You are not the owner of this shop.",
   "shop.edit.locked": "This shop is currently being edited by another player.",
-  "shop.edit.saved": "Shop changes saved.",
+  "shop.edit.saved": "Shop '{0}' saved.",
+  "shop.edit.no_shop": "You don't have any shops. Create one with /ksshop create <name>",
+  "shop.edit.name_empty": "Shop name cannot be empty.",
+  "shop.edit.name_invalid": "Shop name contains invalid characters or is the wrong length.",
+  "shop.edit.name_taken": "A shop with that name already exists.",
+  "shop.edit.save_failed": "Failed to save shop changes. Please try again.",
 
   "shop.open.success": "Shop '{0}' is now open!",
   "shop.open.no_items": "Cannot open shop with no items.",
   "shop.close.success": "Shop '{0}' is now closed.",
 
-  "shop.rename.success": "Shop renamed to '{0}'.",
+  "shop.rename.success": "Shop renamed from '{0}' to '{1}'.",
   "shop.rename.cost": "Renaming costs {0} {1}.",
   "shop.rename.no_funds": "Not enough funds to rename.",
+  "shop.rename.name_required": "Please provide a new name. Usage: /ksshop rename <name>",
+  "shop.rename.name_taken": "A shop with the name '{0}' already exists.",
+  "shop.rename.invalid_length": "Shop name length must be between {0} and {1} characters.",
 
   "shop.buy.success": "Purchased {0}x {1} for {2} {3}.",
   "shop.buy.no_funds": "Not enough funds! Need: {0} {1}",
@@ -54,6 +73,7 @@
   "shop.sell.success": "Sold {0}x {1} for {2} {3}.",
   "shop.sell.disabled": "This shop does not accept buyback.",
   "shop.sell.no_items": "You don't have this item.",
+  "shop.sell.no_funds": "This shop doesn't have enough funds to buy that item.",
 
   "shop.rate.success": "Rated '{0}' {1}/5 stars.",
   "shop.rate.own_shop": "You cannot rate your own shop.",
@@ -63,6 +83,20 @@
   "shop.myshops.header": "=== Your Shops ({0}/{1}) ===",
   "shop.myshops.entry": "{0} | {1} | {2} items | Earned: {3}",
   "shop.myshops.empty": "You don't own any shops yet.",
+  "shop.myshops.none": "You don't own any shops yet. Create one with /ksshop create <name>",
+  "shop.myshops.items": "items",
+  "shop.myshops.status.open": "OPEN",
+  "shop.myshops.status.closed": "CLOSED",
+
+  "shop.status.open": "Open",
+  "shop.status.closed": "Closed",
+  "shop.status.featured": "Featured",
+  "shop.status.already_open": "Shop '{0}' is already open.",
+  "shop.status.already_closed": "Shop '{0}' is already closed.",
+  "shop.status.opened": "Shop '{0}' is now open for business!",
+
+  "shop.visit.id_required": "Please provide a shop ID or name. Usage: /ksshop visit <shopId>",
+  "shop.visit.not_found": "No shop found matching '{0}'.",
 
   "shop.collect.success": "Collected {0} from your shop balances!",
   "shop.collect.empty": "No earnings to collect.",
@@ -72,14 +106,12 @@
   "shop.deposit.failed": "Deposit failed! Check your balance.",
   "shop.deposit.new_balance": "New shop balance: {0}",
 
-  "shop.sell.no_funds": "This shop doesn't have enough funds to buy that item.",
-
   "shop.transfer.success": "Shop '{0}' transferred to {1}.",
   "shop.transfer.cost": "Transfer costs {0} {1}.",
   "shop.transfer.target_max": "{0} has reached the maximum number of shops.",
   "shop.transfer.self": "You cannot transfer a shop to yourself.",
 
-  "shop.history.header": "=== Transaction History ===",
+  "shop.history.header": "=== Transaction History ({0}) ===",
   "shop.history.empty": "No transactions yet.",
 
   "shop.notify.batch_header": "While you were offline:",
@@ -89,6 +121,8 @@
   "shop.notify.rent_due": "Rent due for '{0}': {1} {2} in {3} day(s).",
   "shop.notify.shop_closed": "Your shop '{0}' has been auto-closed.",
 
+  "shop.notifications.disabled": "Shop notifications are currently disabled on this server.",
+
   "shop.error.no_permission": "You don't have permission to do this.",
   "shop.error.player_only": "This command is for players only.",
   "shop.error.invalid_arguments": "Invalid arguments. Usage: {0}",
@@ -96,6 +130,9 @@
   "shop.error.shop_not_found": "Shop '{0}' not found.",
   "shop.error.disabled": "This feature is disabled.",
   "shop.error.database": "A database error occurred. Please try again.",
+  "shop.error.closed": "This shop is currently closed.",
+  "shop.error.editor_locked": "This shop is currently being edited by another session.",
+  "shop.error.open_failed": "Failed to open the shop UI. Please try again.",
 
   "shop.admin.create.success": "Admin shop '{0}' created.",
   "shop.admin.delete.success": "Admin shop '{0}' deleted.",
@@ -115,9 +152,5 @@
   "shop.category.potions": "Potions",
   "shop.category.food": "Food",
   "shop.category.building": "Building",
-  "shop.category.misc": "Miscellaneous",
-
-  "shop.status.open": "Open",
-  "shop.status.closed": "Closed",
-  "shop.status.featured": "Featured"
+  "shop.category.misc": "Miscellaneous"
 }

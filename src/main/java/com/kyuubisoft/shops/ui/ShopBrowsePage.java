@@ -489,7 +489,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         if (currentPage >= totalPages) currentPage = totalPages - 1;
         if (currentPage < 0) currentPage = 0;
 
-        ShopConfig.Tax taxConfig = plugin.getShopConfig().getData().tax;
+        // BUG #7 fix: Tax logic is currently disabled in ShopService (taxAmount = 0).
+        // UI must reflect the real transaction price. Tax config is intentionally ignored here.
         int startIndex = currentPage * ITEMS_PER_PAGE;
 
         for (int i = 0; i < ITEMS_PER_PAGE; i++) {
@@ -564,11 +565,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
 
                 // Overlay: out of stock / can't afford / shop full / shop out of funds
                 if (mode == Mode.BUY) {
-                    int tax = 0;
-                    if (taxConfig.enabled) {
-                        tax = (int) Math.ceil(price * taxConfig.buyTaxPercent / 100.0);
-                    }
-                    int totalCost = price + tax;
+                    // BUG #7: Tax is disabled in ShopService, so UI must not add a tax surcharge.
+                    int totalCost = price;
 
                     if (!item.hasStock()) {
                         ui.set(prefix + " #Overlay.Visible", true);
@@ -628,19 +626,13 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         String itemName = formatItemName(item.getItemId());
         int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
 
-        // Tax calculation
-        ShopConfig.Tax taxConfig = plugin.getShopConfig().getData().tax;
-        boolean hasTax = taxConfig.enabled;
-        double taxPercent = (mode == Mode.BUY) ? taxConfig.buyTaxPercent : taxConfig.sellTaxPercent;
-        int taxPerUnit = hasTax ? (int) Math.ceil(unitPrice * taxPercent / 100.0) : 0;
-
+        // BUG #7 fix: Tax is currently disabled in ShopService (taxAmount forced to 0).
+        // UI must match — no tax surcharge is added to the grand total.
         int maxQty = getConfirmMaxQuantity();
         if (confirmQuantity > maxQty) confirmQuantity = maxQty;
         if (confirmQuantity < 1) confirmQuantity = 1;
 
-        int subtotal = unitPrice * confirmQuantity;
-        int totalTax = taxPerUnit * confirmQuantity;
-        int grandTotal = subtotal + totalTax;
+        int grandTotal = unitPrice * confirmQuantity;
 
         // Title
         String confirmTitle = (mode == Mode.SELL)
@@ -654,29 +646,17 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#ConfirmPrice.Text",
             i18n.get(playerRef, "shop.browse.confirm.price", unitPrice));
 
-        // Tax display
-        if (hasTax && taxPerUnit > 0) {
-            ui.set("#ConfirmTax.Visible", true);
-            ui.set("#ConfirmTax.Text",
-                i18n.get(playerRef, "shop.browse.confirm.tax", totalTax,
-                    String.format("%.1f", taxPercent) + "%"));
-        } else {
-            ui.set("#ConfirmTax.Visible", false);
-        }
+        // BUG #7 fix: Tax UI is hidden because tax is disabled in ShopService.
+        ui.set("#ConfirmTax.Visible", false);
 
         // Quantity selector
         ui.set("#ConfirmQty.Text", String.valueOf(confirmQuantity));
         ui.set("#ConfirmMinus.Visible", confirmQuantity > 1);
         ui.set("#ConfirmPlus.Visible", confirmQuantity < maxQty);
 
-        // Total
-        if (hasTax && totalTax > 0) {
-            ui.set("#ConfirmTotal.Text",
-                i18n.get(playerRef, "shop.browse.confirm.total_with_tax", grandTotal, totalTax));
-        } else {
-            ui.set("#ConfirmTotal.Text",
-                i18n.get(playerRef, "shop.browse.confirm.total", grandTotal));
-        }
+        // Total (no tax — grandTotal == subtotal)
+        ui.set("#ConfirmTotal.Text",
+            i18n.get(playerRef, "shop.browse.confirm.total", grandTotal));
 
         // Buttons
         ui.set("#ConfirmYes.Text", i18n.get(playerRef, "shop.browse.confirm.yes"));
@@ -713,10 +693,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             // Limited by stock (if not unlimited) and by player balance
             int max = item.isUnlimitedStock() ? 64 : item.getStock();
 
-            ShopConfig.Tax taxConfig = plugin.getShopConfig().getData().tax;
-            int price = item.getBuyPrice();
-            int tax = taxConfig.enabled ? (int) Math.ceil(price * taxConfig.buyTaxPercent / 100.0) : 0;
-            int costPerUnit = price + tax;
+            // BUG #7 fix: Tax disabled in ShopService — costPerUnit is just the buy price.
+            int costPerUnit = item.getBuyPrice();
 
             if (costPerUnit > 0) {
                 double balance = plugin.getEconomyBridge().getBalance(playerRef.getUuid());
