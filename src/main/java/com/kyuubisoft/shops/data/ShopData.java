@@ -20,6 +20,7 @@ public class ShopData {
     private float npcRotY;
     private String npcEntityId;
     private String npcSkinUsername;
+    private String iconItemId;
     private List<ShopItem> items;
     private String category;
     private List<String> tags;
@@ -67,6 +68,7 @@ public class ShopData {
                                         UUID ownerUuid, String ownerName,
                                         String worldName, double posX, double posY, double posZ,
                                         float npcRotY, String npcEntityId, String npcSkinUsername,
+                                        String iconItemId,
                                         List<ShopItem> items, String category, List<String> tags,
                                         double averageRating, int totalRatings,
                                         double totalRevenue, double totalTaxPaid,
@@ -87,6 +89,7 @@ public class ShopData {
         shop.npcRotY = npcRotY;
         shop.npcEntityId = npcEntityId;
         shop.npcSkinUsername = npcSkinUsername;
+        shop.iconItemId = iconItemId;
         shop.items = items != null ? new CopyOnWriteArrayList<>(items) : new CopyOnWriteArrayList<>();
         shop.category = category;
         shop.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
@@ -118,6 +121,7 @@ public class ShopData {
     public float getNpcRotY() { return npcRotY; }
     public String getNpcEntityId() { return npcEntityId; }
     public String getNpcSkinUsername() { return npcSkinUsername; }
+    public String getIconItemId() { return iconItemId; }
     public List<ShopItem> getItems() { return items; }
     public String getCategory() { return category; }
     public List<String> getTags() { return tags; }
@@ -147,6 +151,7 @@ public class ShopData {
     public void setNpcRotY(float npcRotY) { this.npcRotY = npcRotY; markDirty(); }
     public void setNpcEntityId(String npcEntityId) { this.npcEntityId = npcEntityId; markDirty(); }
     public void setNpcSkinUsername(String npcSkinUsername) { this.npcSkinUsername = npcSkinUsername; markDirty(); }
+    public void setIconItemId(String iconItemId) { this.iconItemId = iconItemId; markDirty(); }
     public void setCategory(String category) { this.category = category; markDirty(); }
     public void setTags(List<String> tags) { this.tags = tags != null ? tags : new ArrayList<>(); markDirty(); }
     public void setAverageRating(double averageRating) { this.averageRating = averageRating; markDirty(); }
@@ -175,6 +180,18 @@ public class ShopData {
     public void markDirty() { this.dirty = true; }
     public boolean isDirty() { return dirty; }
     public void clearDirty() { this.dirty = false; }
+
+    /**
+     * Returns the ItemId to use as the visual icon for this shop in directory/browse views.
+     * Prefers the explicit {@link #iconItemId} chosen by the owner via the icon picker.
+     * Falls back to the first shop item's itemId, or {@code null} if the shop is empty.
+     */
+    public String getDisplayIconItemId() {
+        if (iconItemId != null && !iconItemId.isBlank()) {
+            return iconItemId;
+        }
+        return items.isEmpty() ? null : items.get(0).getItemId();
+    }
 
     public ShopItem getItem(String itemId) {
         for (ShopItem item : items) {

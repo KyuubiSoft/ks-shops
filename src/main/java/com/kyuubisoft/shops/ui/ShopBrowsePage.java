@@ -393,6 +393,12 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         String title = shopData.getName() != null ? shopData.getName() : i18n.get(playerRef, "shop.browse.title");
         ui.set("#Title #ShopTitle.Text", title);
 
+        // Shop avatar: prefer owner-picked icon, fall back to first shop item
+        String avatarIconId = shopData.getDisplayIconItemId();
+        if (avatarIconId != null) {
+            ui.set("#Title #ShopAvatar.ItemId", avatarIconId);
+        }
+
         // Currency display
         String currencyName = plugin.getEconomyBridge().getCurrencyName();
         ui.set("#Title #CurrencyDisplay #CurrencyBalance.Text", plugin.getEconomyBridge().format(balance));

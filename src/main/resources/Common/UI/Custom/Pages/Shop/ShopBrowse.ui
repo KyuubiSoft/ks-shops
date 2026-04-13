@@ -134,7 +134,21 @@ $C.@PageOverlay {
           LayoutMode: Left;
           Anchor: (Height: 42);
 
-          Group { Anchor: (Width: 120); }
+          // Shop avatar (owner-picked icon, falls back to first shop item)
+          Group {
+            Anchor: (Width: 120, Height: 42);
+            LayoutMode: Left;
+            Padding: (Left: 15, Top: 6);
+
+            Group {
+              Anchor: (Width: 30, Height: 30);
+              Background: (Color: #1a2530);
+              Padding: (Full: 2);
+              ItemIcon #ShopAvatar {
+                Anchor: (Full: 0);
+              }
+            }
+          }
 
           Label #ShopTitle {
             Style: (FontSize: 18, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);

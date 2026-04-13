@@ -77,6 +77,26 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         "Weapons", "Armor", "Tools", "Resources", "Potions", "Food", "Building", "Misc"
     };
 
+    /**
+     * Curated 6x4 grid of icons for the shop avatar picker.
+     * MUST stay in lock-step with #IconPick0..#IconPick23 in ShopEdit.ui.
+     * All entries verified against external_res/dev-export/items.json.
+     */
+    static final String[] ICON_OPTIONS = {
+        // Row 1 - Weapons
+        "Weapon_Sword_Iron", "Weapon_Axe_Iron", "Weapon_Spear_Iron",
+        "Weapon_Shield_Iron", "Weapon_Crossbow_Iron", "Weapon_Battleaxe_Iron",
+        // Row 2 - Armor
+        "Armor_Iron_Head", "Armor_Iron_Chest", "Armor_Iron_Hands",
+        "Armor_Iron_Legs", "Tool_Pickaxe_Iron", "Tool_Hatchet_Iron",
+        // Row 3 - Tools and bars
+        "Tool_Hammer_Iron", "Ingredient_Bar_Iron", "Ingredient_Bar_Gold",
+        "Ingredient_Bar_Silver", "Ingredient_Crystal_Blue", "Ingredient_Crystal_Red",
+        // Row 4 - Crystals, food, materials
+        "Ingredient_Crystal_Green", "Food_Bread", "Food_Cheese",
+        "Plant_Fruit_Apple", "Ingredient_Leather_Medium", "Ingredient_Feathers_Light"
+    };
+
     private enum Tab { SETTINGS, REVENUE, HISTORY }
 
     private final PlayerRef playerRef;
@@ -107,6 +127,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private String editedName;
     private String editedDesc;
     private String editedCategory;
+    private String editedIconItemId;
 
     // FIX 1: Snapshot of original shop items at open time (multiset by itemId).
     // Used by getStagingOnlyItems() to determine which items are NEW in the staging
@@ -141,6 +162,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         this.editedDesc = shopData.getDescription() != null ? shopData.getDescription() : "";
         String rawCategory = shopData.getCategory();
         this.editedCategory = isValidCategory(rawCategory) ? rawCategory : "misc";
+        this.editedIconItemId = shopData.getIconItemId();
 
         // Create staging container matching the grid (9 cols x 5 rows = 45 slots)
         int containerSlots = SHOP_SLOTS_PER_PAGE; // 45
@@ -265,6 +287,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Mode change for selected item
         if (data.mode != null) {
             handleModeChange(data.mode);
+            return;
+        }
+
+        // Icon picker tile click
+        if (data.iconPick != null) {
+            handleIconPick(data.iconPick);
             return;
         }
 
@@ -412,6 +440,29 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         refreshUI();
     }
 
+    // ==================== ICON PICKER ====================
+
+    private void handleIconPick(String idxStr) {
+        try {
+            int idx = Integer.parseInt(idxStr);
+            if (idx < 0 || idx >= ICON_OPTIONS.length) {
+                this.sendUpdate(new UICommandBuilder(), false);
+                return;
+            }
+            String picked = ICON_OPTIONS[idx];
+            // Toggle: clicking the already-selected icon clears it back to fallback
+            if (picked.equals(editedIconItemId)) {
+                editedIconItemId = null;
+            } else {
+                editedIconItemId = picked;
+            }
+            dirty = true; // BUG #11
+            refreshUI();
+        } catch (NumberFormatException e) {
+            this.sendUpdate(new UICommandBuilder(), false);
+        }
+    }
+
     // ==================== PRICE / STOCK CHANGE ====================
 
     private void handlePriceChange(String priceStr) {
@@ -507,6 +558,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         shopData.setName(editedName);
         shopData.setDescription(editedDesc);
         shopData.setCategory(editedCategory);
+        shopData.setIconItemId(editedIconItemId);
         shopData.setLastActivity(System.currentTimeMillis());
 
         // Rebuild shop items from staging container.
@@ -883,6 +935,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             EventData.of("Mode", "sell"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeBothBtn",
             EventData.of("Mode", "both"), false);
+
+        // Icon picker tiles - one binding per tile, IDs match #IconPick0..#IconPick23 in ShopEdit.ui
+        for (int i = 0; i < ICON_OPTIONS.length; i++) {
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#IconPick" + i,
+                EventData.of("IconPick", String.valueOf(i)), false);
+        }
     }
 
     // ==================== BUILD UI ====================
@@ -1115,6 +1173,18 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             }
         } else {
             showNoItemSelected(ui);
+        }
+
+        // Icon picker: highlight the selected tile's selector indicator and update the label.
+        for (int i = 0; i < ICON_OPTIONS.length; i++) {
+            boolean isSelected = ICON_OPTIONS[i].equals(editedIconItemId);
+            ui.set("#IconPick" + i + "Selector.Visible", isSelected);
+        }
+        if (editedIconItemId != null && !editedIconItemId.isBlank()) {
+            ui.set("#IconPickSelectedLabel.Text",
+                "SELECTED: " + ShopBrowsePage.formatItemName(editedIconItemId));
+        } else {
+            ui.set("#IconPickSelectedLabel.Text", "SELECTED: (first item fallback)");
         }
 
         // FIX 5: Clear the "fresh value" flags so subsequent refreshes leave the user's
@@ -1583,6 +1653,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("Mode", Codec.STRING),
                 (data, value) -> data.mode = value,
                 data -> data.mode)
+            .addField(new KeyedCodec<>("IconPick", Codec.STRING),
+                (data, value) -> data.iconPick = value,
+                data -> data.iconPick)
             .addField(new KeyedCodec<>("@Name", Codec.STRING),
                 (data, value) -> data.nameVal = value,
                 data -> data.nameVal)
@@ -1627,6 +1700,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String select;
         private String field;
         private String mode;
+        private String iconPick;
         private String nameVal;
         private String descVal;
         private String priceVal;

@@ -257,6 +257,80 @@ $C.@PageOverlay {
 
                                 Group { Anchor: (Height: 10); }
 
+                                // ==================== SHOP ICON PICKER ====================
+                                Label #IconPickHeader {
+                                    Anchor: (Height: 16);
+                                    Style: (FontSize: 9, TextColor: #00bfff, RenderBold: true, RenderUppercase: true);
+                                    Text: "SHOP ICON";
+                                }
+                                Group { Anchor: (Height: 3); }
+
+                                // 6x4 grid of icon tiles (24 total). Each tile is a Button containing an
+                                // ItemIcon plus a selector overlay Group that Java toggles via .Visible.
+                                Group #IconPickGrid {
+                                    Anchor: (Left: 0, Right: 0, Height: 196);
+                                    LayoutMode: LeftCenterWrap;
+                                    Padding: (Top: 2, Bottom: 2);
+
+                                    Button #IconPick0 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick0Icon { Anchor: (Full: 2); ItemId: "Weapon_Sword_Iron"; } Group #IconPick0Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick1 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick1Icon { Anchor: (Full: 2); ItemId: "Weapon_Axe_Iron"; } Group #IconPick1Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick2 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick2Icon { Anchor: (Full: 2); ItemId: "Weapon_Spear_Iron"; } Group #IconPick2Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick3 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick3Icon { Anchor: (Full: 2); ItemId: "Weapon_Shield_Iron"; } Group #IconPick3Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick4 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick4Icon { Anchor: (Full: 2); ItemId: "Weapon_Crossbow_Iron"; } Group #IconPick4Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick5 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick5Icon { Anchor: (Full: 2); ItemId: "Weapon_Battleaxe_Iron"; } Group #IconPick5Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+
+                                    Button #IconPick6 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick6Icon { Anchor: (Full: 2); ItemId: "Armor_Iron_Head"; } Group #IconPick6Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick7 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick7Icon { Anchor: (Full: 2); ItemId: "Armor_Iron_Chest"; } Group #IconPick7Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick8 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick8Icon { Anchor: (Full: 2); ItemId: "Armor_Iron_Hands"; } Group #IconPick8Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick9 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick9Icon { Anchor: (Full: 2); ItemId: "Armor_Iron_Legs"; } Group #IconPick9Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick10 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick10Icon { Anchor: (Full: 2); ItemId: "Tool_Pickaxe_Iron"; } Group #IconPick10Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick11 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick11Icon { Anchor: (Full: 2); ItemId: "Tool_Hatchet_Iron"; } Group #IconPick11Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+
+                                    Button #IconPick12 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick12Icon { Anchor: (Full: 2); ItemId: "Tool_Hammer_Iron"; } Group #IconPick12Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick13 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick13Icon { Anchor: (Full: 2); ItemId: "Ingredient_Bar_Iron"; } Group #IconPick13Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick14 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick14Icon { Anchor: (Full: 2); ItemId: "Ingredient_Bar_Gold"; } Group #IconPick14Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick15 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick15Icon { Anchor: (Full: 2); ItemId: "Ingredient_Bar_Silver"; } Group #IconPick15Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick16 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick16Icon { Anchor: (Full: 2); ItemId: "Ingredient_Crystal_Blue"; } Group #IconPick16Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick17 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick17Icon { Anchor: (Full: 2); ItemId: "Ingredient_Crystal_Red"; } Group #IconPick17Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+
+                                    Button #IconPick18 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick18Icon { Anchor: (Full: 2); ItemId: "Ingredient_Crystal_Green"; } Group #IconPick18Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick19 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick19Icon { Anchor: (Full: 2); ItemId: "Food_Bread"; } Group #IconPick19Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick20 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick20Icon { Anchor: (Full: 2); ItemId: "Food_Cheese"; } Group #IconPick20Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick21 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick21Icon { Anchor: (Full: 2); ItemId: "Plant_Fruit_Apple"; } Group #IconPick21Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick22 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick22Icon { Anchor: (Full: 2); ItemId: "Ingredient_Leather_Medium"; } Group #IconPick22Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                    Group { Anchor: (Width: 4); }
+                                    Button #IconPick23 { Anchor: (Width: 44, Height: 44); Padding: (Full: 2); Style: ButtonStyle(Default: (Background: (Color: #ffffff08)), Hovered: (Background: (Color: #ffffff18)), Pressed: (Background: (Color: #ffffff28))); ItemIcon #IconPick23Icon { Anchor: (Full: 2); ItemId: "Ingredient_Feathers_Light"; } Group #IconPick23Selector { Visible: false; Anchor: (Full: 0); Background: (Color: #ffd70040); } }
+                                }
+
+                                Group { Anchor: (Height: 2); }
+
+                                Label #IconPickSelectedLabel {
+                                    Anchor: (Left: 0, Right: 0, Height: 14);
+                                    Style: (FontSize: 9, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center);
+                                    Text: "SELECTED: (first item fallback)";
+                                }
+
+                                Group { Anchor: (Height: 10); }
+
                                 // Separator
                                 Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
 

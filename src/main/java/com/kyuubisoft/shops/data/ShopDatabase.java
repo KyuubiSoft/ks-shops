@@ -96,6 +96,7 @@ public class ShopDatabase {
                 "npc_rot_y FLOAT DEFAULT 0," +
                 "npc_entity_id VARCHAR(128)," +
                 "npc_skin_username VARCHAR(64)," +
+                "icon_item_id VARCHAR(128)," +
                 "category VARCHAR(64) DEFAULT ''," +
                 "tags TEXT DEFAULT '[]'," +
                 "average_rating DOUBLE DEFAULT 0," +
@@ -202,6 +203,7 @@ public class ShopDatabase {
                 "npc_rot_y FLOAT DEFAULT 0," +
                 "npc_entity_id VARCHAR(128)," +
                 "npc_skin_username VARCHAR(64)," +
+                "icon_item_id TEXT," +
                 "category VARCHAR(64) DEFAULT ''," +
                 "tags TEXT DEFAULT '[]'," +
                 "average_rating DOUBLE DEFAULT 0," +
@@ -310,7 +312,18 @@ public class ShopDatabase {
             provider.executeUpdate(alterSql);
             LOGGER.info("Migrated: added shop_balance column to shop_shops");
         } catch (SQLException ignored) {
-            // Column already exists — expected after first migration
+            // Column already exists - expected after first migration
+        }
+
+        // Migration: add icon_item_id column if missing (existing databases)
+        try {
+            String alterSql = provider.isMySQL()
+                ? "ALTER TABLE shop_shops ADD COLUMN icon_item_id VARCHAR(128)"
+                : "ALTER TABLE shop_shops ADD COLUMN icon_item_id TEXT";
+            provider.executeUpdate(alterSql);
+            LOGGER.info("Migrated: added icon_item_id column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
         }
 
         LOGGER.info("Database tables initialized");
@@ -343,15 +356,15 @@ public class ShopDatabase {
     public void saveShop(ShopData shop) {
         String sql = provider.isMySQL()
             ? "REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
-              "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, " +
+              "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             : "INSERT OR REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
-              "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, " +
+              "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+              "open, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try {
             provider.executeUpdate(sql,
@@ -368,6 +381,7 @@ public class ShopDatabase {
                 shop.getNpcRotY(),
                 shop.getNpcEntityId(),
                 shop.getNpcSkinUsername(),
+                shop.getIconItemId(),
                 shop.getCategory(),
                 GSON.toJson(shop.getTags()),
                 shop.getAverageRating(),
@@ -1034,6 +1048,10 @@ public class ShopDatabase {
             double shopBalance = 0;
             try { shopBalance = rs.getDouble("shop_balance"); } catch (SQLException ignored) {}
 
+            // Read icon_item_id safely (column may not exist in legacy DBs)
+            String iconItemId = null;
+            try { iconItemId = rs.getString("icon_item_id"); } catch (SQLException ignored) {}
+
             ShopData shop = ShopData.fromDatabase(
                 UUID.fromString(rs.getString("id")),
                 rs.getString("name"),
@@ -1048,6 +1066,7 @@ public class ShopDatabase {
                 rs.getFloat("npc_rot_y"),
                 rs.getString("npc_entity_id"),
                 rs.getString("npc_skin_username"),
+                iconItemId,
                 new ArrayList<>(), // items loaded separately
                 rs.getString("category"),
                 tags,

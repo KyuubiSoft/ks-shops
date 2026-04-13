@@ -120,6 +120,7 @@ public class ShopManager {
                             def.getNpcRotY(),
                             null, // npcEntityId
                             def.getNpcSkinUsername(),
+                            null, // iconItemId (admin shops fall back to first item)
                             defItems,
                             def.getCategory() != null ? def.getCategory() : "",
                             new ArrayList<>(), // tags

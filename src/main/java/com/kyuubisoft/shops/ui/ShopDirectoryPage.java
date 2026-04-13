@@ -20,7 +20,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.data.ShopData;
-import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.service.DirectoryService;
 
@@ -428,10 +427,10 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 ShopData shop = filteredShops.get(actualIndex);
                 ui.set(prefix + ".Visible", true);
 
-                // Avatar: show first item of the shop as icon, or nothing
-                List<ShopItem> items = shop.getItems();
-                if (items != null && !items.isEmpty()) {
-                    ui.set(prefix + " #DAvatar.ItemId", items.get(0).getItemId());
+                // Avatar: prefer the owner-chosen icon, fall back to the first shop item
+                String iconId = shop.getDisplayIconItemId();
+                if (iconId != null) {
+                    ui.set(prefix + " #DAvatar.ItemId", iconId);
                 }
 
                 // Shop name
@@ -462,7 +461,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 }
 
                 // Item count
-                int itemCount = (items != null) ? items.size() : 0;
+                int itemCount = (shop.getItems() != null) ? shop.getItems().size() : 0;
                 ui.set(prefix + " #DItems.Text",
                     i18n.get(playerRef, "shop.directory.item_count", itemCount));
 
