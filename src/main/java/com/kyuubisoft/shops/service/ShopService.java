@@ -1,8 +1,15 @@
 package com.kyuubisoft.shops.service;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.bridge.ClaimsBridge;
@@ -86,9 +93,9 @@ public class ShopService {
             return false;
         }
 
-        // --- Self-purchase prevention ---
+        // --- Self-purchase prevention (skipped for admin shops which have no owner) ---
         UUID buyerUuid = buyer.getUuid();
-        if (shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(buyerUuid)) {
+        if (!shop.isAdminShop() && shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(buyerUuid)) {
             LOGGER.fine("Purchase rejected: buyer is shop owner");
             return false;
         }
@@ -110,6 +117,10 @@ public class ShopService {
             LOGGER.fine("Purchase rejected: buy disabled for " + shopItem.getItemId());
             return false;
         }
+        if (shopItem.getBuyPrice() <= 0) {
+            LOGGER.fine("Purchase rejected: buy price is zero or negative for " + shopItem.getItemId());
+            return false;
+        }
 
         // --- Validate stock (cache check before DB) ---
         if (!shopItem.isUnlimitedStock() && shopItem.getStock() < quantity) {
@@ -117,15 +128,11 @@ public class ShopService {
             return false;
         }
 
-        // --- Calculate pricing ---
+        // --- Calculate pricing (FIX 5: tax disabled — collected nowhere, would vanish) ---
         int pricePerUnit = shopItem.getBuyPrice();
         int totalPrice = pricePerUnit * quantity;
-        ShopConfig.Tax taxConfig = config.getData().tax;
         int taxAmount = 0;
-        if (taxConfig.enabled) {
-            taxAmount = (int) (totalPrice * taxConfig.buyTaxPercent / 100.0);
-        }
-        int buyerCost = totalPrice + taxAmount;
+        int buyerCost = totalPrice;
         int sellerReceived = totalPrice;
 
         // --- Validate buyer has funds ---
@@ -217,6 +224,9 @@ public class ShopService {
             shopItem.getItemId(), quantity, totalPrice, taxAmount, "BUY"
         ));
 
+        // --- Step 10: Persist shop state (balance, revenue, lastActivity, stock cache) ---
+        database.saveShop(shop);
+
         LOGGER.info("Purchase complete: " + buyer.getUsername() + " bought " + quantity
             + "x " + shopItem.getItemId() + " for " + buyerCost + " from shop " + shop.getName());
         return true;
@@ -282,16 +292,12 @@ public class ShopService {
             }
         }
 
-        // --- Calculate pricing ---
+        // --- Calculate pricing (FIX 5: tax disabled — collected nowhere, would vanish) ---
         UUID sellerUuid = seller.getUuid();
         int pricePerUnit = shopItem.getSellPrice();
         int totalPrice = pricePerUnit * quantity;
-        ShopConfig.Tax taxConfig = config.getData().tax;
         int taxAmount = 0;
-        if (taxConfig.enabled) {
-            taxAmount = (int) (totalPrice * taxConfig.sellTaxPercent / 100.0);
-        }
-        int sellerReceived = totalPrice - taxAmount;
+        int sellerReceived = totalPrice;
 
         // --- For player shops: check if shop balance can afford to buy back ---
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
@@ -339,9 +345,20 @@ public class ShopService {
             return false;
         }
 
-        // --- Step 4: Increment stock in DB ---
+        // --- Step 4: Atomic increment stock in DB (FIX 6: respects maxStock, rolls back on cache drift) ---
         if (!shopItem.isUnlimitedStock()) {
-            database.executeAtomicStockIncrement(shopId, itemId, quantity);
+            int rows = database.executeAtomicStockIncrement(shopId, itemId, quantity);
+            if (rows == 0) {
+                // Rollback: items back to seller, restore shop balance, withdraw deposit
+                giveItem(seller, itemId, quantity);
+                if (isPlayerShop) {
+                    shop.addToBalance(totalPrice);
+                }
+                economyBridge.withdraw(sellerUuid, sellerReceived);
+                LOGGER.warning("Sell rollback: stock increment failed (max stock exceeded or item missing) for "
+                    + itemId + " in shop " + shop.getName());
+                return false;
+            }
             shopItem.setStock(shopItem.getStock() + quantity);
         }
 
@@ -383,6 +400,9 @@ public class ShopService {
             shopId, sellerUuid, shop.getOwnerUuid(),
             itemId, quantity, totalPrice, taxAmount, "SELL"
         ));
+
+        // --- Step 9: Persist shop state (balance, quota, lastActivity, stock cache) ---
+        database.saveShop(shop);
 
         LOGGER.info("Sale complete: " + seller.getUsername() + " sold " + quantity
             + "x " + itemId + " for " + sellerReceived + " to shop " + shop.getName());
@@ -1018,33 +1038,150 @@ public class ShopService {
     // ==================== HELPERS ====================
 
     /**
-     * Gives items to a player. Placeholder that will be wired up with full
-     * Hytale inventory API when Player entity is available in the call chain.
+     * Gives items to a player. Tries to add to Storage first; if the storage is full
+     * the overflow is dropped at the player's feet via SimpleItemContainer.addOrDropItemStack.
+     * Marks both Storage and Hotbar dirty on success.
      *
-     * In production: player.getInventoryManager().getInventory().addItemStack(new ItemStack(itemId, quantity))
+     * Pattern mirrors the bank mod (BankService.addItemOrDrop).
      */
     private void giveItem(PlayerRef playerRef, String itemId, int quantity) {
-        // TODO: Wire up with actual Hytale inventory API via Player entity
-        // Player player = resolvePlayer(playerRef);
-        // if (player != null) {
-        //     player.getInventoryManager().getInventory().addItemStack(new ItemStack(itemId, quantity));
-        // }
-        LOGGER.fine("giveItem: " + quantity + "x " + itemId + " -> " + playerRef.getUsername());
+        if (playerRef == null || itemId == null || quantity <= 0) return;
+
+        try {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                LOGGER.warning("giveItem: invalid player reference for " + playerRef.getUsername());
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+
+            ItemStack stack = new ItemStack(itemId, quantity);
+
+            // Attempt to add to player Storage
+            var storageComp = store.getComponent(ref, InventoryComponent.Storage.getComponentType());
+            if (storageComp != null) {
+                ItemContainer storage = storageComp.getInventory();
+                if (storage != null) {
+                    storage.addItemStack(stack);
+                    storageComp.markDirty();
+
+                    // Also mark Hotbar dirty in case overflow spilled there via combined containers
+                    var hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+                    if (hotbarComp != null) hotbarComp.markDirty();
+                    return;
+                }
+            }
+
+            // Storage unavailable or full — drop at player's feet
+            SimpleItemContainer tempContainer = new SimpleItemContainer((short) 0);
+            SimpleItemContainer.addOrDropItemStack(store, ref, tempContainer, stack);
+            LOGGER.fine("giveItem: dropped " + quantity + "x " + itemId
+                + " for " + playerRef.getUsername() + " (storage unavailable)");
+        } catch (Exception e) {
+            LOGGER.warning("giveItem failed for " + playerRef.getUsername()
+                + " (" + quantity + "x " + itemId + "): " + e.getMessage());
+        }
     }
 
     /**
-     * Removes items from a player's inventory. Placeholder.
+     * Removes items from a player's inventory by iterating Hotbar + Storage and
+     * decrementing matching stacks. If the player does not have enough items,
+     * NOTHING is changed and false is returned (atomic check).
      *
-     * @return true if the items were successfully removed
+     * @return true if all requested items were successfully removed
      */
     private boolean removeItem(PlayerRef playerRef, String itemId, int quantity) {
-        // TODO: Wire up with actual Hytale inventory API via Player entity
-        // Player player = resolvePlayer(playerRef);
-        // if (player != null) {
-        //     return player.getInventoryManager().getInventory().removeItemStack(itemId, quantity);
-        // }
-        LOGGER.fine("removeItem: " + quantity + "x " + itemId + " <- " + playerRef.getUsername());
-        return true;
+        if (playerRef == null || itemId == null || quantity <= 0) return false;
+
+        try {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                LOGGER.warning("removeItem: invalid player reference for " + playerRef.getUsername());
+                return false;
+            }
+            Store<EntityStore> store = ref.getStore();
+
+            var hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            var storageComp = store.getComponent(ref, InventoryComponent.Storage.getComponentType());
+            ItemContainer hotbar = hotbarComp != null ? hotbarComp.getInventory() : null;
+            ItemContainer storage = storageComp != null ? storageComp.getInventory() : null;
+
+            // Pre-flight: count available items across both containers
+            int available = countItem(hotbar, itemId) + countItem(storage, itemId);
+            if (available < quantity) {
+                LOGGER.fine("removeItem: insufficient items for " + playerRef.getUsername()
+                    + " (have " + available + ", need " + quantity + " of " + itemId + ")");
+                return false;
+            }
+
+            // Decrement stacks: hotbar first, then storage
+            int remaining = quantity;
+            remaining = decrementContainer(hotbar, itemId, remaining);
+            if (remaining > 0) {
+                remaining = decrementContainer(storage, itemId, remaining);
+            }
+
+            if (remaining > 0) {
+                // Should never happen due to pre-flight check, but guard against races
+                LOGGER.warning("removeItem: drift detected for " + playerRef.getUsername()
+                    + " — pre-flight passed but " + remaining + " items remain undecremented");
+                return false;
+            }
+
+            // Mark both containers dirty
+            if (hotbarComp != null) hotbarComp.markDirty();
+            if (storageComp != null) storageComp.markDirty();
+            return true;
+        } catch (Exception e) {
+            LOGGER.warning("removeItem failed for " + playerRef.getUsername()
+                + " (" + quantity + "x " + itemId + "): " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Counts the total quantity of a given itemId across all slots of a container.
+     */
+    private static int countItem(ItemContainer container, String itemId) {
+        if (container == null) return 0;
+        int total = 0;
+        for (short i = 0; i < container.getCapacity(); i++) {
+            ItemStack s = container.getItemStack(i);
+            if (s == null || s.isEmpty()) continue;
+            if (itemId.equals(s.getItemId())) {
+                total += s.getQuantity();
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Decrements stacks of a given itemId in a container until {@code remaining}
+     * items have been removed. Returns the number of items still left to remove
+     * (0 = fully satisfied).
+     */
+    private static int decrementContainer(ItemContainer container, String itemId, int remaining) {
+        if (container == null || remaining <= 0) return remaining;
+        for (short i = 0; i < container.getCapacity(); i++) {
+            if (remaining <= 0) break;
+            ItemStack s = container.getItemStack(i);
+            if (s == null || s.isEmpty()) continue;
+            if (!itemId.equals(s.getItemId())) continue;
+
+            int stackQty = s.getQuantity();
+            if (stackQty <= remaining) {
+                // Consume the whole stack
+                container.setItemStackForSlot(i, null);
+                remaining -= stackQty;
+            } else {
+                // Partial consume
+                ItemStack reduced = new ItemStack(s.getItemId(), stackQty - remaining,
+                    s.getDurability(), s.getMaxDurability(), s.getMetadata());
+                container.setItemStackForSlot(i, reduced);
+                remaining = 0;
+            }
+        }
+        return remaining;
     }
 
     /**

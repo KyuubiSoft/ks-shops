@@ -61,6 +61,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     private int currentPage = 0;
     private boolean confirmActive = false;
     private int confirmSlotIndex = -1;
+    private ShopItem confirmItem;
     private int confirmQuantity = 1;
 
     // Stored from build() for opening sub-pages
@@ -155,6 +156,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         currentPage = 0;
         confirmActive = false;
         confirmSlotIndex = -1;
+        confirmItem = null;
 
         rebuildItemLists();
         refreshUI();
@@ -196,48 +198,26 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             if (buyItems != null && actualIndex >= 0 && actualIndex < buyItems.size()) {
                 ShopItem item = buyItems.get(actualIndex);
 
-                // Validate stock
+                // Validate stock before opening confirmation
                 if (!item.hasStock()) {
                     player.sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.out_of_stock")).color("#FF5555"));
                     refreshUI();
                     return;
                 }
 
-                // Validate balance
-                double balance = plugin.getEconomyBridge().getBalance(playerRef.getUuid());
-                int price = item.getBuyPrice();
-
-                // Apply tax
-                ShopConfig.Tax taxConfig = plugin.getShopConfig().getData().tax;
-                int tax = 0;
-                if (taxConfig.enabled) {
-                    tax = (int) Math.ceil(price * taxConfig.buyTaxPercent / 100.0);
-                }
-                int totalCost = price + tax;
-
-                if (balance < totalCost) {
-                    player.sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.not_enough")).color("#FF5555"));
-                    refreshUI();
-                    return;
-                }
-
-                // Execute purchase via ShopService
-                boolean success = plugin.getShopService().purchaseItem(
-                    playerRef, shopData.getId(), item.getSlot(), 1
-                );
-
-                if (!success) {
-                    player.sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.purchase_failed")).color("#FF5555"));
-                }
-
-                // Rebuild item lists to reflect stock changes
-                rebuildItemLists();
+                // Show confirmation dialog (actual purchase happens in handleConfirm("yes"))
+                confirmActive = true;
+                confirmSlotIndex = actualIndex;
+                confirmItem = item;
+                confirmQuantity = 1;
+                refreshUI();
+                return;
             }
         } catch (NumberFormatException e) {
             LOGGER.warning("[ShopBrowse] Invalid buy slot: " + slotStr);
         }
 
-        refreshUI();
+        this.sendUpdate(new UICommandBuilder(), false);
     }
 
     // ==================== SELL ====================
@@ -253,6 +233,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     // Show confirmation dialog
                     confirmActive = true;
                     confirmSlotIndex = actualIndex;
+                    confirmItem = item;
                     confirmQuantity = 1;
                     refreshUI();
                     return;
@@ -268,46 +249,47 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     private void handleConfirm(String action) {
         switch (action) {
             case "yes" -> {
-                if (confirmActive && confirmSlotIndex >= 0) {
-                    List<ShopItem> activeItems = (mode == Mode.SELL) ? sellItems : buyItems;
-                    if (activeItems != null && confirmSlotIndex < activeItems.size()) {
-                        ShopItem item = activeItems.get(confirmSlotIndex);
+                if (confirmActive && confirmItem != null) {
+                    ShopI18n i18n = plugin.getI18n();
+                    ShopItem item = confirmItem;
 
-                        if (mode == Mode.SELL) {
-                            boolean success = plugin.getShopService().sellItem(
-                                playerRef, shopData.getId(), item.getItemId(), confirmQuantity
-                            );
-                            if (!success) {
-                                ShopI18n i18n = plugin.getI18n();
-                                player.sendMessage(Message.raw(
-                                    i18n.get(playerRef, "shop.browse.sell_failed")).color("#FF5555"));
-                            }
-                        } else {
-                            // Buy with quantity
-                            boolean success = plugin.getShopService().purchaseItem(
-                                playerRef, shopData.getId(), item.getSlot(), confirmQuantity
-                            );
-                            if (!success) {
-                                ShopI18n i18n = plugin.getI18n();
-                                player.sendMessage(Message.raw(
-                                    i18n.get(playerRef, "shop.browse.purchase_failed")).color("#FF5555"));
-                            }
+                    if (mode == Mode.SELL) {
+                        boolean success = plugin.getShopService().sellItem(
+                            playerRef, shopData.getId(), item.getItemId(), confirmQuantity
+                        );
+                        if (!success) {
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.browse.sell_failed")).color("#FF5555"));
                         }
-
-                        rebuildItemLists();
+                    } else {
+                        // Buy with quantity
+                        boolean success = plugin.getShopService().purchaseItem(
+                            playerRef, shopData.getId(), item.getSlot(), confirmQuantity
+                        );
+                        if (success) {
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.buy.success", confirmQuantity, item.getItemId())).color("#44FF44"));
+                        } else {
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.browse.purchase_failed")).color("#FF5555"));
+                        }
                     }
+
+                    rebuildItemLists();
                 }
                 confirmActive = false;
                 confirmSlotIndex = -1;
+                confirmItem = null;
                 refreshUI();
             }
             case "no" -> {
                 confirmActive = false;
                 confirmSlotIndex = -1;
+                confirmItem = null;
                 refreshUI();
             }
             case "plus" -> {
-                if (confirmActive && confirmSlotIndex >= 0) {
+                if (confirmActive && confirmItem != null) {
                     int max = getConfirmMaxQuantity();
                     if (confirmQuantity < max) confirmQuantity++;
                 }
@@ -414,6 +396,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         // Currency display
         String currencyName = plugin.getEconomyBridge().getCurrencyName();
         ui.set("#Title #CurrencyDisplay #CurrencyBalance.Text", plugin.getEconomyBridge().format(balance));
+        ui.set("#Title #CurrencyDisplay #CurrencyIcon.ItemId", "Ingredient_Bar_Gold");
 
         // ---- Info bar ----
         buildInfoBar(ui, i18n);
@@ -444,6 +427,12 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         } else {
             ui.set("#TabBar.Visible", false);
         }
+
+        // ---- Empty state (when active list is empty) ----
+        List<ShopItem> currentList = (mode == Mode.BUY) ? buyItems : sellItems;
+        boolean isEmpty = (currentList == null || currentList.isEmpty());
+        ui.set("#EmptyStateLabel.Visible", isEmpty);
+        ui.set("#CardContainer.Visible", !isEmpty);
 
         // ---- Cards ----
         buildCards(ui, i18n, balance);
@@ -514,6 +503,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 // Item icon
                 ui.set(prefix + " #ItemIcon.ItemId", item.getItemId());
 
+                // Cost icon (currency display)
+                ui.set(prefix + " #CostIcon.ItemId", "Ingredient_Bar_Gold");
+
                 // Quantity badge (for stock display or bundle size)
                 if (mode == Mode.BUY) {
                     if (!item.isUnlimitedStock() && item.getStock() > 0) {
@@ -547,15 +539,30 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     ui.set(prefix + " #LimitInfo.Text", "");
                 }
 
-                // Tooltip with seller info
+                // Multi-line tooltip with seller / price / stock / category info
+                StringBuilder tooltip = new StringBuilder();
                 if (shopData.isPlayerShop() && shopData.getOwnerName() != null) {
-                    ui.set(prefix + " #CardBtn.TooltipText",
-                        i18n.get(playerRef, "shop.browse.tooltip.seller", shopData.getOwnerName()));
-                } else {
-                    ui.set(prefix + " #CardBtn.TooltipText", "");
+                    tooltip.append("Seller: ").append(shopData.getOwnerName()).append("\n");
                 }
+                if (mode == Mode.BUY) {
+                    tooltip.append("Price: ").append(item.getBuyPrice()).append(" Gold\n");
+                    if (!item.isUnlimitedStock()) {
+                        tooltip.append("Stock: ").append(item.getStock()).append("\n");
+                    } else {
+                        tooltip.append("Stock: Unlimited\n");
+                    }
+                } else {
+                    tooltip.append("Price: ").append(item.getSellPrice()).append(" Gold\n");
+                    if (item.getDailyBuyLimit() > 0) {
+                        tooltip.append("Wanted: ").append(item.getDailyBuyLimit()).append("\n");
+                    }
+                }
+                if (item.getCategory() != null && !item.getCategory().isBlank()) {
+                    tooltip.append("Category: ").append(item.getCategory());
+                }
+                ui.set(prefix + " #CardBtn.TooltipText", tooltip.toString());
 
-                // Overlay: out of stock / can't afford
+                // Overlay: out of stock / can't afford / shop full / shop out of funds
                 if (mode == Mode.BUY) {
                     int tax = 0;
                     if (taxConfig.enabled) {
@@ -575,8 +582,30 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                         ui.set(prefix + " #Overlay.Visible", false);
                     }
                 } else {
-                    // Sell mode: no overlay (player just needs items in inventory)
-                    ui.set(prefix + " #Overlay.Visible", false);
+                    // SELL mode: show overlay if shop has insufficient funds or is full
+                    boolean overlayShown = false;
+
+                    if (shopData.isPlayerShop()) {
+                        int totalCost = item.getSellPrice(); // per 1 unit
+                        if (shopData.getShopBalance() < totalCost) {
+                            ui.set(prefix + " #Overlay.Visible", true);
+                            ui.set(prefix + " #OverlayText.Text", "SHOP OUT OF FUNDS");
+                            ui.set(prefix + " #OverlayText.Style.TextColor", "#ff4444");
+                            overlayShown = true;
+                        }
+                    }
+
+                    if (!overlayShown && !item.isUnlimitedStock() && item.getMaxStock() > 0
+                        && item.getStock() >= item.getMaxStock()) {
+                        ui.set(prefix + " #Overlay.Visible", true);
+                        ui.set(prefix + " #OverlayText.Text", "SHOP FULL");
+                        ui.set(prefix + " #OverlayText.Style.TextColor", "#ff4444");
+                        overlayShown = true;
+                    }
+
+                    if (!overlayShown) {
+                        ui.set(prefix + " #Overlay.Visible", false);
+                    }
                 }
             } else {
                 ui.set(prefix + ".Visible", false);
@@ -593,12 +622,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     private void buildConfirmOverlay(UICommandBuilder ui, ShopI18n i18n, double balance) {
         ui.set("#ConfirmOverlay.Visible", confirmActive);
 
-        if (!confirmActive || confirmSlotIndex < 0) return;
+        if (!confirmActive || confirmItem == null) return;
 
-        List<ShopItem> activeItems = (mode == Mode.SELL) ? sellItems : buyItems;
-        if (activeItems == null || confirmSlotIndex >= activeItems.size()) return;
-
-        ShopItem item = activeItems.get(confirmSlotIndex);
+        ShopItem item = confirmItem;
         String itemName = formatItemName(item.getItemId());
         int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
 
@@ -679,10 +705,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     }
 
     private int getConfirmMaxQuantity() {
-        List<ShopItem> activeItems = (mode == Mode.SELL) ? sellItems : buyItems;
-        if (activeItems == null || confirmSlotIndex < 0 || confirmSlotIndex >= activeItems.size()) return 1;
+        if (confirmItem == null) return 1;
 
-        ShopItem item = activeItems.get(confirmSlotIndex);
+        ShopItem item = confirmItem;
 
         if (mode == Mode.BUY) {
             // Limited by stock (if not unlimited) and by player balance
@@ -735,11 +760,36 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
 
     /**
      * Converts an item ID like "Ingredient_Bar_Gold" to a human-readable name
-     * "Ingredient Bar Gold" by replacing underscores with spaces.
+     * "Bar Gold" by stripping common prefixes and title-casing each word.
      */
     static String formatItemName(String itemId) {
-        if (itemId == null || itemId.isEmpty()) return "";
-        return itemId.replace('_', ' ');
+        if (itemId == null || itemId.isEmpty()) return "Unknown";
+
+        // Remove common prefixes
+        String name = itemId;
+        String[] prefixes = {"Ingredient_", "Weapon_", "Armor_", "Tool_", "Consumable_", "Block_"};
+        for (String prefix : prefixes) {
+            if (name.startsWith(prefix)) {
+                name = name.substring(prefix.length());
+                break;
+            }
+        }
+
+        // Replace underscores with spaces
+        name = name.replace("_", " ");
+
+        // Title case each word
+        String[] words = name.split(" ");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (result.length() > 0) result.append(" ");
+            result.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) {
+                result.append(word.substring(1).toLowerCase());
+            }
+        }
+        return result.toString();
     }
 
     // ==================== DISMISS ====================

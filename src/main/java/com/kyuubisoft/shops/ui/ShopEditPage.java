@@ -31,7 +31,11 @@ import javax.annotation.Nonnull;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -95,6 +99,23 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private String editedDesc;
     private String editedCategory;
 
+    // FIX 1: Snapshot of original shop items at open time (multiset by itemId).
+    // Used by getStagingOnlyItems() to determine which items are NEW in the staging
+    // container (and must be returned to the player on discard). Per-slot equality
+    // doesn't work because the user may have moved an original item to a different slot.
+    private final Map<String, Integer> originalItemCounts = new HashMap<>();
+
+    // FIX 4: Track which item IDs were unlimited stock at open time, so handleSave()
+    // can preserve unlimited (-1) instead of clobbering it with the staging quantity.
+    private final Set<String> originalUnlimitedItems = new HashSet<>();
+
+    // FIX 5: Only push text-field values to the client when the server has a "fresh"
+    // value the client doesn't know yet. Otherwise refreshUI() triggered by an unrelated
+    // event would clobber whatever the user is currently typing. Two flags so slot changes
+    // can refresh per-item fields without clobbering global text fields (name/desc/category).
+    private boolean pushGlobalFields = true; // name, desc, category — pushed once at open
+    private boolean pushItemFields = true;   // per-slot price/stock/quota — pushed on slot change
+
     // Cached refs for post-build updates
     private Ref<EntityStore> buildRef;
     private Store<EntityStore> buildStore;
@@ -118,6 +139,16 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
         // Copy existing shop items into staging container
         populateStagingFromShop();
+
+        // FIX 1 + FIX 4: Snapshot original counts (multiset) and unlimited-stock IDs.
+        // Read directly from shopData so we get the authoritative pre-edit state.
+        for (ShopItem item : shopData.getItems()) {
+            int qty = item.isUnlimitedStock() ? 1 : Math.max(1, item.getStock());
+            originalItemCounts.merge(item.getItemId(), qty, Integer::sum);
+            if (item.isUnlimitedStock()) {
+                originalUnlimitedItems.add(item.getItemId());
+            }
+        }
     }
 
     /**
@@ -331,6 +362,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             selectedSlot = -1;
         }
 
+        // FIX 5: Slot change must push fresh price/stock/quota values to the UI fields.
+        pushItemFields = true;
         refreshUI();
     }
 
@@ -454,17 +487,23 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         shopData.setCategory(editedCategory);
         shopData.setLastActivity(System.currentTimeMillis());
 
-        // Rebuild shop items from staging container
+        // Rebuild shop items from staging container.
+        // FIX 4: If the item was originally unlimited stock (-1), preserve that on save.
+        // Otherwise the staging container's quantity (always >= 1) would clobber the
+        // unlimited flag and turn the listing into a 1-stock item.
         List<ShopItem> newItems = new ArrayList<>();
         for (int i = 0; i < stagingContainer.getCapacity(); i++) {
             ItemStack stack = stagingContainer.getItemStack((short) i);
             if (stack != null && !stack.isEmpty()) {
                 StagedItemMeta meta = stagingMeta[i];
+                int finalStock = originalUnlimitedItems.contains(stack.getItemId())
+                    ? -1
+                    : stack.getQuantity();
                 ShopItem item = new ShopItem(
                     stack.getItemId(),
                     meta != null ? meta.buyPrice : 10,
                     meta != null ? meta.sellPrice : 5,
-                    stack.getQuantity(),
+                    finalStock,
                     meta != null ? meta.maxStock : -1,
                     meta != null ? meta.buyEnabled : true,
                     meta != null ? meta.sellEnabled : false,
@@ -518,6 +557,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private void handleToggleOpen() {
         boolean newState = !shopData.isOpen();
         shopData.setOpen(newState);
+        shopData.markDirty();
+
+        // FIX 3: Persist immediately. Previously the toggle only mutated the in-memory
+        // ShopData, so a server crash before the next full save would lose the change.
+        try {
+            plugin.getDatabase().saveShop(shopData);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] Failed to persist shop open state: " + e.getMessage());
+        }
 
         refreshUI();
     }
@@ -563,6 +611,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         }
 
         selectedSlot = -1;
+        // FIX 5: Removing an item clears the selection -- push UI back to "no item selected".
+        pushItemFields = true;
         refreshUI();
     }
 
@@ -625,6 +675,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Auto-select the destination slot if dropped into shop grid
         if (destSectionId == 0 && srcItem != null && !srcItem.isEmpty()) {
             selectedSlot = destSlot;
+            // FIX 5: Auto-select after drop -- push the item's price/stock fields to UI.
+            pushItemFields = true;
         }
 
         refreshUI();
@@ -651,6 +703,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         if (shopPage > 0) {
             shopPage--;
             selectedSlot = -1;
+            pushItemFields = true; // FIX 5: re-arm so per-item fields refresh on page change
             refreshUI();
         } else {
             this.sendUpdate(new UICommandBuilder(), false);
@@ -662,6 +715,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         if (shopPage < maxPage) {
             shopPage++;
             selectedSlot = -1;
+            pushItemFields = true; // FIX 5: re-arm so per-item fields refresh on page change
             refreshUI();
         } else {
             this.sendUpdate(new UICommandBuilder(), false);
@@ -941,11 +995,18 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== SETTINGS PANEL ====================
 
     private void buildSettingsPanel(UICommandBuilder ui) {
-        ui.set("#EditNameField.Value", editedName);
-        ui.set("#EditDescField.Value", editedDesc);
-
-        // Set dropdown value for category
-        ui.set("#EditCategoryDropdown.Value", editedCategory);
+        // FIX 5: Only push text-field values to the client when the server has a "fresh"
+        // value the client doesn't know yet. Otherwise refreshUI() triggered by an unrelated
+        // event (e.g. mode click) would clobber whatever the user is currently typing.
+        //
+        // Global fields (name/desc/category) are pushed once at open: after that the
+        // client owns the value. Per-item fields (price/stock/quota) are pushed on slot
+        // change since they're tied to the selection.
+        if (pushGlobalFields) {
+            ui.set("#EditNameField.Value", editedName);
+            ui.set("#EditDescField.Value", editedDesc);
+            ui.set("#EditCategoryDropdown.Value", editedCategory);
+        }
 
         // Selected item section
         if (selectedSlot >= 0 && selectedSlot < stagingContainer.getCapacity()) {
@@ -958,24 +1019,36 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 ui.set("#SelectedItemName.Text", itemName + " x" + stack.getQuantity());
 
                 StagedItemMeta meta = getOrCreateMeta(selectedSlot);
-                ui.set("#BuyPriceField.Value", String.valueOf(meta.buyPrice));
-                ui.set("#SellPriceField.Value", String.valueOf(meta.sellPrice));
-                ui.set("#BuyQuotaField.Value", String.valueOf(meta.buyQuota));
-                ui.set("#StockLimitField.Value", String.valueOf(meta.maxStock));
+                if (pushItemFields) {
+                    ui.set("#BuyPriceField.Value", String.valueOf(meta.buyPrice));
+                    ui.set("#SellPriceField.Value", String.valueOf(meta.sellPrice));
+                    ui.set("#BuyQuotaField.Value", String.valueOf(meta.buyQuota));
+                    ui.set("#StockLimitField.Value", String.valueOf(meta.maxStock));
+                }
 
-                // Highlight active mode button
-                String buyColor = meta.buyEnabled ? "#44ff44" : "#555555";
-                String sellColor = meta.sellEnabled ? "#cc8844" : "#555555";
-                String bothColor = (meta.buyEnabled && meta.sellEnabled) ? "#7caacc" : "#555555";
-                ui.set("#ModeBuyLbl.Style.TextColor", buyColor);
-                ui.set("#ModeSellLbl.Style.TextColor", sellColor);
-                ui.set("#ModeBothLbl.Style.TextColor", bothColor);
+                // FIX 2: Mode buttons must be mutually exclusive in display so the user can
+                // tell which mode is actually active. Previously BOTH lit up all 3 labels.
+                boolean isBoth = meta.buyEnabled && meta.sellEnabled;
+                boolean isBuyOnly = meta.buyEnabled && !meta.sellEnabled;
+                boolean isSellOnly = !meta.buyEnabled && meta.sellEnabled;
+
+                String activeColor = "#ffd700";   // Gold for the single active mode
+                String inactiveColor = "#555555";
+
+                ui.set("#ModeBuyLbl.Style.TextColor", isBuyOnly ? activeColor : inactiveColor);
+                ui.set("#ModeSellLbl.Style.TextColor", isSellOnly ? activeColor : inactiveColor);
+                ui.set("#ModeBothLbl.Style.TextColor", isBoth ? activeColor : inactiveColor);
             } else {
                 showNoItemSelected(ui);
             }
         } else {
             showNoItemSelected(ui);
         }
+
+        // FIX 5: Clear the "fresh value" flags so subsequent refreshes leave the user's
+        // typing alone. Slot changes / page changes will re-arm pushItemFields.
+        pushGlobalFields = false;
+        pushItemFields = false;
     }
 
     private void showNoItemSelected(UICommandBuilder ui) {
@@ -1078,24 +1151,29 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     /**
      * Returns the items that are in the staging container but were NOT in the original shop.
      * These items must be returned to the player on close without save.
+     *
+     * FIX 1 (CRITICAL: dupe prevention): Uses a multiset diff against the snapshot taken
+     * at open time (originalItemCounts), NOT a per-slot equality check. Otherwise moving
+     * an original item from slot A -> slot B and discarding would return the moved item
+     * to the player AND leave the original in DB -> dupe.
      */
     private List<ItemStack> getStagingOnlyItems() {
-        List<ItemStack> result = new ArrayList<>();
+        // Sum current quantities per itemId across the entire staging container
+        Map<String, Integer> currentCounts = new HashMap<>();
         for (int i = 0; i < stagingContainer.getCapacity(); i++) {
             ItemStack stack = stagingContainer.getItemStack((short) i);
             if (stack != null && !stack.isEmpty()) {
-                // Check if this item existed in the original shop data at this slot
-                boolean wasOriginal = false;
-                for (ShopItem original : shopData.getItems()) {
-                    if (original.getSlot() == i
-                        && original.getItemId().equals(stack.getItemId())) {
-                        wasOriginal = true;
-                        break;
-                    }
-                }
-                if (!wasOriginal) {
-                    result.add(stack);
-                }
+                currentCounts.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
+            }
+        }
+
+        // Anything beyond the original count is a NET addition by the user during this
+        // editing session and must be returned to the inventory on discard.
+        List<ItemStack> result = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : currentCounts.entrySet()) {
+            int diff = entry.getValue() - originalItemCounts.getOrDefault(entry.getKey(), 0);
+            if (diff > 0) {
+                result.add(new ItemStack(entry.getKey(), diff));
             }
         }
         return result;

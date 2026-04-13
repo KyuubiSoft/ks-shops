@@ -152,8 +152,13 @@ public class ShopData {
     public void setAverageRating(double averageRating) { this.averageRating = averageRating; markDirty(); }
     public void setTotalRatings(int totalRatings) { this.totalRatings = totalRatings; markDirty(); }
     public void setShopBalance(double shopBalance) { this.shopBalance = shopBalance; markDirty(); }
-    public void addToBalance(double amount) { this.shopBalance += amount; markDirty(); }
+    public void addToBalance(double amount) {
+        if (amount < 0 || Double.isNaN(amount) || Double.isInfinite(amount)) return;
+        this.shopBalance += amount;
+        markDirty();
+    }
     public boolean deductFromBalance(double amount) {
+        if (amount < 0 || Double.isNaN(amount) || Double.isInfinite(amount)) return false;
         if (shopBalance >= amount) { shopBalance -= amount; markDirty(); return true; }
         return false;
     }
