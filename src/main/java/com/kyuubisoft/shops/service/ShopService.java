@@ -63,16 +63,26 @@ public class ShopService {
     // ==================== PURCHASE ====================
 
     /**
-     * Processes a purchase: deducts currency from buyer, adds stock change,
-     * credits seller earnings, fires transaction event.
+     * Processes a purchase: deducts currency from buyer, decrements stock,
+     * routes both the purchased items and the seller earnings through the
+     * mailbox, and fires the transaction event.
      *
-     * Follows the Transaction Journal pattern:
+     * Follows the Transaction Journal pattern (Phase 3 — mailbox flow):
      *   1. Validate all preconditions
      *   2. Atomic stock decrement in DB
      *   3. Withdraw from buyer
-     *   4. Give item to buyer
-     *   5. Deposit to seller (if player shop)
+     *   4. Create ITEM mail for buyer (no direct inventory delivery)
+     *   5. Create MONEY mail for seller (player shops only — admin shops skip)
      *   6. Log transaction + update stats
+     *
+     * <p>shopBalance is no longer credited on a sale — it is now strictly a
+     * buyback pool fed by {@link #depositToShop(PlayerRef, UUID, double)}
+     * and drained by {@link #sellItem(PlayerRef, UUID, String, int)}. The
+     * owner's earnings live in the mailbox until claimed.
+     *
+     * <p>Failure handling: if the mailbox insertion throws (DB issue), the
+     * buyer is refunded, the stock is restored, and no money mail is
+     * created. The transaction never partially commits.
      *
      * @return true if the purchase succeeded
      */
@@ -164,23 +174,66 @@ public class ShopService {
             return false;
         }
 
-        // --- Step 3: Give item to buyer (placeholder, wired up with Player reference) ---
-        giveItem(buyer, shopItem.getItemId(), quantity);
-
-        // --- Step 4: Credit shop balance (player shop) or skip (admin shop) ---
+        // --- Step 3: Mail items to buyer + earnings to seller (atomic group) ---
+        // Both mailbox writes happen here. If either throws, we roll back the
+        // economy + stock and abort. We intentionally insert the buyer's item
+        // mail first — if it fails, no money mail exists yet to clean up.
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
-        if (isPlayerShop) {
-            // Add earnings to shop's own balance account (owner collects later)
-            shop.addToBalance(sellerReceived);
+        try {
+            // 3a. ITEM mail to the buyer (always — admin and player shops alike)
+            plugin.getMailboxService().createItemMail(
+                buyerUuid,
+                shop.getId(),
+                shop.getName(),
+                shop.getName(), // ITEM mails show the shop name as the "sender"
+                shopItem.getItemId(),
+                quantity
+            );
 
-            // Update seller's tracking stats
+            // 3b. MONEY mail to the seller (player shops only — admin shops skip)
+            if (isPlayerShop) {
+                plugin.getMailboxService().createMoneyMail(
+                    shop.getOwnerUuid(),
+                    shop.getId(),
+                    shop.getName(),
+                    buyer.getUsername(),
+                    sellerReceived
+                );
+            }
+        } catch (Exception e) {
+            // Roll back: restore stock and refund the buyer. No mail to undo
+            // because we never reach the catch after a successful insertion
+            // pair (insertMailboxEntry is a single atomic INSERT each).
+            if (!shopItem.isUnlimitedStock()) {
+                database.executeAtomicStockIncrement(shopId, shopItem.getItemId(), quantity);
+            }
+            economyBridge.deposit(buyerUuid, buyerCost);
+            LOGGER.severe("Purchase failed: mailbox insert threw — buyer refunded, stock restored. Reason: "
+                + e.getMessage());
+            return false;
+        }
+
+        // --- Step 4: Notify the buyer that the items are in their mailbox ---
+        try {
+            String itemLabel = shopItem.getItemId().replace('_', ' ');
+            String msg = i18n.get(buyer, "shop.buy.sent_to_mailbox", quantity, itemLabel);
+            buyer.sendMessage(Message.raw(msg).color("#FFD700"));
+        } catch (Exception e) {
+            // Non-fatal — the mail is already created.
+            LOGGER.fine("Purchase: failed to send mailbox notification chat: " + e.getMessage());
+        }
+
+        // --- Step 4b: Update seller stats (player shops only) ---
+        if (isPlayerShop) {
             PlayerShopData sellerData = plugin.getPlayerData(shop.getOwnerUuid());
             if (sellerData != null) {
                 sellerData.setTotalEarnings(sellerData.getTotalEarnings() + sellerReceived);
                 sellerData.setTotalSales(sellerData.getTotalSales() + 1);
             }
 
-            // Create offline notification if seller is offline
+            // Create offline notification if seller is offline. The mailbox is
+            // the canonical earnings store now, but offline-summary chat on
+            // login is still useful to the seller.
             PlayerRef sellerRef = findOnlinePlayer(shop.getOwnerUuid());
             if (sellerRef == null) {
                 database.addNotification(
@@ -192,7 +245,7 @@ public class ShopService {
                 );
             }
         }
-        // Admin shops: money goes to the void (no balance tracking)
+        // Admin shops: no stats / notifications — money does not exist for them
 
         // --- Step 5: Update buyer stats ---
         PlayerShopData buyerData = plugin.getPlayerData(buyerUuid);
@@ -711,12 +764,22 @@ public class ShopService {
     // ==================== EARNINGS ====================
 
     /**
-     * Collects earnings from all owned shop balances.
-     * Iterates all shops owned by the player, captures a per-shop breakdown,
-     * deposits the total into the player's wallet, and resets shop balances to 0.
+     * @deprecated Phase 3 (mailbox refactor): shopBalance is now a buyback pool,
+     * not an earnings pool. New sales never increment shopBalance — they create
+     * a MONEY mail in the seller's mailbox instead. This method is kept only
+     * as a legacy helper for the case where a non-zero shopBalance still exists
+     * after the one-shot legacy migration runs (e.g. ad-hoc admin tooling).
+     * Player-facing entry point is now {@code Mailbox_Block} interaction.
+     *
+     * <p>Iterates all shops owned by the player, captures a per-shop breakdown,
+     * deposits the total into the player's wallet, and resets shop balances
+     * to 0. Use only if you knowingly want to drain the buyback pool back into
+     * the owner's wallet — note this will leave the shop unable to buy items
+     * back from customers until the owner deposits again.
      *
      * @return a {@link CollectResult} describing the outcome (total, per-shop entries, failure flags)
      */
+    @Deprecated
     public CollectResult collectEarnings(PlayerRef player) {
         if (player == null) return CollectResult.empty();
 
@@ -816,6 +879,75 @@ public class ShopService {
             + economyBridge.format(amount) + " into shop '" + shop.getName() + "'"
             + " (new balance: " + economyBridge.format(shop.getShopBalance()) + ")");
         return true;
+    }
+
+    // ==================== LEGACY BALANCE MIGRATION ====================
+
+    /**
+     * One-shot migration that converts every player shop's pre-Phase-3
+     * {@code shopBalance} into a single MONEY mail in the owner's mailbox.
+     *
+     * <p>Before the mailbox refactor, {@code shopBalance} doubled as both a
+     * buyback pool and the owner's uncollected earnings — there was no way
+     * to tell the two roles apart from the field alone. The mailbox split
+     * earnings out to per-sale entries; any non-zero balance lingering at
+     * upgrade time therefore represents earnings the owner never collected
+     * and is moved verbatim to the mailbox as a single legacy entry. The
+     * shop's balance is then reset to 0 so it cleanly takes its new role
+     * as a buyback pool only.
+     *
+     * <p>Idempotency is enforced via a hidden file marker
+     * {@code .legacy_balances_migrated} in the plugin data folder. If the
+     * marker exists the method is a no-op. After a successful run (whether
+     * 0 or N shops were migrated) the marker is created so subsequent
+     * starts skip immediately.
+     *
+     * <p>Admin shops are skipped — they have no owner and no real balance.
+     * Failures on individual shops are logged but do not abort the run.
+     *
+     * @return number of shops whose balances were migrated
+     */
+    public int migrateLegacyShopBalances() {
+        java.nio.file.Path marker = plugin.getDataDirectory().resolve(".legacy_balances_migrated");
+        if (java.nio.file.Files.exists(marker)) {
+            LOGGER.fine("Legacy balance migration: marker present, skipping.");
+            return 0;
+        }
+
+        int migrated = 0;
+        int errors = 0;
+        for (ShopData shop : shopManager.getAllShops()) {
+            if (shop.isAdminShop() || shop.getOwnerUuid() == null) continue;
+            double bal = shop.getShopBalance();
+            if (bal <= 0) continue;
+
+            try {
+                plugin.getMailboxService().createMoneyMail(
+                    shop.getOwnerUuid(),
+                    shop.getId(),
+                    shop.getName(),
+                    "[Legacy Balance]",
+                    bal
+                );
+                shop.setShopBalance(0);
+                database.saveShop(shop);
+                migrated++;
+            } catch (Exception e) {
+                errors++;
+                LOGGER.warning("Legacy balance migration failed for shop '" + shop.getName()
+                    + "' (" + shop.getId() + "): " + e.getMessage());
+            }
+        }
+
+        try {
+            java.nio.file.Files.createFile(marker);
+        } catch (java.io.IOException e) {
+            LOGGER.warning("Failed to create legacy migration marker: " + e.getMessage());
+        }
+
+        LOGGER.info(i18n.get("shop.migration.legacy_balances", migrated)
+            + (errors > 0 ? " (" + errors + " errors)" : ""));
+        return migrated;
     }
 
     // ==================== RENT COLLECTION ====================
@@ -1125,15 +1257,17 @@ public class ShopService {
 
     /**
      * Gives items to a player. Tries to add to the combined inventory (hotbar-first,
-     * then storage) and respects the transaction remainder — any items that did not
+     * then storage) and respects the transaction remainder - any items that did not
      * fit are dropped at the player's feet via SimpleItemContainer.addOrDropItemStack.
      *
      * Pattern mirrors the bank mod (BankPage.transferBankToInventory).
      *
      * BUG FIX: previously ignored the return value of addItemStack, so items silently
      * vanished when the storage was partially full.
+     *
+     * Public so the MailboxPage (and other dispensers) can reuse it.
      */
-    private void giveItem(PlayerRef playerRef, String itemId, int quantity) {
+    public void giveItem(PlayerRef playerRef, String itemId, int quantity) {
         if (playerRef == null || itemId == null || quantity <= 0) return;
 
         try {

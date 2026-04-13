@@ -1123,8 +1123,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== REVENUE PANEL ====================
 
     private void buildRevenuePanel(UICommandBuilder ui) {
-        // Shop Balance (current funds available for buyback)
-        ui.set("#ShopBalanceLbl.Text", "SHOP BALANCE: "
+        // Buyback pool (current funds available for buybacks). Phase 3
+        // mailbox refactor: shopBalance is no longer earnings — it is the
+        // pool the owner deposits into so customers can sell back to the
+        // shop. Earnings live in the mailbox now.
+        String poolLabel = plugin.getI18n().get(playerRef, "shop.revenue.buyback_pool");
+        ui.set("#ShopBalanceLbl.Text", poolLabel + ": "
             + plugin.getEconomyBridge().format(shopData.getShopBalance()) + " Gold");
 
         ui.set("#TotalRevenue.Text", plugin.getEconomyBridge().format(shopData.getTotalRevenue()));

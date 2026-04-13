@@ -7,6 +7,7 @@ import com.kyuubisoft.common.database.DatabaseProvider;
 import com.kyuubisoft.common.database.SQLiteProvider;
 import com.kyuubisoft.common.database.MySQLProvider;
 import com.kyuubisoft.shops.config.ShopConfig;
+import com.kyuubisoft.shops.mailbox.MailboxEntry;
 
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -78,6 +79,7 @@ public class ShopDatabase {
         String transactionsTable;
         String ratingsTable;
         String notificationsTable;
+        String mailboxTable;
 
         if (provider.isMySQL()) {
             shopsTable = "CREATE TABLE IF NOT EXISTS shop_shops (" +
@@ -169,6 +171,21 @@ public class ShopDatabase {
                 "read_flag BOOLEAN DEFAULT FALSE," +
                 "INDEX idx_owner (owner_uuid)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+            mailboxTable = "CREATE TABLE IF NOT EXISTS shop_mailbox (" +
+                "id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                "owner_uuid VARCHAR(36) NOT NULL," +
+                "mail_type VARCHAR(16) NOT NULL," +
+                "item_id VARCHAR(128)," +
+                "quantity INT DEFAULT 0," +
+                "amount DOUBLE DEFAULT 0," +
+                "from_shop_id VARCHAR(36)," +
+                "from_shop_name VARCHAR(64)," +
+                "from_player_name VARCHAR(64)," +
+                "created_at BIGINT NOT NULL," +
+                "claimed INT DEFAULT 0," +
+                "INDEX idx_mailbox_owner (owner_uuid, claimed)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         } else {
             // SQLite
             shopsTable = "CREATE TABLE IF NOT EXISTS shop_shops (" +
@@ -254,6 +271,20 @@ public class ShopDatabase {
                 "timestamp BIGINT NOT NULL," +
                 "read_flag BOOLEAN DEFAULT 0" +
                 ")";
+
+            mailboxTable = "CREATE TABLE IF NOT EXISTS shop_mailbox (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "owner_uuid TEXT NOT NULL," +
+                "mail_type TEXT NOT NULL," +
+                "item_id TEXT," +
+                "quantity INTEGER DEFAULT 0," +
+                "amount REAL DEFAULT 0," +
+                "from_shop_id TEXT," +
+                "from_shop_name TEXT," +
+                "from_player_name TEXT," +
+                "created_at INTEGER NOT NULL," +
+                "claimed INTEGER DEFAULT 0" +
+                ")";
         }
 
         provider.executeUpdate(shopsTable);
@@ -261,6 +292,15 @@ public class ShopDatabase {
         provider.executeUpdate(transactionsTable);
         provider.executeUpdate(ratingsTable);
         provider.executeUpdate(notificationsTable);
+        provider.executeUpdate(mailboxTable);
+
+        // Index for mailbox lookups (SQLite needs explicit CREATE INDEX)
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_mailbox_owner ON shop_mailbox(owner_uuid, claimed)");
+        } catch (SQLException ignored) {
+            // MySQL already declared the index inline; ignore duplicate-key errors
+        }
 
         // Migration: add shop_balance column if missing (existing databases)
         try {
@@ -773,6 +813,141 @@ public class ShopDatabase {
         } catch (SQLException e) {
             LOGGER.warning("Failed to mark notifications read for " + playerUuid + ": " + e.getMessage());
         }
+    }
+
+    // ==================== MAILBOX ====================
+
+    public void insertMailboxEntry(MailboxEntry entry) {
+        String sql = "INSERT INTO shop_mailbox (owner_uuid, mail_type, item_id, quantity, amount, " +
+            "from_shop_id, from_shop_name, from_player_name, created_at, claimed) " +
+            "VALUES (?,?,?,?,?,?,?,?,?,?)";
+        try {
+            int rows = provider.executeUpdate(sql,
+                entry.getOwnerUuid().toString(),
+                entry.getType().name(),
+                entry.getItemId(),
+                entry.getQuantity(),
+                entry.getAmount(),
+                entry.getFromShopId() != null ? entry.getFromShopId().toString() : null,
+                entry.getFromShopName(),
+                entry.getFromPlayerName(),
+                entry.getCreatedAt(),
+                entry.isClaimed() ? 1 : 0);
+            if (rows > 0) {
+                long lastId = fetchLastInsertId();
+                entry.setId(lastId);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to insert mailbox entry: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Helper: returns the last auto-increment ID from the provider.
+     * SQLite uses SELECT last_insert_rowid(); MySQL uses SELECT LAST_INSERT_ID().
+     * Note: on MySQL this only works if the provider reuses the same Connection
+     * as the prior INSERT. Since our pooled provider does NOT guarantee this,
+     * MySQL callers should expect the returned ID may be 0 if the connection
+     * was returned to the pool; treat the in-memory ID as best-effort until a
+     * subsequent reload from the database.
+     */
+    private long fetchLastInsertId() {
+        String sql = provider.isMySQL() ? "SELECT LAST_INSERT_ID()" : "SELECT last_insert_rowid()";
+        try {
+            ResultSet rs = provider.executeQuery(sql);
+            try {
+                if (rs.next()) return rs.getLong(1);
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to fetch last insert id: " + e.getMessage());
+        }
+        return 0L;
+    }
+
+    public List<MailboxEntry> loadMailboxForPlayer(UUID ownerUuid, boolean includeClaimed) {
+        List<MailboxEntry> mails = new ArrayList<>();
+        String sql = includeClaimed
+            ? "SELECT * FROM shop_mailbox WHERE owner_uuid = ? ORDER BY created_at DESC"
+            : "SELECT * FROM shop_mailbox WHERE owner_uuid = ? AND claimed = 0 ORDER BY created_at DESC";
+        try {
+            ResultSet rs = provider.executeQuery(sql, ownerUuid.toString());
+            try {
+                while (rs.next()) {
+                    mails.add(readMailboxEntry(rs));
+                }
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load mailbox for " + ownerUuid + ": " + e.getMessage());
+        }
+        return mails;
+    }
+
+    public int countUnclaimedMailsForPlayer(UUID ownerUuid) {
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT COUNT(*) AS cnt FROM shop_mailbox WHERE owner_uuid = ? AND claimed = 0",
+                ownerUuid.toString());
+            try {
+                if (rs.next()) return rs.getInt("cnt");
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to count unclaimed mails for " + ownerUuid + ": " + e.getMessage());
+        }
+        return 0;
+    }
+
+    public MailboxEntry loadMail(long mailId) {
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT * FROM shop_mailbox WHERE id = ?", mailId);
+            try {
+                if (rs.next()) return readMailboxEntry(rs);
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load mail " + mailId + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    public boolean markMailClaimed(long mailId) {
+        try {
+            int rows = provider.executeUpdate(
+                "UPDATE shop_mailbox SET claimed = 1 WHERE id = ? AND claimed = 0", mailId);
+            return rows > 0;
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to mark mail claimed " + mailId + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private MailboxEntry readMailboxEntry(ResultSet rs) throws SQLException {
+        UUID ownerUuid = UUID.fromString(rs.getString("owner_uuid"));
+        MailboxEntry.Type type;
+        try { type = MailboxEntry.Type.valueOf(rs.getString("mail_type")); }
+        catch (Exception e) { type = MailboxEntry.Type.MONEY; }
+        String itemId = rs.getString("item_id");
+        int quantity = rs.getInt("quantity");
+        double amount = rs.getDouble("amount");
+        String fromShopIdStr = rs.getString("from_shop_id");
+        UUID fromShopId = null;
+        if (fromShopIdStr != null) {
+            try { fromShopId = UUID.fromString(fromShopIdStr); }
+            catch (IllegalArgumentException ignored) {}
+        }
+        String fromShopName = rs.getString("from_shop_name");
+        String fromPlayerName = rs.getString("from_player_name");
+        long createdAt = rs.getLong("created_at");
+        boolean claimed = rs.getInt("claimed") != 0;
+        return MailboxEntry.fromDatabase(rs.getLong("id"), ownerUuid, type, itemId,
+            quantity, amount, fromShopId, fromShopName, fromPlayerName, createdAt, claimed);
     }
 
     // ==================== INNER CLASSES ====================

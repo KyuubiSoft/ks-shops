@@ -34,8 +34,11 @@ public class ShopI18n {
      * - v4: Priority 2 bug fixes — getting started help block, search/delete/rate command implementations
      * - v5: Priority 3 polish — collect earnings per-shop breakdown + economy failure message
      * - v6: Priority 3 polish — /ksshop stats and /ksshop transfer subcommands
+     * - v7: Phase 3 mailbox refactor — purchase routes through mailbox, /ksshop collect redirects,
+     *       buyback pool label, legacy balance migration string
+     * - v8: Phase 2 mailbox UI — page strings, claim labels, item display name
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 6;
+    private static final int CURRENT_LOCALIZATION_VERSION = 8;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

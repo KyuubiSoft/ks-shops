@@ -1,0 +1,376 @@
+// Mailbox UI -- Shop mailbox for collecting items and money (500x540)
+$C = "../../Common.ui";
+
+// ===== Page Layout =====
+
+$C.@PageOverlay {
+  Group #MailboxLayout {
+    LayoutMode: CenterMiddle;
+
+    $C.@DecoratedContainer #MailboxPanel {
+      Anchor: (Width: 500, Height: 540);
+
+      #Title {
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 42);
+
+          Group { FlexWeight: 1; }
+
+          Label #MailboxTitle {
+            Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+            Text: "MAILBOX";
+          }
+
+          Group { FlexWeight: 1; }
+        }
+      }
+
+      #Content {
+        LayoutMode: Top;
+        Padding: (Left: 17, Right: 17, Top: 12, Bottom: 12);
+
+        // ---- Summary section ----
+        Group #Summary {
+          Anchor: (Left: 0, Right: 0, Height: 72);
+          LayoutMode: Left;
+          Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+          Background: (Color: #ffffff08);
+
+          Group {
+            FlexWeight: 1;
+            LayoutMode: Top;
+
+            Label #SummaryHeader {
+              Anchor: (Height: 18);
+              Style: (FontSize: 13, TextColor: #E8A93B, RenderBold: true, RenderUppercase: true);
+              Text: "UNCLAIMED MAILS";
+            }
+
+            Label #SummaryCounts {
+              Anchor: (Height: 18);
+              Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center);
+              Text: "0 item mails, 0 money mails";
+            }
+
+            Label #SummaryTotal {
+              Anchor: (Height: 18);
+              Style: (FontSize: 12, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center);
+              Text: "Total pending: 0";
+            }
+          }
+
+          Group {
+            Anchor: (Width: 150);
+            LayoutMode: CenterMiddle;
+
+            $C.@TextButton #ClaimAllBtn {
+              @Anchor = (Width: 140, Height: 34);
+              @Text = "CLAIM ALL";
+            }
+          }
+        }
+
+        Group { Anchor: (Height: 6); }
+
+        // ---- Separator ----
+        Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+
+        Group { Anchor: (Height: 6); }
+
+        // ---- Mail list header ----
+        Label #MailListHeader {
+          Anchor: (Height: 18);
+          Style: (FontSize: 13, TextColor: #E8A93B, RenderBold: true, RenderUppercase: true);
+          Text: "PENDING MAILS";
+        }
+
+        Group { Anchor: (Height: 4); }
+
+        // ---- Empty state label ----
+        Label #EmptyLabel {
+          Visible: false;
+          Anchor: (Left: 0, Right: 0, Height: 40);
+          Style: (FontSize: 13, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "Your mailbox is empty.";
+        }
+
+        // ---- Mail list (6 rows) ----
+        Group #MailList {
+          FlexWeight: 1;
+          LayoutMode: Top;
+
+          Group #Entry0 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry0Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry0Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry0Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry0Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+
+          Group { Anchor: (Height: 4); }
+
+          Group #Entry1 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry1Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry1Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry1Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry1Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+
+          Group { Anchor: (Height: 4); }
+
+          Group #Entry2 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry2Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry2Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry2Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry2Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+
+          Group { Anchor: (Height: 4); }
+
+          Group #Entry3 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry3Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry3Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry3Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry3Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+
+          Group { Anchor: (Height: 4); }
+
+          Group #Entry4 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry4Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry4Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry4Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry4Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+
+          Group { Anchor: (Height: 4); }
+
+          Group #Entry5 {
+            Visible: false;
+            Anchor: (Left: 0, Right: 0, Height: 56);
+            LayoutMode: Left;
+            Padding: (Left: 8, Right: 8, Top: 4, Bottom: 4);
+            Background: (Color: #ffffff06);
+
+            ItemIcon #Entry5Icon {
+              Anchor: (Width: 40, Height: 40);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              FlexWeight: 1;
+              LayoutMode: Top;
+
+              Label #Entry5Detail {
+                Anchor: (Height: 20);
+                Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center, RenderBold: true);
+                Text: "";
+              }
+
+              Label #Entry5Time {
+                Anchor: (Height: 18);
+                Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center);
+                Text: "";
+              }
+            }
+
+            $C.@SmallSecondaryTextButton #Entry5Claim {
+              @Anchor = (Width: 80, Height: 32);
+              @Text = "CLAIM";
+            }
+          }
+        }
+
+        // ---- Pagination ----
+        Group #Pagination {
+          Anchor: (Left: 0, Right: 0, Height: 28);
+          LayoutMode: Left;
+          Padding: (Left: 10, Right: 10);
+
+          $C.@SmallSecondaryTextButton #PrevBtn {
+            @Anchor = (Width: 44);
+            @Text = "<";
+            Visible: false;
+          }
+
+          Group { FlexWeight: 1; LayoutMode: CenterMiddle;
+            Label #PageInfo {
+              Style: (FontSize: 11, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+              Text: "1/1";
+            }
+          }
+
+          $C.@SmallSecondaryTextButton #NextBtn {
+            @Anchor = (Width: 44);
+            @Text = ">";
+            Visible: false;
+          }
+        }
+
+        Group { Anchor: (Height: 6); }
+
+        // ---- Actions ----
+        Group #Actions {
+          Anchor: (Left: 0, Right: 0, Height: 38);
+          LayoutMode: Left;
+          Padding: (Left: 40, Right: 40);
+
+          Group { FlexWeight: 1; }
+
+          $C.@SecondaryTextButton #CloseBtn {
+            @Anchor = (Width: 140);
+            @Text = "CLOSE";
+          }
+
+          Group { FlexWeight: 1; }
+        }
+      }
+    }
+  }
+}

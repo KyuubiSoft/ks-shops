@@ -1,5 +1,5 @@
 {
-  "_localization_version": "6",
+  "_localization_version": "8",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -7,7 +7,7 @@
   "shop.help.gs.step2": "2. Place the block where you want your shop, then run /ksshop create <name>.",
   "shop.help.gs.step3": "3. Open the editor with /ksshop edit, drag items into the shop grid, set prices on each slot, pick BUY/SELL/BOTH mode, then save.",
   "shop.help.gs.step4": "4. Deposit coins to the shop (so it can buy from customers), then /ksshop open to accept visitors.",
-  "shop.help.gs.step5": "5. Collect your earnings anytime with /ksshop collect.",
+  "shop.help.gs.step5": "5. Place a Mailbox_Block and press F to claim earnings and any items bought from other shops.",
   "shop.help.gs.spacer": "",
   "shop.help.create": "/ksshop create <name> - Create a new shop",
   "shop.help.edit": "/ksshop edit [shopId] - Open shop editor",
@@ -17,7 +17,7 @@
   "shop.help.visit": "/ksshop visit <shopId> - Visit a shop",
   "shop.help.rate": "/ksshop rate <shopId> <1-5> - Rate a shop",
   "shop.help.myshops": "/ksshop myshops - Your shops",
-  "shop.help.collect": "/ksshop collect - Collect earnings from shop balances",
+  "shop.help.collect": "/ksshop collect - Open your mailbox to claim earnings and bought items",
   "shop.help.deposit": "/ksshop deposit <amount> - Deposit money into shop",
   "shop.help.history": "/ksshop history - Transaction history",
   "shop.help.open": "/ksshop open - Open your shop for business",
@@ -209,5 +209,27 @@
   "shop.transfer.confirm_prompt": "Type `/ksshop transfer {0} {1} confirm` within 60 seconds to transfer shop `{2}` to {1}. They will own it and all its items.",
   "shop.transfer.confirmed_sender": "Shop `{0}` transferred to {1}.",
   "shop.transfer.confirmed_target": "{0} has transferred the shop `{1}` to you. Use /ksshop edit to manage it.",
-  "shop.transfer.failed": "Transfer failed."
+  "shop.transfer.failed": "Transfer failed.",
+
+  "shop.buy.sent_to_mailbox": "{0}x {1} sent to your mailbox.",
+  "shop.collect.use_mailbox": "Your earnings are now in your Mailbox. Place a Mailbox_Block and press F to collect. ({0} unclaimed mails)",
+  "shop.revenue.buyback_pool": "BUYBACK POOL",
+  "shop.stats.pending_mails": "Unclaimed mailbox entries: {0} (place a Mailbox_Block to claim)",
+  "shop.migration.legacy_balances": "Migrated {0} legacy shop balances to mailbox.",
+
+  "shop.mailbox.title": "Mailbox",
+  "shop.mailbox.empty": "Your mailbox is empty.",
+  "shop.mailbox.summary": "{0} item mails, {1} money mails",
+  "shop.mailbox.total_pending": "Total pending: {0}",
+  "shop.mailbox.claim_all": "CLAIM ALL",
+  "shop.mailbox.claim": "CLAIM",
+  "shop.mailbox.row.item": "{0} sent you {1}x {2}",
+  "shop.mailbox.row.money": "{0} bought from {1}: {2}",
+  "shop.mailbox.claimed_item": "Claimed {0}x {1} from mailbox.",
+  "shop.mailbox.claimed_money": "Claimed {0} from mailbox.",
+  "shop.mailbox.claimed_all": "Claimed {0} mail(s): {1} items, {2} gold.",
+  "shop.mailbox.claim_failed": "Failed to claim mail.",
+
+  "items.Mailbox_Block.name": "Mailbox",
+  "items.Mailbox_Block.description": "Place to receive your shop earnings and purchases."
 }

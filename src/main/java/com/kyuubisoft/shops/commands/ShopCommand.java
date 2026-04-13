@@ -23,7 +23,6 @@ import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopType;
 import com.kyuubisoft.shops.i18n.ShopI18n;
-import com.kyuubisoft.shops.service.CollectResult;
 import com.kyuubisoft.shops.service.CreateShopResult;
 import com.kyuubisoft.shops.service.ShopManager;
 import com.kyuubisoft.shops.service.ShopService;
@@ -1015,9 +1014,19 @@ public class ShopCommand extends AbstractCommandCollection {
         }
     }
 
+    /**
+     * Phase 3 (mailbox refactor): {@code /ksshop collect} is now a compat
+     * shortcut that points the player at the Mailbox block. shopBalance is
+     * a buyback pool — the owner's earnings live in the mailbox and are
+     * claimed via the Mailbox UI (place a Mailbox_Block, press F).
+     *
+     * <p>Kept as a subcommand so existing muscle memory + help docs do not
+     * dead-end. Prints the unclaimed mail count so the player knows whether
+     * it is worth setting up a mailbox right now.
+     */
     private class CollectCmd extends AbstractPlayerCommand {
         @Override protected boolean canGeneratePermission() { return false; }
-        CollectCmd() { super("collect", "Collect shop earnings"); }
+        CollectCmd() { super("collect", "Open your mailbox to claim earnings"); }
 
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
@@ -1029,45 +1038,17 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             ShopI18n i18n = plugin.getI18n();
-            ShopService shopService = plugin.getShopService();
 
-            CollectResult result = shopService.collectEarnings(playerRef);
-
-            if (result.isEconomyFailure()) {
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.collect.economy_failed")).color("#FF5555"));
-                return;
+            int unclaimed = 0;
+            try {
+                unclaimed = plugin.getMailboxService().countUnclaimedForPlayer(playerRef.getUuid());
+            } catch (Exception e) {
+                // Non-fatal — still show the redirect message
             }
 
-            if (result.isEmpty() || result.getTotal() <= 0) {
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.collect.nothing")).color("#FFD700"));
-                return;
-            }
-
-            // Header
-            String totalFmt = plugin.getEconomyBridge().format(result.getTotal());
             player.sendMessage(Message.raw(
-                i18n.get(playerRef, "shop.collect.breakdown_header", totalFmt,
-                    String.valueOf(result.getEntries().size()))
-            ).color("#55FF55"));
-
-            // Per-shop lines (max 10 to avoid chat flood)
-            int shown = 0;
-            for (CollectResult.ShopEntry entry : result.getEntries()) {
-                if (shown >= 10) break;
-                String amountFmt = plugin.getEconomyBridge().format(entry.amount);
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.collect.breakdown_line", entry.shopName, amountFmt)
-                ).color("#96a9be"));
-                shown++;
-            }
-            if (result.getEntries().size() > 10) {
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.collect.breakdown_more",
-                        String.valueOf(result.getEntries().size() - 10))
-                ).color("#888888"));
-            }
+                i18n.get(playerRef, "shop.collect.use_mailbox", unclaimed)
+            ).color("#FFD700"));
         }
     }
 
@@ -1177,16 +1158,21 @@ public class ShopCommand extends AbstractCommandCollection {
 
             double totalRevenue = 0;
             double totalTax = 0;
-            double pendingEarnings = 0;
             double ratingStarSum = 0;
             int ratingCountSum = 0;
             for (ShopData s : ownedShops) {
                 totalRevenue += s.getTotalRevenue();
                 totalTax += s.getTotalTaxPaid();
-                pendingEarnings += s.getShopBalance();
                 ratingStarSum += s.getAverageRating() * s.getTotalRatings();
                 ratingCountSum += s.getTotalRatings();
             }
+
+            // Phase 3: pending earnings now means unclaimed mailbox entries,
+            // not shopBalance (which is now strictly a buyback pool).
+            int unclaimedMails = 0;
+            try {
+                unclaimedMails = plugin.getMailboxService().countUnclaimedForPlayer(playerUuid);
+            } catch (Exception ignored) {}
 
             int totalSales = plugin.getDatabase().countSalesForOwner(playerUuid);
             double avgRating = ratingCountSum > 0 ? ratingStarSum / ratingCountSum : 0.0;
@@ -1214,10 +1200,10 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.stats.no_ratings")).color("#96a9be"));
             }
-            if (pendingEarnings > 0) {
+            if (unclaimedMails > 0) {
                 player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.stats.pending",
-                        econ.format(pendingEarnings))).color("#55FF55"));
+                    i18n.get(playerRef, "shop.stats.pending_mails",
+                        unclaimedMails)).color("#55FF55"));
             }
         }
     }

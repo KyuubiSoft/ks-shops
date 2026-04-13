@@ -25,6 +25,7 @@ import com.kyuubisoft.shops.service.ShopSessionManager;
 import com.kyuubisoft.shops.service.DirectoryService;
 import com.kyuubisoft.shops.npc.ShopNpcManager;
 import com.kyuubisoft.shops.interaction.ShopBlockInteraction;
+import com.kyuubisoft.shops.mailbox.MailboxService;
 import com.kyuubisoft.common.kslang.KsLang;
 
 import java.nio.file.Path;
@@ -55,6 +56,7 @@ public class ShopPlugin extends JavaPlugin {
     private ShopSessionManager sessionManager;
     private DirectoryService directoryService;
     private ShopNpcManager npcManager;
+    private MailboxService mailboxService;
 
     private final Map<String, PlayerShopData> playerData = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
@@ -90,6 +92,9 @@ public class ShopPlugin extends JavaPlugin {
             database = new ShopDatabase();
             database.init(getDataDirectory(), config);
 
+            // 3b. Mailbox service (depends on database)
+            mailboxService = new MailboxService(database);
+
             // 4. Economy bridge
             economyBridge = new ShopEconomyBridge();
             economyBridge.detect();
@@ -100,6 +105,16 @@ public class ShopPlugin extends JavaPlugin {
             shopManager.loadAll();
             directoryService = new DirectoryService(shopManager);
             shopService = new ShopService(this, shopManager, sessionManager, economyBridge, config, i18n, database);
+
+            // 5b. One-shot legacy balance migration (Phase 3 mailbox refactor).
+            //     Converts pre-mailbox shopBalance values into MONEY mails so
+            //     owners do not lose uncollected earnings on upgrade. Idempotent
+            //     via .legacy_balances_migrated marker in the data folder.
+            try {
+                shopService.migrateLegacyShopBalances();
+            } catch (Exception e) {
+                LOGGER.warning("Legacy balance migration threw: " + e.getMessage());
+            }
 
             // 6. NPC Manager
             npcManager = new ShopNpcManager(this, config, shopManager);
@@ -143,6 +158,17 @@ public class ShopPlugin extends JavaPlugin {
                 LOGGER.info("Registered shop_block_use interaction codec");
             } catch (Exception e) {
                 LOGGER.warning("Failed to register shop_block_use interaction: " + e.getMessage());
+            }
+
+            // 7d. Custom block interaction codec for mailbox blocks (F-key on mailbox block)
+            try {
+                getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC)
+                    .register("mailbox_block_use",
+                        com.kyuubisoft.shops.interaction.MailboxBlockBlockInteraction.class,
+                        com.kyuubisoft.shops.interaction.MailboxBlockBlockInteraction.CODEC);
+                LOGGER.info("Registered mailbox_block_use interaction codec");
+            } catch (Exception e) {
+                LOGGER.warning("Failed to register mailbox_block_use interaction: " + e.getMessage());
             }
 
             // 8. Core bridge (optional NPC skins, economy providers)
@@ -319,6 +345,7 @@ public class ShopPlugin extends JavaPlugin {
     public ShopSessionManager getSessionManager() { return sessionManager; }
     public DirectoryService getDirectoryService() { return directoryService; }
     public ShopNpcManager getNpcManager() { return npcManager; }
+    public MailboxService getMailboxService() { return mailboxService; }
     public Map<String, PlayerShopData> getPlayerDataMap() { return playerData; }
 
     public PlayerShopData getPlayerData(UUID uuid) {
