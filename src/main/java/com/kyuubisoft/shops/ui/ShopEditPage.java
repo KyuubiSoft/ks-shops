@@ -257,6 +257,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "price" -> {
                     if (data.priceVal != null) handlePriceChange(data.priceVal);
                 }
+                case "buyPrice" -> {
+                    if (data.buyPriceVal != null) handleBuyPriceChange(data.buyPriceVal);
+                }
+                case "sellPrice" -> {
+                    if (data.sellPriceVal != null) handleSellPriceChange(data.sellPriceVal);
+                }
+                case "buyQuota" -> {
+                    if (data.buyQuotaVal != null) handleBuyQuotaChange(data.buyQuotaVal);
+                }
                 case "stockLimit" -> {
                     if (data.stockLimitVal != null) handleStockLimitChange(data.stockLimitVal);
                 }
@@ -355,6 +364,11 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== PRICE / STOCK CHANGE ====================
 
     private void handlePriceChange(String priceStr) {
+        // Legacy single price field - kept for backwards compat
+        handleBuyPriceChange(priceStr);
+    }
+
+    private void handleBuyPriceChange(String priceStr) {
         if (selectedSlot < 0 || selectedSlot >= stagingMeta.length) return;
         try {
             int price = Integer.parseInt(priceStr);
@@ -364,7 +378,29 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
             StagedItemMeta meta = getOrCreateMeta(selectedSlot);
             meta.buyPrice = price;
-            meta.sellPrice = (int) (price * 0.5); // Default sell = 50% buy
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private void handleSellPriceChange(String priceStr) {
+        if (selectedSlot < 0 || selectedSlot >= stagingMeta.length) return;
+        try {
+            int price = Integer.parseInt(priceStr);
+            ShopConfig.Economy eco = plugin.getShopConfig().getData().economy;
+            if (price < 0) price = 0;
+            if (price > eco.maxPrice) price = eco.maxPrice;
+
+            StagedItemMeta meta = getOrCreateMeta(selectedSlot);
+            meta.sellPrice = price;
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private void handleBuyQuotaChange(String quotaStr) {
+        if (selectedSlot < 0 || selectedSlot >= stagingMeta.length) return;
+        try {
+            int quota = Integer.parseInt(quotaStr);
+            if (quota < 0) quota = 0;
+            StagedItemMeta meta = getOrCreateMeta(selectedSlot);
+            meta.buyQuota = quota;
         } catch (NumberFormatException ignored) {}
     }
 
@@ -431,10 +467,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                     stack.getQuantity(),
                     meta != null ? meta.maxStock : -1,
                     meta != null ? meta.buyEnabled : true,
-                    meta != null ? meta.sellEnabled : true,
+                    meta != null ? meta.sellEnabled : false,
                     i,
                     editedCategory,
-                    0,   // dailyBuyLimit
+                    meta != null ? meta.buyQuota : 0,  // Reuse dailyBuyLimit as buy quota (persistent)
                     0,   // dailySellLimit
                     null // itemMetadata
                 );
@@ -717,9 +753,17 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#EditCategoryDropdown",
             EventData.of("@Category", "#EditCategoryDropdown.Value"));
 
-        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#PriceField",
-            EventData.of("Field", "price")
-                .append("@Price", "#PriceField.Value"));
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BuyPriceField",
+            EventData.of("Field", "buyPrice")
+                .append("@BuyPrice", "#BuyPriceField.Value"));
+
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SellPriceField",
+            EventData.of("Field", "sellPrice")
+                .append("@SellPrice", "#SellPriceField.Value"));
+
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#BuyQuotaField",
+            EventData.of("Field", "buyQuota")
+                .append("@BuyQuota", "#BuyQuotaField.Value"));
 
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#StockLimitField",
             EventData.of("Field", "stockLimit")
@@ -914,7 +958,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 ui.set("#SelectedItemName.Text", itemName + " x" + stack.getQuantity());
 
                 StagedItemMeta meta = getOrCreateMeta(selectedSlot);
-                ui.set("#PriceField.Value", String.valueOf(meta.buyPrice));
+                ui.set("#BuyPriceField.Value", String.valueOf(meta.buyPrice));
+                ui.set("#SellPriceField.Value", String.valueOf(meta.sellPrice));
+                ui.set("#BuyQuotaField.Value", String.valueOf(meta.buyQuota));
                 ui.set("#StockLimitField.Value", String.valueOf(meta.maxStock));
 
                 // Highlight active mode button
@@ -1016,13 +1062,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 stagingContainer.setItemStackForSlot((short) slot, stack);
 
                 // Copy metadata
-                stagingMeta[slot] = new StagedItemMeta(
+                StagedItemMeta meta = new StagedItemMeta(
                     item.getBuyPrice(),
                     item.getSellPrice(),
                     item.getMaxStock(),
                     item.isBuyEnabled(),
                     item.isSellEnabled()
                 );
+                meta.buyQuota = item.getDailyBuyLimit(); // Reused as buyback quota
+                stagingMeta[slot] = meta;
             }
         }
     }
@@ -1125,6 +1173,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         int buyPrice;
         int sellPrice;
         int maxStock;
+        int buyQuota;       // How many more shop wants to buy from players (0 = unlimited)
         boolean buyEnabled;
         boolean sellEnabled;
 
@@ -1132,8 +1181,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             this.buyPrice = 10;
             this.sellPrice = 5;
             this.maxStock = -1;
+            this.buyQuota = 0;
             this.buyEnabled = true;
-            this.sellEnabled = true;
+            this.sellEnabled = false;
         }
 
         StagedItemMeta(int buyPrice, int sellPrice, int maxStock,
@@ -1141,6 +1191,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             this.buyPrice = buyPrice;
             this.sellPrice = sellPrice;
             this.maxStock = maxStock;
+            this.buyQuota = 0;
             this.buyEnabled = buyEnabled;
             this.sellEnabled = sellEnabled;
         }
@@ -1175,6 +1226,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("@Price", Codec.STRING),
                 (data, value) -> data.priceVal = value,
                 data -> data.priceVal)
+            .addField(new KeyedCodec<>("@BuyPrice", Codec.STRING),
+                (data, value) -> data.buyPriceVal = value,
+                data -> data.buyPriceVal)
+            .addField(new KeyedCodec<>("@SellPrice", Codec.STRING),
+                (data, value) -> data.sellPriceVal = value,
+                data -> data.sellPriceVal)
+            .addField(new KeyedCodec<>("@BuyQuota", Codec.STRING),
+                (data, value) -> data.buyQuotaVal = value,
+                data -> data.buyQuotaVal)
             .addField(new KeyedCodec<>("@StockLimit", Codec.STRING),
                 (data, value) -> data.stockLimitVal = value,
                 data -> data.stockLimitVal)
@@ -1204,6 +1264,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String nameVal;
         private String descVal;
         private String priceVal;
+        private String buyPriceVal;
+        private String sellPriceVal;
+        private String buyQuotaVal;
         private String stockLimitVal;
         private String categoryVal;
         // Grid interaction fields

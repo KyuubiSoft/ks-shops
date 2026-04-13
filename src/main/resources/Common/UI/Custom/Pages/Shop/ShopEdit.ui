@@ -294,25 +294,68 @@ $C.@PageOverlay {
 
                                     Group { Anchor: (Height: 6); }
 
-                                    // Price field
+                                    // Buy Price (customer pays this when buying)
                                     Group {
                                         Anchor: (Left: 0, Right: 0, Height: 30);
                                         LayoutMode: Left;
 
                                         Label {
-                                            Anchor: (Width: 50, Height: 28);
-                                            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
-                                            Text: "Price:";
+                                            Anchor: (Width: 80, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #44cc44, VerticalAlignment: Center, RenderBold: true);
+                                            Text: "Buy Price:";
                                         }
-                                        $C.@TextField #PriceField {
+                                        $C.@TextField #BuyPriceField {
                                             @PlaceholderText = "0";
-                                            Anchor: (Width: 100, Height: 28);
+                                            Anchor: (Width: 80, Height: 28);
                                             MaxLength: 10;
                                         }
-                                        Group { Anchor: (Width: 8); }
-                                        ItemIcon #PriceCoinIcon {
-                                            Anchor: (Width: 16, Height: 16);
-                                            ItemId: "Ingredient_Bar_Gold";
+                                        Group { Anchor: (Width: 6); }
+                                        ItemIcon { Anchor: (Width: 16, Height: 16); ItemId: "Ingredient_Bar_Gold"; }
+                                    }
+
+                                    Group { Anchor: (Height: 4); }
+
+                                    // Sell Price (shop pays this when buying from customer)
+                                    Group {
+                                        Anchor: (Left: 0, Right: 0, Height: 30);
+                                        LayoutMode: Left;
+
+                                        Label {
+                                            Anchor: (Width: 80, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #cc8844, VerticalAlignment: Center, RenderBold: true);
+                                            Text: "Sell Price:";
+                                        }
+                                        $C.@TextField #SellPriceField {
+                                            @PlaceholderText = "0";
+                                            Anchor: (Width: 80, Height: 28);
+                                            MaxLength: 10;
+                                        }
+                                        Group { Anchor: (Width: 6); }
+                                        ItemIcon { Anchor: (Width: 16, Height: 16); ItemId: "Ingredient_Bar_Gold"; }
+                                    }
+
+                                    Group { Anchor: (Height: 4); }
+
+                                    // Buyback Quota (how many more shop wants to buy from players)
+                                    Group {
+                                        Anchor: (Left: 0, Right: 0, Height: 30);
+                                        LayoutMode: Left;
+
+                                        Label {
+                                            Anchor: (Width: 80, Height: 28);
+                                            Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center);
+                                            Text: "Want Qty:";
+                                        }
+                                        $C.@TextField #BuyQuotaField {
+                                            @PlaceholderText = "0";
+                                            Anchor: (Width: 80, Height: 28);
+                                            MaxLength: 10;
+                                        }
+                                        Group { Anchor: (Width: 6); }
+                                        Label {
+                                            Anchor: (Width: 60, Height: 28);
+                                            Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center);
+                                            Text: "(0=unlim)";
                                         }
                                     }
 

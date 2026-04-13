@@ -272,6 +272,16 @@ public class ShopService {
             }
         }
 
+        // --- Check buyback quota (dailyBuyLimit field is reused as persistent quota) ---
+        // 0 = unlimited, >0 = max amount the shop wants to buy
+        int quota = shopItem.getDailyBuyLimit();
+        if (quota > 0) {
+            if (quantity > quota) {
+                LOGGER.fine("Sell rejected: would exceed shop buyback quota (quota=" + quota + " requested=" + quantity + ")");
+                return false;
+            }
+        }
+
         // --- Calculate pricing ---
         UUID sellerUuid = seller.getUuid();
         int pricePerUnit = shopItem.getSellPrice();
@@ -334,6 +344,19 @@ public class ShopService {
             database.executeAtomicStockIncrement(shopId, itemId, quantity);
             shopItem.setStock(shopItem.getStock() + quantity);
         }
+
+        // --- Step 4b: Decrement buyback quota (dailyBuyLimit field) ---
+        int currentQuota = shopItem.getDailyBuyLimit();
+        if (currentQuota > 0) {
+            int newQuota = Math.max(0, currentQuota - quantity);
+            shopItem.setDailyBuyLimit(newQuota);
+            // If quota reached 0, disable sellEnabled so the shop stops accepting this item
+            if (newQuota == 0) {
+                shopItem.setSellEnabled(false);
+                LOGGER.info("Buyback quota exhausted for " + itemId + " in shop " + shop.getName() + " - sell disabled");
+            }
+        }
+        shop.markDirty();
 
         // --- Step 5: Update stats ---
         PlayerShopData sellerData = plugin.getPlayerData(sellerUuid);
