@@ -975,9 +975,49 @@ public class ShopService {
      */
     public int migrateShopBlocksToNpcShops() {
         java.nio.file.Path marker = plugin.getDataDirectory().resolve(".shops_npc_migration_done");
-        if (java.nio.file.Files.exists(marker)) {
-            LOGGER.fine("Shop NPC migration: marker present, skipping.");
+        // Second-generation migration marker: re-runs if the user came from an
+        // older build that spawned NPCs with Core's KS_NPC_Interactable_Role.
+        // When this marker is missing we force a respawn cycle so existing shop
+        // NPCs pick up the standalone Shop_Keeper_Role + Invulnerable component.
+        java.nio.file.Path markerV2 = plugin.getDataDirectory().resolve(".shops_npc_role_v2_done");
+        boolean hasV1 = java.nio.file.Files.exists(marker);
+        boolean hasV2 = java.nio.file.Files.exists(markerV2);
+
+        if (hasV1 && hasV2) {
+            LOGGER.fine("Shop NPC migration: both markers present, skipping.");
             return 0;
+        }
+
+        // V2 upgrade path: clear npcEntityIds so the lazy spawn re-registers
+        // with Shop_Keeper_Role. The in-world entities are still chunk-backed
+        // from the previous role; despawn via the NPC manager when possible.
+        if (hasV1 && !hasV2) {
+            int respawned = 0;
+            for (ShopData shop : shopManager.getAllShops()) {
+                if (shop.isAdminShop() || shop.getOwnerUuid() == null) continue;
+                if (shop.getWorldName() == null || shop.getWorldName().isEmpty()) continue;
+                try {
+                    plugin.getNpcManager().despawnNpc(shop.getId());
+                } catch (Exception ignored) {
+                    // Entity may not be present yet; just clearing the id is enough.
+                }
+                shop.setNpcEntityId(null);
+                try {
+                    database.saveShop(shop);
+                } catch (Exception e) {
+                    LOGGER.warning("Shop NPC v2 migration: save failed for shop '"
+                        + shop.getName() + "': " + e.getMessage());
+                }
+                respawned++;
+            }
+            try {
+                java.nio.file.Files.createFile(markerV2);
+            } catch (java.io.IOException e) {
+                LOGGER.warning("Failed to create shop NPC v2 migration marker: " + e.getMessage());
+            }
+            LOGGER.info("Shop NPC v2 migration: cleared " + respawned
+                + " NPC entity ids for respawn with Shop_Keeper_Role");
+            return respawned;
         }
 
         int migrated = 0;
@@ -1000,6 +1040,14 @@ public class ShopService {
             java.nio.file.Files.createFile(marker);
         } catch (java.io.IOException e) {
             LOGGER.warning("Failed to create shop NPC migration marker: " + e.getMessage());
+        }
+        // First-run implies v2 is also satisfied (fresh spawn already uses Shop_Keeper_Role).
+        try {
+            if (!java.nio.file.Files.exists(markerV2)) {
+                java.nio.file.Files.createFile(markerV2);
+            }
+        } catch (java.io.IOException e) {
+            LOGGER.warning("Failed to create shop NPC v2 marker: " + e.getMessage());
         }
 
         LOGGER.info(i18n.get("shop.migration.npc_migrated", migrated));

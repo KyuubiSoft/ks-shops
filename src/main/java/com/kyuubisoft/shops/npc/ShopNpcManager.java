@@ -291,6 +291,9 @@ public class ShopNpcManager {
                 null,
                 (npcEntity, holder, st) -> {
                     holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE);
+                    holder.addComponent(
+                        com.hypixel.hytale.server.core.modules.entity.component.Invulnerable.getComponentType(),
+                        com.hypixel.hytale.server.core.modules.entity.component.Invulnerable.INSTANCE);
                 },
                 null
             );
@@ -397,6 +400,9 @@ public class ShopNpcManager {
                 // Pre-spawn callback: add Interactable component
                 (npcEntity, holder, st) -> {
                     holder.addComponent(Interactable.getComponentType(), Interactable.INSTANCE);
+                    holder.addComponent(
+                        com.hypixel.hytale.server.core.modules.entity.component.Invulnerable.getComponentType(),
+                        com.hypixel.hytale.server.core.modules.entity.component.Invulnerable.INSTANCE);
                 },
                 null  // Post-spawn callback
             );
