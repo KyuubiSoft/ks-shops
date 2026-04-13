@@ -139,7 +139,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Initialize edited fields from current shop data
         this.editedName = shopData.getName() != null ? shopData.getName() : "";
         this.editedDesc = shopData.getDescription() != null ? shopData.getDescription() : "";
-        this.editedCategory = shopData.getCategory() != null ? shopData.getCategory() : "";
+        String rawCategory = shopData.getCategory();
+        this.editedCategory = isValidCategory(rawCategory) ? rawCategory : "misc";
 
         // Create staging container matching the grid (9 cols x 5 rows = 45 slots)
         int containerSlots = SHOP_SLOTS_PER_PAGE; // 45
@@ -1261,6 +1262,29 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     }
 
     // ==================== STAGING ====================
+
+    /**
+     * Checks whether the given category is one of the values defined in
+     * #EditCategoryDropdown in ShopEdit.ui. Setting .Value to a category that
+     * isn't in the dropdown crashes the client with a NullReferenceException
+     * because no matching DropdownEntry exists.
+     */
+    private static boolean isValidCategory(String cat) {
+        if (cat == null) return false;
+        switch (cat) {
+            case "weapons":
+            case "armor":
+            case "tools":
+            case "resources":
+            case "potions":
+            case "food":
+            case "building":
+            case "misc":
+                return true;
+            default:
+                return false;
+        }
+    }
 
     /**
      * Copies existing shop items from ShopData into the staging container.
