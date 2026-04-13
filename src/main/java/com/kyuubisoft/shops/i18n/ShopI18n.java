@@ -42,8 +42,9 @@ public class ShopI18n {
      *       and the new filter/tab label + search placeholder keys used by ShopDirectoryPage
      * - v12: NPC-only shop creation refactor — Shop_NPC_Token interaction keys,
      *        NPC skin picker labels, shop block -> NPC migration log string
+     * - v13: NPC name tag toggle labels (shop.edit.name_tag.on/off)
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 12;
+    private static final int CURRENT_LOCALIZATION_VERSION = 13;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

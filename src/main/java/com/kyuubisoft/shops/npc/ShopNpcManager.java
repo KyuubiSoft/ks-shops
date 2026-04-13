@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
@@ -331,6 +332,7 @@ public class ShopNpcManager {
             }
 
             applySkinIfAvailable(shop, entityRef, world, store);
+            applyNameTag(shop, entityRef, store);
 
             LOGGER.info("Standalone shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", position.x, position.y, position.z)
@@ -447,16 +449,11 @@ public class ShopNpcManager {
                 CoreBridge.protectNpcFromCitizens(npcEntityUuid);
             }
 
-            // Set nameplate text to shop name
-            // NOTE: Nameplate is handled by the NPC role system.
-            // For custom text, we'd use HologramManager or Nameplate component.
-            // TODO: Set nameplate text via Nameplate component or HologramManager
-            // HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-            //     world.execute(() -> setNpcNameplate(entityRef, shop.getName(), store));
-            // }, 50, TimeUnit.MILLISECONDS);
-
-            // Apply owner skin if configured and Core is available
+            // Apply owner skin if configured
             applySkinIfAvailable(shop, entityRef, world, store);
+
+            // Apply nameplate text (shop name) if the owner has it enabled
+            applyNameTag(shop, entityRef, store);
 
             LOGGER.info("Shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", npcPosition.x, npcPosition.y, npcPosition.z)
@@ -526,6 +523,43 @@ public class ShopNpcManager {
                     + "' (username=" + resolvedUsername + "): " + ex.getMessage());
                 return null;
             });
+    }
+
+    /**
+     * Applies the shop name as a Nameplate component on the NPC entity so
+     * players can read the shop name above the NPC's head. Controlled by
+     * {@link ShopData#isShowNameTag()} — when disabled the nameplate is
+     * cleared (empty string) so a previously-visible tag disappears on
+     * respawn. MUST be called inside world.execute().
+     */
+    private void applyNameTag(ShopData shop, Ref<EntityStore> entityRef, Store<EntityStore> store) {
+        if (entityRef == null || !entityRef.isValid()) return;
+        try {
+            Nameplate nameplate = (Nameplate) store.ensureAndGetComponent(
+                entityRef, Nameplate.getComponentType());
+            if (shop.isShowNameTag() && shop.getName() != null && !shop.getName().isEmpty()) {
+                nameplate.setText(shop.getName());
+            } else {
+                nameplate.setText("");
+            }
+        } catch (Exception e) {
+            LOGGER.fine("Failed to set nameplate for shop " + shop.getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Public entry point for runtime nameplate updates (e.g. when the owner
+     * toggles the show-name-tag option in the editor or renames the shop).
+     * Resolves the tracked entity ref + dispatches to the world thread.
+     */
+    public void refreshNameTag(ShopData shop, World world) {
+        if (shop == null || world == null) return;
+        Ref<EntityStore> ref = entityRefs.get(shop.getId());
+        if (ref == null || !ref.isValid()) return;
+        world.execute(() -> {
+            var store = world.getEntityStore().getStore();
+            applyNameTag(shop, ref, store);
+        });
     }
 
     /**

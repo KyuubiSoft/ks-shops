@@ -306,6 +306,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "toggleOpen" -> handleToggleOpen();
                 case "removeItem" -> handleRemoveItem();
                 case "deposit" -> handleDeposit(ref, store);
+                case "toggleNameTag" -> handleToggleNameTag();
                 case "prevPage" -> handlePrevPage();
                 case "nextPage" -> handleNextPage();
                 case "histPrev" -> handleHistPrev();
@@ -712,6 +713,34 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         refreshUI();
     }
 
+    // ==================== TOGGLE NAME TAG ====================
+
+    /**
+     * Toggles the "show shop name above NPC" nameplate flag, persists it, and
+     * pushes the update to the live NPC entity so the change is visible
+     * immediately without a full respawn.
+     */
+    private void handleToggleNameTag() {
+        boolean newState = !shopData.isShowNameTag();
+        shopData.setShowNameTag(newState);
+        shopData.markDirty();
+        dirty = true;
+
+        try {
+            plugin.getDatabase().saveShop(shopData);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] Failed to persist name tag toggle: " + e.getMessage());
+        }
+
+        try {
+            plugin.getNpcManager().refreshNameTag(shopData, player.getWorld());
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] NPC nameplate refresh failed: " + e.getMessage());
+        }
+
+        refreshUI();
+    }
+
     // ==================== DEPOSIT ====================
 
     private void handleDeposit(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -940,6 +969,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             EventData.of("Button", "removeItem"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#DepositBtn",
             EventData.of("Button", "deposit"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ToggleNameTagBtn",
+            EventData.of("Button", "toggleNameTag"), false);
 
         // Shop grid pagination
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PrevPageBtn",
@@ -1222,6 +1253,18 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             ui.set("#NpcSkinStatusLabel.Text", "CURRENT: (default)");
         } else {
             ui.set("#NpcSkinStatusLabel.Text", "CURRENT: " + editedNpcSkin);
+        }
+
+        // Name tag toggle label reflects the current state so clicking updates
+        // immediately without waiting for a respawn.
+        if (shopData.isShowNameTag()) {
+            ui.set("#ToggleNameTagLbl.Text",
+                i18n.get(playerRef, "shop.edit.name_tag.on"));
+            ui.set("#ToggleNameTagLbl.Style.TextColor", "#44ff44");
+        } else {
+            ui.set("#ToggleNameTagLbl.Text",
+                i18n.get(playerRef, "shop.edit.name_tag.off"));
+            ui.set("#ToggleNameTagLbl.Style.TextColor", "#888888");
         }
 
         // Selected item section

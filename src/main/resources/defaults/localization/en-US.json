@@ -1,5 +1,5 @@
 {
-  "_localization_version": "12",
+  "_localization_version": "13",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -228,6 +228,8 @@
   "shop.edit.skin.placeholder": "Minecraft-style username",
   "shop.edit.skin.apply": "APPLY SKIN",
   "shop.edit.skin.applied": "NPC skin updated.",
+  "shop.edit.name_tag.on": "NAME TAG: ON",
+  "shop.edit.name_tag.off": "NAME TAG: OFF",
 
 
   "shop.mailbox.title": "Mailbox",

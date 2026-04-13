@@ -364,6 +364,18 @@ $C.@PageOverlay {
                                     Text: "CURRENT: (default)";
                                 }
 
+                                Group { Anchor: (Height: 6); }
+
+                                // Name Tag Toggle (shows shop name above NPC head)
+                                Button #ToggleNameTagBtn {
+                                    Anchor: (Left: 0, Right: 0, Height: 26);
+                                    Style: ButtonStyle(Default: (Background: (Color: #1c2835)), Hovered: (Background: (Color: #2a3a4a)), Pressed: (Background: (Color: #1a2a38)));
+                                    Label #ToggleNameTagLbl {
+                                        Style: (FontSize: 10, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                                        Text: "NAME TAG: ON";
+                                    }
+                                }
+
                                 Group { Anchor: (Height: 10); }
 
                                 // Separator

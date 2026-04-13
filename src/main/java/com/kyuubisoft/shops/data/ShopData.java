@@ -35,6 +35,7 @@ public class ShopData {
     private boolean featured;
     private long featuredUntil;
     private boolean open;
+    private boolean showNameTag = true;
     private long createdAt;
     private long lastActivity;
     private transient volatile boolean dirty;
@@ -136,6 +137,7 @@ public class ShopData {
     public boolean isFeatured() { return featured; }
     public long getFeaturedUntil() { return featuredUntil; }
     public boolean isOpen() { return open; }
+    public boolean isShowNameTag() { return showNameTag; }
     public long getCreatedAt() { return createdAt; }
     public long getLastActivity() { return lastActivity; }
 
@@ -175,6 +177,7 @@ public class ShopData {
     public void setFeatured(boolean featured) { this.featured = featured; markDirty(); }
     public void setFeaturedUntil(long featuredUntil) { this.featuredUntil = featuredUntil; markDirty(); }
     public void setOpen(boolean open) { this.open = open; markDirty(); }
+    public void setShowNameTag(boolean showNameTag) { this.showNameTag = showNameTag; markDirty(); }
     public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; markDirty(); }
 
     public void markDirty() { this.dirty = true; }
