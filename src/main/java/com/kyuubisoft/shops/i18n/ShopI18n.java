@@ -53,8 +53,11 @@ public class ShopI18n {
      *        shop.mailbox.row.from_item/from_money
      * - v18: typed purchase failure reasons — shop.buy.fail.* (own_shop, no_funds,
      *        out_of_stock, shop_closed, etc.)
+     * - v19: item-search grid tooltip keys — shop.directory.tooltip.*
+     *        (shop/owner/price/stock/unlimited/click_hint) for the native
+     *        ItemGridSlot setName/setDescription override in the items tab
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 18;
+    private static final int CURRENT_LOCALIZATION_VERSION = 19;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

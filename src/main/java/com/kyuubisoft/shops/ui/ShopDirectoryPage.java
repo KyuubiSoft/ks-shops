@@ -621,7 +621,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         if ("items".equals(searchMode)) {
             ui.set("#ShopGrid.Visible", false);
             ui.set("#ItemGrid.Visible", true);
-            populateItemSearchGrid(ui);
+            populateItemSearchGrid(ui, i18n);
         } else {
             ui.set("#ShopGrid.Visible", true);
             ui.set("#ItemGrid.Visible", false);
@@ -742,6 +742,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
      * metadata so Hytale's native tooltip + DTT render enchantments, stats,
      * etc. on hover. Stock is shown as the native slot-quantity badge.
      *
+     * Each slot also overrides {@link ItemGridSlot#setName(String)} and
+     * {@link ItemGridSlot#setDescription(String)} so the hover tooltip shows
+     * the selling shop + owner + price + stock — without that override the
+     * native tooltip only shows the bare item name and the user has no way
+     * to tell which shop offers the item.
+     *
      * Clicking a slot fires a {@code SlotClicking} event with the slot index,
      * which routes to {@link #handleItemSlotClick(Integer)} and opens the
      * shop that sells the clicked item.
@@ -750,7 +756,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
      * slots MUST be set via {@code ui.set("#ItemSearchGrid.Slots", List)} and
      * every slot MUST be {@code setActivatable(true)} for SlotClicking to fire.
      */
-    private void populateItemSearchGrid(UICommandBuilder ui) {
+    private void populateItemSearchGrid(UICommandBuilder ui, ShopI18n i18n) {
         // Grid flags: display-only (no drag), show stock as the slot quantity.
         ui.set("#ItemSearchGrid.AreItemsDraggable", false);
         ui.set("#ItemSearchGrid.DisplayItemQuantity", true);
@@ -760,6 +766,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             ItemGridSlot slot;
             if (i < itemResults.size()) {
                 ItemSearchResult r = itemResults.get(i);
+                ShopData shop = r.shop;
                 ShopItem item = r.item;
                 String itemId = item.getItemId();
                 int quantityToShow = item.isUnlimitedStock()
@@ -777,6 +784,41 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                         + itemId + ": " + e.getMessage());
                     slot = new ItemGridSlot();
                 }
+
+                // Override tooltip name + description so the user can see at a
+                // glance WHICH SHOP sells this item. The item's native tooltip
+                // (enchantments, custom stats, DTT extras) is still rendered
+                // by the client; only the name/description lines are overridden
+                // by the slot-level setName/setDescription calls below.
+                slot.setName(ShopBrowsePage.formatItemName(itemId));
+
+                StringBuilder desc = new StringBuilder();
+                String shopName = shop.getName() != null ? shop.getName() : "Shop";
+                desc.append(i18n.get(playerRef, "shop.directory.tooltip.shop", shopName));
+                desc.append('\n');
+
+                if (shop.isAdminShop()) {
+                    desc.append(i18n.get(playerRef, "shop.directory.admin_shop"));
+                } else if (shop.getOwnerName() != null) {
+                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.owner",
+                        shop.getOwnerName()));
+                }
+                desc.append('\n');
+
+                desc.append(i18n.get(playerRef, "shop.directory.tooltip.price",
+                    item.getBuyPrice()));
+                desc.append('\n');
+
+                if (item.isUnlimitedStock()) {
+                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.unlimited"));
+                } else {
+                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.stock",
+                        item.getStock()));
+                }
+                desc.append('\n');
+                desc.append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
+
+                slot.setDescription(desc.toString());
             } else {
                 slot = new ItemGridSlot();
             }
