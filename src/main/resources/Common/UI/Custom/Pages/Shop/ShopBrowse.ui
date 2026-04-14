@@ -383,30 +383,35 @@ $C.@PageOverlay {
 
         Group { Anchor: (Height: 6); }
 
-        // Quantity slider (SliderNumberField + big label showing current value)
+        // Quantity slider (SliderNumberField centered in the row with equal
+        // side-label widths so the slider track sits symmetrically in the
+        // middle of the dialog).
         Group {
           LayoutMode: Left;
           Anchor: (Height: 34);
           Padding: (Left: 20, Right: 20, Top: 8);
 
           Label {
-            Anchor: (Width: 36, Height: 18);
+            Anchor: (Width: 50, Height: 18);
             Style: (FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center);
             Text: "Qty";
           }
 
-          SliderNumberField #ConfirmQtySlider {
+          Group {
             FlexWeight: 1;
-            Anchor: (Height: 5);
-            Padding: (Left: 8, Right: 8);
-            SliderStyle: $C.@DefaultSliderStyle;
-            NumberFieldStyle: $C.@DefaultInputFieldStyle;
-            Min: 1;
-            Max: 64;
+            LayoutMode: CenterMiddle;
+
+            SliderNumberField #ConfirmQtySlider {
+              Anchor: (Width: 200, Height: 5);
+              SliderStyle: $C.@DefaultSliderStyle;
+              NumberFieldStyle: $C.@DefaultInputFieldStyle;
+              Min: 1;
+              Max: 64;
+            }
           }
 
           Label #ConfirmQty {
-            Anchor: (Width: 46, Height: 18);
+            Anchor: (Width: 50, Height: 18);
             Style: (FontSize: 16, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: Center);
             Text: "1";
           }
