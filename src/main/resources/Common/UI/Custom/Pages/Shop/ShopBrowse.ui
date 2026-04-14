@@ -1,7 +1,15 @@
-// ShopBrowse UI - Buyer view for KS-Shops (3 cards per row, 9 per page)
+// ShopBrowse UI - Buyer view for KS-Shops (native ItemGrid, 9x5 = 45 slots)
 $C = "../../Common.ui";
 
-// ===== Card Macro - defined once, instantiated 9x =====
+// ===== ItemGrid Style for the browse grid =====
+@BrowseSlotStyle = ItemGridStyle(
+    SlotSpacing: 4,
+    SlotSize: 48,
+    SlotIconSize: 40,
+    SlotBackground: "../../Pages/Bank/BankSlot.png"
+);
+
+// ===== Card Macro - kept for backwards compatibility, no longer instantiated =====
 @CardButtonStyle = ButtonStyle(
   Default: (Background: (Color: #1c2835)),
   Hovered: (Background: (Color: #2a3a4a)),
@@ -236,25 +244,18 @@ $C.@PageOverlay {
           }
         }
 
-        // Card Grid
+        // Native ItemGrid (9 cols x 5 rows = 45 slots, click to buy)
         Group #CardContainer {
           FlexWeight: 1;
-          LayoutMode: TopScrolling;
-          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+          LayoutMode: CenterMiddle;
           Padding: (Left: 10, Right: 10, Top: 6);
 
-          Group #CardGrid {
-            LayoutMode: LeftCenterWrap;
-
-            @ShopCard #Card0 {}
-            @ShopCard #Card1 {}
-            @ShopCard #Card2 {}
-            @ShopCard #Card3 {}
-            @ShopCard #Card4 {}
-            @ShopCard #Card5 {}
-            @ShopCard #Card6 {}
-            @ShopCard #Card7 {}
-            @ShopCard #Card8 {}
+          ItemGrid #BrowseGrid {
+            Anchor: (Width: 488, Height: 260);
+            SlotsPerRow: 9;
+            Style: @BrowseSlotStyle;
+            Background: #1a2332(0);
+            Padding: 0;
           }
         }
 
