@@ -234,10 +234,10 @@
   "shop.edit.name_tag.off": "NAME TAG: OFF",
   "shop.edit.pickup_button": "PICKUP SHOP",
 
-  "shop.pickup.success": "Shop '{0}' packed up! Right-click the Shop_NPC_Token to replant it.",
+  "shop.pickup.success": "Shop '{0}' packed up! Items + buyback pool sent to your Mailbox. Right-click the Shop_NPC_Token to replant it.",
   "shop.pickup.failed": "Failed to pack up shop.",
-  "shop.pickup.no_items": "Shop inventory refunded: {0} item(s).",
-  "shop.pickup.balance_refunded": "Buyback pool refunded: {0}.",
+  "shop.pickup.no_items": "Shop inventory sent to Mailbox: {0} item(s).",
+  "shop.pickup.balance_refunded": "Buyback pool sent to Mailbox: {0}.",
 
 
   "shop.mailbox.title": "Mailbox",

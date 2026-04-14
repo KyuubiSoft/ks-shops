@@ -717,8 +717,17 @@ public class ShopService {
             return false;
         }
 
-        // --- Step 1: return shop items to owner inventory ---
-        int refundedCount = 0;
+        // --- Step 1: send shop items to the owner's mailbox ---
+        //
+        // Items + balance both route through the mailbox instead of directly
+        // dropping into the inventory/wallet. Consistent with the rest of the
+        // mod (sales + purchases also use the mailbox) and automatically
+        // handles full-inventory cases without dropping items on the ground.
+        // The owner gets a clear itemised list of everything they get back
+        // when they claim the pickup mails.
+        int refundedItemCount = 0;
+        int refundedMailCount = 0;
+        String shopName = shop.getName();
         List<ShopItem> itemsCopy = new ArrayList<>(shop.getItems());
         for (ShopItem item : itemsCopy) {
             if (item == null) continue;
@@ -728,22 +737,26 @@ public class ShopService {
             int stock = item.getStock();
             if (stock <= 0) continue;
             try {
-                giveItem(owner, item.getItemId(), stock);
-                refundedCount += stock;
+                plugin.getMailboxService().createItemMail(
+                    ownerUuid, shopId, shopName, "[Shop Pickup]", item.getItemId(), stock);
+                refundedItemCount += stock;
+                refundedMailCount++;
             } catch (Exception e) {
-                LOGGER.warning("pickupShop: failed to refund " + stock + "x "
-                    + item.getItemId() + " for shop " + shop.getName() + ": " + e.getMessage());
+                LOGGER.warning("pickupShop: failed to send " + stock + "x "
+                    + item.getItemId() + " to mailbox for shop " + shopName + ": " + e.getMessage());
             }
         }
 
-        // --- Step 2: refund shop balance to wallet ---
+        // --- Step 2: send buyback pool balance to the mailbox as a money mail ---
         double balance = shop.getShopBalance();
         if (balance > 0) {
-            if (economyBridge.isAvailable() && economyBridge.deposit(ownerUuid, balance)) {
+            try {
+                plugin.getMailboxService().createMoneyMail(
+                    ownerUuid, shopId, shopName, "[Shop Pickup]", balance);
                 shop.setShopBalance(0);
-            } else {
-                LOGGER.warning("pickupShop: failed to refund balance " + balance
-                    + " for shop " + shop.getName() + " - keeping on shop for manual withdraw");
+            } catch (Exception e) {
+                LOGGER.warning("pickupShop: failed to send balance " + balance
+                    + " to mailbox for shop " + shopName + " - keeping on shop: " + e.getMessage());
             }
         }
 
@@ -776,8 +789,9 @@ public class ShopService {
         }
 
         LOGGER.info("pickupShop: packed shop '" + shop.getName() + "' for "
-            + owner.getUsername() + " (items refunded: " + refundedCount
-            + ", balance refunded: " + balance + ")");
+            + owner.getUsername() + " (sent to mailbox: " + refundedMailCount
+            + " item mails totalling " + refundedItemCount + " units, balance "
+            + balance + ")");
         return true;
     }
 
