@@ -111,6 +111,7 @@ public class ShopDatabase {
                 "featured_until BIGINT DEFAULT 0," +
                 "open BOOLEAN DEFAULT TRUE," +
                 "show_name_tag BOOLEAN DEFAULT TRUE," +
+                "packed BOOLEAN DEFAULT FALSE," +
                 "created_at BIGINT NOT NULL," +
                 "last_activity BIGINT NOT NULL" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -219,6 +220,7 @@ public class ShopDatabase {
                 "featured_until BIGINT DEFAULT 0," +
                 "open BOOLEAN DEFAULT 1," +
                 "show_name_tag BOOLEAN DEFAULT 1," +
+                "packed BOOLEAN DEFAULT 0," +
                 "created_at BIGINT NOT NULL," +
                 "last_activity BIGINT NOT NULL" +
                 ")";
@@ -339,6 +341,17 @@ public class ShopDatabase {
             // Column already exists - expected after first migration
         }
 
+        // Migration: add packed column if missing (existing databases)
+        try {
+            String alterSql = provider.isMySQL()
+                ? "ALTER TABLE shop_shops ADD COLUMN packed BOOLEAN DEFAULT FALSE"
+                : "ALTER TABLE shop_shops ADD COLUMN packed BOOLEAN DEFAULT 0";
+            provider.executeUpdate(alterSql);
+            LOGGER.info("Migrated: added packed column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+
         LOGGER.info("Database tables initialized");
     }
 
@@ -372,12 +385,12 @@ public class ShopDatabase {
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+              "open, show_name_tag, packed, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             : "INSERT OR REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+              "open, show_name_tag, packed, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try {
             provider.executeUpdate(sql,
@@ -409,6 +422,7 @@ public class ShopDatabase {
                 shop.getFeaturedUntil(),
                 shop.isOpen(),
                 shop.isShowNameTag(),
+                shop.isPacked(),
                 shop.getCreatedAt(),
                 shop.getLastActivity()
             );
@@ -1070,6 +1084,10 @@ public class ShopDatabase {
             boolean showNameTag = true;
             try { showNameTag = rs.getBoolean("show_name_tag"); } catch (SQLException ignored) {}
 
+            // Read packed safely (column may not exist in legacy DBs)
+            boolean packed = false;
+            try { packed = rs.getBoolean("packed"); } catch (SQLException ignored) {}
+
             ShopData shop = ShopData.fromDatabase(
                 UUID.fromString(rs.getString("id")),
                 rs.getString("name"),
@@ -1103,6 +1121,7 @@ public class ShopDatabase {
             );
             shop.setShopBalance(shopBalance);
             shop.setShowNameTag(showNameTag);
+            shop.setPacked(packed);
             return shop;
         } catch (Exception e) {
             LOGGER.warning("Failed to read shop row: " + e.getMessage());

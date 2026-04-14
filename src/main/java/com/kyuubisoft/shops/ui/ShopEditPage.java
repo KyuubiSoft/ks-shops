@@ -313,6 +313,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "histPrev" -> handleHistPrev();
                 case "histNext" -> handleHistNext();
                 case "apply_skin" -> handleApplySkin();
+                case "pickup_shop" -> handlePickupShop();
                 // Drag & drop completed: refresh grids to reflect container changes
                 case "shopDrop", "invDrop", "hotbarDrop" -> refreshUI();
                 default -> this.sendUpdate(new UICommandBuilder(), false);
@@ -536,6 +537,58 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             i18n.get(playerRef, "shop.edit.skin.applied")).color("#55FF55"));
 
         refreshUI();
+    }
+
+    // ==================== PICKUP SHOP ====================
+
+    /**
+     * Packs the current shop up. Delegates to
+     * {@link com.kyuubisoft.shops.service.ShopService#pickupShop(Player, PlayerRef, java.util.UUID)}
+     * which refunds all stocked items to the owner's inventory, returns the
+     * buyback pool to their wallet, despawns the NPC, and gives them a fresh
+     * Shop_NPC_Token back. The shop row stays in the DB (packed=true) so
+     * rating history, transaction log, category, icon, skin and name-tag
+     * state are all preserved for when the owner replants.
+     *
+     * <p>After a successful pickup the editor is closed — the shop is no
+     * longer in a state where further editing makes sense. We set
+     * {@code saved = true} before closing so onDismiss does NOT try to
+     * return staged items to the player's inventory (that would duplicate
+     * refunds, since pickupShop already returned everything).
+     */
+    private void handlePickupShop() {
+        ShopI18n i18n = plugin.getI18n();
+
+        boolean ok;
+        try {
+            ok = plugin.getShopService().pickupShop(player, playerRef, shopData.getId());
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] pickupShop threw: " + e.getMessage());
+            ok = false;
+        }
+
+        if (!ok) {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.pickup.failed")).color("#FF5555"));
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+
+        player.sendMessage(Message.raw(
+            i18n.get(playerRef, "shop.pickup.success", shopData.getName())
+        ).color("#55FF55"));
+
+        // Prevent onDismiss from running the "return staged items / restore
+        // original items" dupe-prevention paths — pickupShop has already
+        // cleared shopData.items and refunded everything through the service.
+        saved = true;
+        plugin.getSessionManager().unlockEditor(shopData.getId(), playerRef.getUuid());
+
+        try {
+            this.close();
+        } catch (Exception e) {
+            LOGGER.warning("[ShopEdit] Failed to close page after pickup: " + e.getMessage());
+        }
     }
 
     // ==================== PRICE / STOCK CHANGE ====================
@@ -1077,6 +1130,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ApplySkinBtn",
             EventData.of("Button", "apply_skin"), false);
 
+        // Pickup-shop button: packs the shop, refunds items + balance, returns a token
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#PickupShopBtn",
+            EventData.of("Button", "pickup_shop"), false);
+
         // Deposit amount field: live-sync typed value into pendingDepositAmount
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#DepositField",
             EventData.of("Field", "depositAmount")
@@ -1294,6 +1351,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 i18n.get(playerRef, "shop.edit.name_tag.off"));
             ui.set("#ToggleNameTagLbl.Style.TextColor", "#888888");
         }
+
+        // Pickup shop button label (localised).
+        ui.set("#PickupShopLbl.Text",
+            i18n.get(playerRef, "shop.edit.pickup_button"));
 
         // Icon picker: highlight the selected tile and update the status label.
         for (int i = 0; i < ICON_OPTIONS.length; i++) {

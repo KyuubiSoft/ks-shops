@@ -44,8 +44,13 @@ public class ShopI18n {
      *        NPC skin picker labels, shop block -> NPC migration log string
      * - v13: NPC name tag toggle labels (shop.edit.name_tag.on/off)
      * - v14: deposit invalid-amount error key
+     * - v15: shop pickup/replant feature — shop.pickup.* keys, shop.edit.pickup_button,
+     *        shop.token.replanted for the Shop_NPC_Token reactivation path
+     * - v16: directory item-search mode — shop.directory.mode.*,
+     *        shop.directory.search.placeholder_items, shop.directory.item_count_stock,
+     *        shop.directory.no_item_results
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 14;
+    private static final int CURRENT_LOCALIZATION_VERSION = 16;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

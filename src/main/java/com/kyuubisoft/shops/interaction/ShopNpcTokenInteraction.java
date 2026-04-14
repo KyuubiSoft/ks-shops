@@ -30,6 +30,8 @@ import com.kyuubisoft.shops.service.ShopService;
 import com.kyuubisoft.shops.util.PlayerInventoryAccess;
 
 import javax.annotation.Nonnull;
+import java.util.Comparator;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
@@ -112,8 +114,66 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                 return;
             }
 
+            // Resolve player position (needed both for replant and fresh-create).
+            TransformComponent tc = player.getTransformComponent();
+            if (tc == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
+                interactionContext.getState().state = InteractionState.Failed;
+                return;
+            }
+            final Vector3d pos = tc.getPosition();
+            Vector3f rotation = null;
+            try {
+                rotation = tc.getRotation();
+            } catch (Throwable ignored) {
+                // Rotation is optional - used only for the NPC facing direction.
+            }
+            final float rotY = rotation != null ? rotation.y : 0.0f;
+            String worldName = world.getName();
+
+            // --- Replant check: if the player already has a packed shop, reactivate
+            // the oldest one at this location instead of creating a fresh one. The
+            // packed shop still counts against the max-shops cap, but that's OK
+            // because we're not adding a new row — we're just unpacking an
+            // existing one. This path completely bypasses the max-shops check.
+            UUID playerUuid = playerRef.getUuid();
+            ShopData packedShop = plugin.getShopManager().getShopsByOwner(playerUuid).stream()
+                .filter(ShopData::isPacked)
+                .min(Comparator.comparingLong(ShopData::getCreatedAt))
+                .orElse(null);
+
+            if (packedShop != null) {
+                final ShopData replantTarget = packedShop;
+                final UUID replantId = replantTarget.getId();
+                world.execute(() -> {
+                    try {
+                        boolean ok = shopService.replantShop(
+                            player, playerRef, replantId, world,
+                            pos.x, pos.y, pos.z, rotY);
+                        if (ok) {
+                            consumeOneToken(player);
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.token.replanted",
+                                    replantTarget.getName())
+                            ).color("#55FF55"));
+                        } else {
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.token.failed",
+                                    i18n.get(playerRef, "shop.create.failed"))
+                            ).color("#FF5555"));
+                        }
+                    } catch (Exception e) {
+                        LOGGER.warning("Shop NPC token: replant failed for shop "
+                            + replantId + ": " + e.getMessage());
+                    }
+                });
+                interactionContext.getState().state = InteractionState.Finished;
+                return;
+            }
+
             // Max shops per player (pre-check so we don't waste the token)
-            int ownedCount = plugin.getShopManager().getShopsByOwner(playerRef.getUuid()).size();
+            int ownedCount = plugin.getShopManager().getShopsByOwner(playerUuid).size();
             int maxShops = cfg.getData().playerShops.maxShopsPerPlayer;
             if (ownedCount >= maxShops) {
                 player.sendMessage(Message.raw(
@@ -122,24 +182,6 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                 return;
             }
 
-            // Get player position for shop placement
-            TransformComponent tc = player.getTransformComponent();
-            if (tc == null) {
-                player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
-                interactionContext.getState().state = InteractionState.Failed;
-                return;
-            }
-            Vector3d pos = tc.getPosition();
-            Vector3f rotation = null;
-            try {
-                rotation = tc.getRotation();
-            } catch (Throwable ignored) {
-                // Rotation is optional - used only for the NPC facing direction.
-            }
-            float rotY = rotation != null ? rotation.y : 0.0f;
-
-            String worldName = world.getName();
             String shopName = buildDefaultShopName(playerRef.getUsername(), ownedCount);
 
             CreateShopResult result = shopService.createPlayerShop(
@@ -164,11 +206,9 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
             ShopNpcManager npcManager = plugin.getNpcManager();
             npcManager.registerShopInWorld(newShop);
 
-            final Vector3d spawnPos = pos;
-            final float finalRotY = rotY;
             world.execute(() -> {
                 try {
-                    npcManager.spawnNpcAtPosition(newShop, world, spawnPos, finalRotY);
+                    npcManager.spawnNpcAtPosition(newShop, world, pos, rotY);
                 } catch (Exception e) {
                     LOGGER.warning("Shop NPC token: spawn failed for shop "
                         + newShop.getId() + ": " + e.getMessage());

@@ -1,5 +1,5 @@
 {
-  "_localization_version": "14",
+  "_localization_version": "16",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -224,6 +224,7 @@
   "shop.token.spawned": "Shop created! Press F on the NPC to manage it.",
   "shop.token.not_enough_shops": "You cannot create any more shops (limit reached).",
   "shop.token.failed": "Failed to spawn shop NPC: {0}",
+  "shop.token.replanted": "Shop '{0}' replanted at your location!",
 
   "shop.edit.label.skin": "NPC SKIN",
   "shop.edit.skin.placeholder": "Minecraft-style username",
@@ -231,6 +232,12 @@
   "shop.edit.skin.applied": "NPC skin updated.",
   "shop.edit.name_tag.on": "NAME TAG: ON",
   "shop.edit.name_tag.off": "NAME TAG: OFF",
+  "shop.edit.pickup_button": "PICKUP SHOP",
+
+  "shop.pickup.success": "Shop '{0}' packed up! Right-click the Shop_NPC_Token to replant it.",
+  "shop.pickup.failed": "Failed to pack up shop.",
+  "shop.pickup.no_items": "Shop inventory refunded: {0} item(s).",
+  "shop.pickup.balance_refunded": "Buyback pool refunded: {0}.",
 
 
   "shop.mailbox.title": "Mailbox",
@@ -277,13 +284,18 @@
   "shop.directory.admin_shop": "Admin Shop",
   "shop.directory.no_ratings": "No ratings",
   "shop.directory.item_count": "{0} items",
+  "shop.directory.item_count_stock": "Stock: {0}",
+  "shop.directory.no_item_results": "No items found.",
   "shop.directory.page": "Page {0} / {1}",
   "shop.directory.result_count": "{0} results",
   "shop.directory.click_to_browse": "Click to browse this shop",
   "shop.directory.filter.sort_label": "Sort by:",
   "shop.directory.filter.category_label": "Category:",
   "shop.directory.filter.rating_label": "Rating:",
-  "shop.directory.search.placeholder": "Search shops and items...",
+  "shop.directory.search.placeholder": "Search shops...",
+  "shop.directory.search.placeholder_items": "Search items...",
+  "shop.directory.mode.shops": "SHOPS",
+  "shop.directory.mode.items": "ITEMS",
   "shop.directory.tab.all": "ALL",
   "shop.directory.tab.admin": "ADMIN",
   "shop.directory.tab.player": "PLAYER",

@@ -383,6 +383,20 @@ $C.@PageOverlay {
                                     }
                                 }
 
+                                Group { Anchor: (Height: 8); }
+
+                                // Pickup Shop button: packs the shop into a token so the
+                                // owner can replant it at a new location. Red-tinted to
+                                // emphasise the disruptive nature of the action.
+                                Button #PickupShopBtn {
+                                    Anchor: (Left: 0, Right: 0, Height: 30);
+                                    Style: ButtonStyle(Default: (Background: (Color: #6e2a2a40)), Hovered: (Background: (Color: #8e3a3a60)), Pressed: (Background: (Color: #5e1a1a80)));
+                                    Label #PickupShopLbl {
+                                        Style: (FontSize: 11, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                                        Text: "PICKUP SHOP";
+                                    }
+                                }
+
                                 Group { Anchor: (Height: 10); }
                             }
 

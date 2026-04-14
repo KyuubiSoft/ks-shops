@@ -2,6 +2,7 @@ package com.kyuubisoft.shops.service;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import com.kyuubisoft.shops.ShopPlugin;
@@ -658,6 +660,249 @@ public class ShopService {
         LOGGER.info("Shop deleted: '" + shop.getName() + "' by " + owner.getUsername()
             + " (refund: " + refund + ")");
         return true;
+    }
+
+    // ==================== SHOP PICKUP / REPLANT ====================
+
+    /**
+     * Packs up a player shop without deleting it. The shop row stays in the DB
+     * (preserving rating history, transaction log, category, icon, skin, name
+     * tag, total revenue) but is marked {@code packed=true} and {@code open=false}.
+     *
+     * <p>On pickup we:
+     * <ol>
+     *   <li>Return every stocked item in the shop to the owner's combined
+     *       storage (using the same combined-container pattern as
+     *       {@link #giveItem(PlayerRef, String, int)}); unlimited-stock items
+     *       (admin-style, {@code stock == -1}) are skipped.</li>
+     *   <li>Refund the shop buyback pool ({@code shopBalance}) to the owner's
+     *       wallet via the economy bridge. If the deposit fails, the balance
+     *       stays on the shop so the owner can withdraw manually later.</li>
+     *   <li>Despawn the NPC via {@link ShopNpcManager#despawnNpc(UUID)}.</li>
+     *   <li>Clear the shop item list, mark {@code packed=true}, save.</li>
+     *   <li>Put a fresh {@code Shop_NPC_Token} into the owner's inventory so
+     *       they can replant the shop at a new location.</li>
+     * </ol>
+     *
+     * <p>The max-shops-per-player cap still counts packed shops, so owners
+     * cannot hoard packed shops by repeatedly picking up and creating new ones.
+     *
+     * @param player  the owner's live {@link Player} entity (required to
+     *                resolve the inventory for item refunds and token delivery)
+     * @param owner   the owner's {@link PlayerRef}
+     * @param shopId  the shop to pack up
+     * @return true on success, false if validation failed or the shop was
+     *         already packed
+     */
+    public boolean pickupShop(Player player, PlayerRef owner, UUID shopId) {
+        if (player == null || owner == null || shopId == null) return false;
+
+        ShopData shop = shopManager.getShop(shopId);
+        if (shop == null) {
+            LOGGER.fine("pickupShop rejected: shop not found " + shopId);
+            return false;
+        }
+        if (!shop.isPlayerShop()) {
+            LOGGER.fine("pickupShop rejected: not a player shop " + shopId);
+            return false;
+        }
+
+        UUID ownerUuid = owner.getUuid();
+        if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(ownerUuid)) {
+            LOGGER.fine("pickupShop rejected: not the owner of shop " + shopId);
+            return false;
+        }
+        if (shop.isPacked()) {
+            LOGGER.fine("pickupShop rejected: shop already packed " + shopId);
+            return false;
+        }
+
+        // --- Step 1: return shop items to owner inventory ---
+        int refundedCount = 0;
+        List<ShopItem> itemsCopy = new ArrayList<>(shop.getItems());
+        for (ShopItem item : itemsCopy) {
+            if (item == null) continue;
+            // Admin-style unlimited stock items don't represent real inventory,
+            // so we skip refunding them. Regular items use their current stock.
+            if (item.isUnlimitedStock()) continue;
+            int stock = item.getStock();
+            if (stock <= 0) continue;
+            try {
+                giveItem(owner, item.getItemId(), stock);
+                refundedCount += stock;
+            } catch (Exception e) {
+                LOGGER.warning("pickupShop: failed to refund " + stock + "x "
+                    + item.getItemId() + " for shop " + shop.getName() + ": " + e.getMessage());
+            }
+        }
+
+        // --- Step 2: refund shop balance to wallet ---
+        double balance = shop.getShopBalance();
+        if (balance > 0) {
+            if (economyBridge.isAvailable() && economyBridge.deposit(ownerUuid, balance)) {
+                shop.setShopBalance(0);
+            } else {
+                LOGGER.warning("pickupShop: failed to refund balance " + balance
+                    + " for shop " + shop.getName() + " - keeping on shop for manual withdraw");
+            }
+        }
+
+        // --- Step 3: despawn NPC ---
+        try {
+            plugin.getNpcManager().despawnNpc(shopId);
+        } catch (Exception e) {
+            LOGGER.warning("pickupShop: despawnNpc failed for shop " + shopId + ": " + e.getMessage());
+        }
+
+        // --- Step 4: clear items, mark packed, save ---
+        shop.getItems().clear();
+        shop.setNpcEntityId(null);
+        shop.setOpen(false);
+        shop.setPacked(true);
+        shop.setLastActivity(System.currentTimeMillis());
+        try {
+            database.saveShop(shop);
+        } catch (Exception e) {
+            LOGGER.severe("pickupShop: failed to persist packed shop " + shopId + ": " + e.getMessage());
+            return false;
+        }
+
+        // --- Step 5: give token back to player ---
+        try {
+            giveShopNpcToken(player, owner);
+        } catch (Exception e) {
+            LOGGER.warning("pickupShop: failed to deliver replacement token for "
+                + owner.getUsername() + ": " + e.getMessage());
+        }
+
+        LOGGER.info("pickupShop: packed shop '" + shop.getName() + "' for "
+            + owner.getUsername() + " (items refunded: " + refundedCount
+            + ", balance refunded: " + balance + ")");
+        return true;
+    }
+
+    /**
+     * Reactivates a packed shop at a new world position. Called from
+     * {@link com.kyuubisoft.shops.interaction.ShopNpcTokenInteraction} when the
+     * owner right-clicks a Shop_NPC_Token while they already have a packed
+     * shop on file — the packed shop's rating, category, icon, skin, name-tag
+     * state and transaction history are all preserved; only the location
+     * changes.
+     *
+     * <p>MUST be called from the world thread (or dispatched to it) because
+     * {@link ShopNpcManager#spawnNpcAtPosition(ShopData, World, Vector3d, float)}
+     * performs entity operations that require world.execute().
+     *
+     * @param player  the owner's live {@link Player} entity
+     * @param owner   the owner's {@link PlayerRef}
+     * @param shopId  the packed shop to reactivate
+     * @param world   the target world
+     * @param x       world x
+     * @param y       world y
+     * @param z       world z
+     * @param rotY    NPC yaw rotation (radians)
+     * @return true on success
+     */
+    public boolean replantShop(Player player, PlayerRef owner, UUID shopId,
+                               World world, double x, double y, double z, float rotY) {
+        if (player == null || owner == null || shopId == null || world == null) return false;
+
+        ShopData shop = shopManager.getShop(shopId);
+        if (shop == null) {
+            LOGGER.fine("replantShop rejected: shop not found " + shopId);
+            return false;
+        }
+        if (!shop.isPacked()) {
+            LOGGER.fine("replantShop rejected: shop not packed " + shopId);
+            return false;
+        }
+        if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(owner.getUuid())) {
+            LOGGER.fine("replantShop rejected: not the owner of shop " + shopId);
+            return false;
+        }
+
+        // --- Update coordinates and state ---
+        shop.setWorldName(world.getName());
+        shop.setPosX(x);
+        shop.setPosY(y);
+        shop.setPosZ(z);
+        shop.setNpcRotY(rotY);
+        shop.setNpcEntityId(null);
+        shop.setOpen(true);
+        shop.setPacked(false);
+        shop.setLastActivity(System.currentTimeMillis());
+
+        try {
+            database.saveShop(shop);
+        } catch (Exception e) {
+            LOGGER.severe("replantShop: failed to persist reactivated shop " + shopId
+                + ": " + e.getMessage());
+            return false;
+        }
+
+        // --- Register + spawn NPC at new location ---
+        // spawnNpcAtPosition handles registerShopInWorld + spawnedWorlds internally.
+        try {
+            plugin.getNpcManager().spawnNpcAtPosition(shop, world, new Vector3d(x, y, z), rotY);
+        } catch (Exception e) {
+            LOGGER.warning("replantShop: spawnNpcAtPosition failed for shop " + shopId
+                + ": " + e.getMessage());
+            // Not a hard failure - the shop is unpacked and persisted; the NPC
+            // will be retried on the next world-load pass.
+        }
+
+        LOGGER.info("replantShop: reactivated shop '" + shop.getName() + "' at "
+            + world.getName() + " [" + (int) x + ", " + (int) y + ", " + (int) z + "] for "
+            + owner.getUsername());
+        return true;
+    }
+
+    /**
+     * Adds one {@code Shop_NPC_Token} to the player's inventory. Used by
+     * {@link #pickupShop(Player, PlayerRef, UUID)} to give the owner a fresh
+     * token they can use to replant the packed shop.
+     *
+     * <p>Uses the same combined-storage-first pattern as
+     * {@link #giveItem(PlayerRef, String, int)} so the token lands in the
+     * player's main inventory whenever possible, dropping at the feet only as
+     * a last resort.
+     */
+    private void giveShopNpcToken(Player player, PlayerRef owner) {
+        if (player == null || owner == null) return;
+
+        try {
+            Ref<EntityStore> ref = owner.getReference();
+            if (ref == null || !ref.isValid()) {
+                LOGGER.warning("giveShopNpcToken: invalid player reference for "
+                    + owner.getUsername());
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+
+            ItemStack stack = new ItemStack(
+                com.kyuubisoft.shops.interaction.ShopNpcTokenInteraction.TOKEN_ITEM_ID, 1);
+
+            PlayerInventoryAccess inv = PlayerInventoryAccess.of(player);
+            CombinedItemContainer combined = inv.getCombinedStorageFirst();
+
+            if (combined != null) {
+                var transaction = combined.addItemStack(stack);
+                ItemStack remainder = (transaction != null) ? transaction.getRemainder() : stack;
+                if (remainder == null || remainder.isEmpty()) {
+                    inv.markChanged();
+                    return;
+                }
+                inv.markChanged();
+                SimpleItemContainer.addOrDropItemStack(store, ref, combined, remainder);
+                return;
+            }
+
+            SimpleItemContainer tempContainer = new SimpleItemContainer((short) 0);
+            SimpleItemContainer.addOrDropItemStack(store, ref, tempContainer, stack);
+        } catch (Exception e) {
+            LOGGER.warning("giveShopNpcToken failed for " + owner.getUsername()
+                + ": " + e.getMessage());
+        }
     }
 
     // ==================== SHOP TRANSFER ====================
