@@ -280,16 +280,21 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                                 i18n.get(playerRef, "shop.browse.sell_failed")).color("#FF5555"));
                         }
                     } else {
-                        // Buy with quantity
-                        boolean success = plugin.getShopService().purchaseItem(
-                            playerRef, shopData.getId(), item.getSlot(), confirmQuantity
-                        );
-                        if (success) {
+                        // Buy with quantity. Use the typed result so failures
+                        // surface a specific reason (own shop, no funds, out
+                        // of stock, etc) instead of a generic "purchase failed".
+                        ShopService.PurchaseResult result = plugin.getShopService()
+                            .purchaseItemWithReason(playerRef, shopData.getId(),
+                                item.getSlot(), confirmQuantity);
+                        if (result.isSuccess()) {
                             player.sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.buy.success", confirmQuantity, item.getItemId())).color("#44FF44"));
                         } else {
+                            String key = result.getErrorKey() != null
+                                ? result.getErrorKey()
+                                : "shop.browse.purchase_failed";
                             player.sendMessage(Message.raw(
-                                i18n.get(playerRef, "shop.browse.purchase_failed")).color("#FF5555"));
+                                i18n.get(playerRef, key)).color("#FF5555"));
                         }
                     }
 

@@ -92,30 +92,42 @@ public class ShopService {
      * @return true if the purchase succeeded
      */
     public boolean purchaseItem(PlayerRef buyer, UUID shopId, int itemSlot, int quantity) {
-        if (buyer == null || shopId == null || quantity <= 0) return false;
+        return purchaseItemWithReason(buyer, shopId, itemSlot, quantity).isSuccess();
+    }
+
+    /**
+     * Like {@link #purchaseItem} but returns a typed reason on failure so the
+     * UI can show a specific i18n key instead of the generic "purchase failed"
+     * message.
+     */
+    public PurchaseResult purchaseItemWithReason(PlayerRef buyer, UUID shopId, int itemSlot, int quantity) {
+        if (buyer == null || shopId == null || quantity <= 0) {
+            return PurchaseResult.error("shop.buy.fail.invalid_input");
+        }
 
         // --- Validate economy ---
         if (!economyBridge.isAvailable()) {
             LOGGER.warning("Purchase rejected: economy provider not available");
-            return false;
+            return PurchaseResult.error("shop.buy.fail.economy_unavailable");
         }
 
         // --- Validate shop exists and is open ---
         ShopData shop = shopManager.getShop(shopId);
         if (shop == null) {
-            LOGGER.fine("Purchase rejected: shop not found " + shopId);
-            return false;
+            LOGGER.info("Purchase rejected: shop not found " + shopId);
+            return PurchaseResult.error("shop.buy.fail.shop_not_found");
         }
         if (!shop.isOpen()) {
-            LOGGER.fine("Purchase rejected: shop is closed " + shopId);
-            return false;
+            LOGGER.info("Purchase rejected: shop is closed " + shopId);
+            return PurchaseResult.error("shop.buy.fail.shop_closed");
         }
 
         // --- Self-purchase prevention (skipped for admin shops which have no owner) ---
         UUID buyerUuid = buyer.getUuid();
         if (!shop.isAdminShop() && shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(buyerUuid)) {
-            LOGGER.fine("Purchase rejected: buyer is shop owner");
-            return false;
+            LOGGER.info("Purchase rejected: buyer is shop owner ('" + buyer.getUsername()
+                + "' on shop '" + shop.getName() + "')");
+            return PurchaseResult.error("shop.buy.fail.own_shop");
         }
 
         // --- Validate item slot and find the ShopItem ---
@@ -128,22 +140,23 @@ public class ShopService {
             }
         }
         if (shopItem == null) {
-            LOGGER.fine("Purchase rejected: no item in slot " + itemSlot);
-            return false;
+            LOGGER.info("Purchase rejected: no item in slot " + itemSlot + " of shop " + shop.getName());
+            return PurchaseResult.error("shop.buy.fail.item_missing");
         }
         if (!shopItem.isBuyEnabled()) {
-            LOGGER.fine("Purchase rejected: buy disabled for " + shopItem.getItemId());
-            return false;
+            LOGGER.info("Purchase rejected: buy disabled for " + shopItem.getItemId());
+            return PurchaseResult.error("shop.buy.fail.not_for_sale");
         }
         if (shopItem.getBuyPrice() <= 0) {
-            LOGGER.fine("Purchase rejected: buy price is zero or negative for " + shopItem.getItemId());
-            return false;
+            LOGGER.info("Purchase rejected: buy price is zero or negative for " + shopItem.getItemId());
+            return PurchaseResult.error("shop.buy.fail.bad_price");
         }
 
         // --- Validate stock (cache check before DB) ---
         if (!shopItem.isUnlimitedStock() && shopItem.getStock() < quantity) {
-            LOGGER.fine("Purchase rejected: insufficient stock for " + shopItem.getItemId());
-            return false;
+            LOGGER.info("Purchase rejected: insufficient stock for " + shopItem.getItemId()
+                + " (have " + shopItem.getStock() + ", want " + quantity + ")");
+            return PurchaseResult.error("shop.buy.fail.out_of_stock");
         }
 
         // --- Calculate pricing (FIX 5: tax disabled — collected nowhere, would vanish) ---
@@ -155,16 +168,17 @@ public class ShopService {
 
         // --- Validate buyer has funds ---
         if (!economyBridge.has(buyerUuid, buyerCost)) {
-            LOGGER.fine("Purchase rejected: buyer has insufficient funds");
-            return false;
+            LOGGER.info("Purchase rejected: buyer '" + buyer.getUsername()
+                + "' has insufficient funds (need " + buyerCost + ")");
+            return PurchaseResult.error("shop.buy.fail.no_funds");
         }
 
         // --- Step 1: Atomic stock decrement in DB (prevents overselling) ---
         if (!shopItem.isUnlimitedStock()) {
             int rows = database.executeAtomicStockDecrement(shopId, shopItem.getItemId(), quantity);
             if (rows == 0) {
-                LOGGER.fine("Purchase rejected: atomic stock decrement failed (out of stock)");
-                return false;
+                LOGGER.info("Purchase rejected: atomic stock decrement failed (out of stock)");
+                return PurchaseResult.error("shop.buy.fail.out_of_stock");
             }
         }
 
@@ -176,7 +190,7 @@ public class ShopService {
                 database.executeAtomicStockIncrement(shopId, shopItem.getItemId(), quantity);
             }
             LOGGER.warning("Purchase failed: withdraw from buyer failed, stock rolled back");
-            return false;
+            return PurchaseResult.error("shop.buy.fail.withdraw_failed");
         }
 
         // --- Step 3: Mail items to buyer + earnings to seller (atomic group) ---
@@ -219,7 +233,7 @@ public class ShopService {
             economyBridge.deposit(buyerUuid, buyerCost);
             LOGGER.severe("Purchase failed: mailbox insert threw — buyer refunded, stock restored. Reason: "
                 + e.getMessage());
-            return false;
+            return PurchaseResult.error("shop.buy.fail.mailbox_error");
         }
 
         // --- Step 4: Notify the buyer that the items are in their mailbox ---
@@ -294,7 +308,27 @@ public class ShopService {
 
         LOGGER.info("Purchase complete: " + buyer.getUsername() + " bought " + quantity
             + "x " + shopItem.getItemId() + " for " + buyerCost + " from shop " + shop.getName());
-        return true;
+        return PurchaseResult.success();
+    }
+
+    /**
+     * Typed result for {@link #purchaseItemWithReason}. Carries either
+     * success or a specific i18n error key the UI can show to the player.
+     */
+    public static final class PurchaseResult {
+        private final boolean success;
+        private final String errorKey;
+
+        private PurchaseResult(boolean success, String errorKey) {
+            this.success = success;
+            this.errorKey = errorKey;
+        }
+
+        public static PurchaseResult success() { return new PurchaseResult(true, null); }
+        public static PurchaseResult error(String errorKey) { return new PurchaseResult(false, errorKey); }
+
+        public boolean isSuccess() { return success; }
+        public String getErrorKey() { return errorKey; }
     }
 
     // ==================== SELL ====================

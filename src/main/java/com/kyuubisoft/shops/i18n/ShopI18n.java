@@ -51,8 +51,10 @@ public class ShopI18n {
      *        shop.directory.no_item_results
      * - v17: mailbox two-line row layout — shop.mailbox.row.item_title/money_title,
      *        shop.mailbox.row.from_item/from_money
+     * - v18: typed purchase failure reasons — shop.buy.fail.* (own_shop, no_funds,
+     *        out_of_stock, shop_closed, etc.)
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 17;
+    private static final int CURRENT_LOCALIZATION_VERSION = 18;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
