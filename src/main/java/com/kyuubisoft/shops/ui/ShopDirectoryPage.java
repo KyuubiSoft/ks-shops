@@ -729,28 +729,48 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         // Item icon
         ui.set("#DirConfirmIcon.ItemId", item.getItemId());
 
-        // Item name (white) + shop (cyan) + owner (lavender)
+        // Item name (white) + shop (cyan) + owner (lavender). Owner + shop
+        // colors are driven by the .ui styles; only the Text is pushed here.
         ui.set("#DirConfirmItemName.Text", ShopBrowsePage.formatItemName(item.getItemId()));
         ui.set("#DirConfirmShop.Text",
             i18n.get(playerRef, "shop.directory.tooltip.shop",
                 shop.getName() != null ? shop.getName() : "Shop"));
         if (shop.isAdminShop()) {
             ui.set("#DirConfirmOwner.Text", i18n.get(playerRef, "shop.directory.admin_shop"));
+            // Admin shops get a distinctive magenta accent on the owner line.
+            ui.set("#DirConfirmOwner.Style.TextColor", "#ce93d8");
         } else if (shop.getOwnerName() != null) {
             ui.set("#DirConfirmOwner.Text",
                 i18n.get(playerRef, "shop.directory.tooltip.owner", shop.getOwnerName()));
+            ui.set("#DirConfirmOwner.Style.TextColor", "#9fa8da");
         } else {
             ui.set("#DirConfirmOwner.Text", "");
         }
 
-        // Price per unit (gold) + stock (green)
+        // Price per unit (warm orange so it stands apart from the gold total
+        // at the bottom of the dialog — same info in two places but visually
+        // distinct so the eye doesn't confuse "per unit" with "grand total").
         ui.set("#DirConfirmPrice.Text",
             i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice));
+        ui.set("#DirConfirmPrice.Style.TextColor", "#ffb74d");
+
+        // Stock: dynamic color based on remaining quantity.
+        //   unlimited -> cyan  (#26c6da)
+        //   > 10      -> green (#66bb6a)
+        //   3-10      -> amber (#ffb74d)
+        //   1-2       -> red   (#ff5252)
         if (item.isUnlimitedStock()) {
             ui.set("#DirConfirmStock.Text", i18n.get(playerRef, "shop.directory.buy.stock_unlimited"));
+            ui.set("#DirConfirmStock.Style.TextColor", "#26c6da");
         } else {
+            int stock = item.getStock();
             ui.set("#DirConfirmStock.Text",
-                i18n.get(playerRef, "shop.directory.buy.stock", item.getStock()));
+                i18n.get(playerRef, "shop.directory.buy.stock", stock));
+            String stockColor;
+            if (stock <= 2) stockColor = "#ff5252";
+            else if (stock <= 10) stockColor = "#ffb74d";
+            else stockColor = "#66bb6a";
+            ui.set("#DirConfirmStock.Style.TextColor", stockColor);
         }
 
         // Quantity slider + big label (replaces the old +/- buttons). Slider
@@ -979,33 +999,46 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 // (enchantments, custom stats, DTT extras) is still rendered
                 // by the client; only the name/description lines are overridden
                 // by the slot-level setName/setDescription calls below.
+                //
+                // Minecraft-style §-codes are used for per-line coloring (same
+                // codes Bank/ChatPlus use for chat messages). If Hytale's
+                // tooltip renderer strips them the lines just show as plain
+                // text with a few visible §-chars; functionality unaffected.
+                //
+                //   §b = aqua       (shop label)
+                //   §f = white      (values)
+                //   §7 = gray       (owner "by ...")
+                //   §e = yellow     (price label)
+                //   §6 = gold       (price number)
+                //   §a = green      (stock ok)
+                //   §c = red        (stock critical, 1-2 left)
+                //   §8 = dark gray  (click hint, subtle)
                 slot.setName(ShopBrowsePage.formatItemName(itemId));
 
                 StringBuilder desc = new StringBuilder();
                 String shopName = shop.getName() != null ? shop.getName() : "Shop";
-                desc.append(i18n.get(playerRef, "shop.directory.tooltip.shop", shopName));
-                desc.append('\n');
+                desc.append("\u00a7bShop: \u00a7f").append(shopName).append('\n');
 
                 if (shop.isAdminShop()) {
-                    desc.append(i18n.get(playerRef, "shop.directory.admin_shop"));
+                    desc.append("\u00a7dAdmin Shop");
                 } else if (shop.getOwnerName() != null) {
-                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.owner",
-                        shop.getOwnerName()));
+                    desc.append("\u00a77by \u00a7f").append(shop.getOwnerName());
                 }
                 desc.append('\n');
 
-                desc.append(i18n.get(playerRef, "shop.directory.tooltip.price",
-                    item.getBuyPrice()));
-                desc.append('\n');
+                desc.append("\u00a7ePrice: \u00a76").append(item.getBuyPrice())
+                    .append(" \u00a7eGold").append('\n');
 
                 if (item.isUnlimitedStock()) {
-                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.unlimited"));
+                    desc.append("\u00a7bStock: \u00a7fUnlimited");
                 } else {
-                    desc.append(i18n.get(playerRef, "shop.directory.tooltip.stock",
-                        item.getStock()));
+                    int s = item.getStock();
+                    String stockColor = s <= 2 ? "\u00a7c" : (s <= 5 ? "\u00a7e" : "\u00a7a");
+                    desc.append("\u00a7aStock: ").append(stockColor).append(s);
                 }
                 desc.append('\n');
-                desc.append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
+                desc.append("\u00a78")
+                    .append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
 
                 slot.setDescription(desc.toString());
             } else {
