@@ -60,6 +60,8 @@ public class ShopPlugin extends JavaPlugin {
     private com.kyuubisoft.shops.skin.ShopSkinManager skinManager;
 
     private final Map<String, PlayerShopData> playerData = new ConcurrentHashMap<>();
+    /** Online players for the per-tick shop NPC rotation (look-at-player). */
+    private final Map<UUID, Player> onlinePlayers = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
 
     public ShopPlugin(JavaPluginInit init) {
@@ -272,6 +274,25 @@ public class ShopPlugin extends JavaPlugin {
                 3, 5, TimeUnit.SECONDS
             );
 
+            // 11c. Shop NPC look-at-player rotation tick (100ms, same cadence
+            // as Core's CitizenRotationManager). Runs entirely off cached data
+            // (shop position + NetworkId + player position), sends per-player
+            // packets that are thread-safe - no world.execute() needed.
+            if (config.getData().npc.lookAtPlayer) {
+                scheduler.scheduleAtFixedRate(
+                    () -> {
+                        try {
+                            if (npcManager != null && !onlinePlayers.isEmpty()) {
+                                npcManager.getRotationManager().tick(onlinePlayers.values());
+                            }
+                        } catch (Exception e) {
+                            LOGGER.fine("Shop NPC rotation tick failed: " + e.getMessage());
+                        }
+                    },
+                    1000, 100, TimeUnit.MILLISECONDS
+                );
+            }
+
             // 12. Rent collection scheduler (if enabled)
             if (config.getData().rent.enabled) {
                 scheduler.scheduleAtFixedRate(
@@ -330,6 +351,9 @@ public class ShopPlugin extends JavaPlugin {
             npcManager.despawnAll();
         }
 
+        // 3b. Clear the rotation roster
+        onlinePlayers.clear();
+
         // 4. Save all dirty shop data
         if (shopManager != null) {
             shopManager.saveAll();
@@ -368,6 +392,17 @@ public class ShopPlugin extends JavaPlugin {
         UUID uuid = playerRef.getUuid();
         String username = playerRef.getUsername();
 
+        // Track the live Player for the NPC rotation tick (look-at-player).
+        try {
+            Player p = event.getPlayer();
+            if (p != null) {
+                onlinePlayers.put(uuid, p);
+            }
+        } catch (Exception ignored) {
+            // If getPlayer() is unavailable the rotation tick simply skips this
+            // player - it's a polish feature, not load-bearing.
+        }
+
         CompletableFuture.runAsync(() -> {
             try {
                 PlayerShopData data = database.loadPlayerData(uuid);
@@ -393,6 +428,9 @@ public class ShopPlugin extends JavaPlugin {
     private void onPlayerDisconnect(PlayerDisconnectEvent event) {
         PlayerRef playerRef = event.getPlayerRef();
         UUID uuid = playerRef.getUuid();
+
+        // Drop from the rotation tick roster.
+        onlinePlayers.remove(uuid);
 
         // Close any open editor session
         sessionManager.closeSession(uuid);

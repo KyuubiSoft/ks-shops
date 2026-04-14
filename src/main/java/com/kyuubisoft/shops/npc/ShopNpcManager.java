@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -85,11 +86,18 @@ public class ShopNpcManager {
     /** Maps shopId -> spawned NPCEntity UUID (for chunk reload detection) */
     private final Map<UUID, UUID> entityUuids = new ConcurrentHashMap<>();
 
+    /** Per-shop rotation tracking (null = look-at-player disabled in config) */
+    private final ShopNpcRotationManager rotationManager = new ShopNpcRotationManager();
+
     public ShopNpcManager(ShopPlugin plugin, ShopConfig config, ShopManager shopManager) {
         this.plugin = plugin;
         this.config = config;
         this.shopManager = shopManager;
         buildWorldShopIndex();
+    }
+
+    public ShopNpcRotationManager getRotationManager() {
+        return rotationManager;
     }
 
     // ==================== INDEX ====================
@@ -433,6 +441,7 @@ public class ShopNpcManager {
 
             applySkinIfAvailable(shop, entityRef, world, store);
             applyNameTag(shop, entityRef, store);
+            cacheRotationTarget(shopId, entityRef, store, position);
 
             LOGGER.info("Standalone shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", position.x, position.y, position.z)
@@ -555,6 +564,9 @@ public class ShopNpcManager {
             // Apply nameplate text (shop name) if the owner has it enabled
             applyNameTag(shop, entityRef, store);
 
+            // Cache NetworkId + position for the look-at-player rotation tick.
+            cacheRotationTarget(shopId, entityRef, store, npcPosition);
+
             LOGGER.info("Shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", npcPosition.x, npcPosition.y, npcPosition.z)
                 + "] in world '" + world.getName() + "'");
@@ -581,6 +593,27 @@ public class ShopNpcManager {
         double offsetZ = Math.cos(rotY) * NPC_OFFSET_DISTANCE;
 
         return new Vector3d(x + offsetX, y, z + offsetZ);
+    }
+
+    /**
+     * Reads the spawned NPC's NetworkId from the ECS store and hands it to the
+     * rotation manager along with the spawn position. No-op when the config
+     * flag {@code npc.lookAtPlayer} is disabled. Must be called inside
+     * {@code world.execute()} (same context as spawn), since it reads an ECS
+     * component right after the entity was added to the store.
+     */
+    private void cacheRotationTarget(UUID shopId, Ref<EntityStore> entityRef,
+                                      Store<EntityStore> store, Vector3d position) {
+        if (!config.getData().npc.lookAtPlayer) return;
+        if (entityRef == null || !entityRef.isValid()) return;
+        try {
+            NetworkId nid = store.getComponent(entityRef, NetworkId.getComponentType());
+            if (nid != null) {
+                rotationManager.trackNpc(shopId, nid.getId(), position);
+            }
+        } catch (Exception e) {
+            LOGGER.fine("cacheRotationTarget: failed for " + shopId + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -783,6 +816,7 @@ public class ShopNpcManager {
         shopNpcIds.remove(shopId);
         entityRefs.remove(shopId);
         entityUuids.remove(shopId);
+        rotationManager.untrackNpc(shopId);
         if (npcEntityId != null) {
             npcToShopMap.remove(npcEntityId);
         }
@@ -845,6 +879,7 @@ public class ShopNpcManager {
         npcToShopMap.clear();
         entityRefs.clear();
         entityUuids.clear();
+        rotationManager.clearAll();
         spawnedWorlds.clear();
 
         if (count > 0 || extra > 0) {
