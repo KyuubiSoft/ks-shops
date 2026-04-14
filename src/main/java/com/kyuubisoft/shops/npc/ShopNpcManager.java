@@ -197,7 +197,14 @@ public class ShopNpcManager {
         try {
             var store = world.getEntityStore().getStore();
             var query = Archetype.of(NPCEntity.getComponentType());
-            List<UUID> staleUuids = new ArrayList<>();
+            List<Ref<EntityStore>> toRemove = new ArrayList<>();
+
+            // Collect currently-tracked UUIDs so we can distinguish "ours" from
+            // "orphan chunk-restored duplicate". The orphan scan runs on every
+            // chunk load / periodic tick, so we can't rely on the scan
+            // happening before our fresh spawn - we must keep the fresh spawn
+            // and only remove anything NOT in our tracking.
+            Set<UUID> trackedUuids = new HashSet<>(entityUuids.values());
 
             store.forEachChunk(query, (chunk, commandBuffer) -> {
                 for (int i = 0; i < chunk.size(); i++) {
@@ -206,15 +213,17 @@ public class ShopNpcManager {
                         if (npc == null) continue;
                         String roleName = npc.getRoleName();
                         if (roleName == null) continue;
-                        // Match both our canonical role and the legacy core role
-                        // used by pre-standalone shop NPCs.
                         if (!NPC_ROLE_INTERACTABLE.equals(roleName)
                             && !NPC_ROLE_LEGACY_FALLBACK.equals(roleName)) {
                             continue;
                         }
-                        UUIDComponent uuidComp = chunk.getComponent(i, UUIDComponent.getComponentType());
+                        Ref<EntityStore> ref = chunk.getReferenceTo(i);
+                        if (ref == null || !ref.isValid()) continue;
+                        UUIDComponent uuidComp = store.getComponent(ref, UUIDComponent.getComponentType());
                         if (uuidComp == null || uuidComp.getUuid() == null) continue;
-                        staleUuids.add(uuidComp.getUuid());
+                        // Keep tracked NPCs - we own those.
+                        if (trackedUuids.contains(uuidComp.getUuid())) continue;
+                        toRemove.add(ref);
                     } catch (Exception ignored) {
                         // Skip broken entities
                     }
@@ -222,20 +231,45 @@ public class ShopNpcManager {
             });
 
             int removed = 0;
-            for (UUID uuid : staleUuids) {
+            for (Ref<EntityStore> ref : toRemove) {
                 try {
-                    var ref = world.getEntityRef(uuid);
-                    if (ref != null && ref.isValid()) {
+                    if (ref.isValid()) {
                         store.removeEntity(ref, RemoveReason.REMOVE);
                         removed++;
                     }
                 } catch (Exception e) {
-                    LOGGER.fine("sweepStalePersistentNpcs: remove failed for " + uuid + ": " + e.getMessage());
+                    LOGGER.fine("sweepStalePersistentNpcs: remove failed: " + e.getMessage());
                 }
             }
             return removed;
         } catch (Exception e) {
             LOGGER.warning("sweepStalePersistentNpcs: scan failed: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Public scheduler entry: runs the stale-NPC sweep periodically against the
+     * default world. Called every 30 seconds from ShopPlugin so chunk-restored
+     * duplicates that appear after the player walks into a new area also get
+     * cleaned up (not just the first-player-join path).
+     */
+    public int runPeriodicOrphanSweep() {
+        try {
+            World world = resolveWorld(null);
+            if (world == null) return 0;
+            final int[] removed = { 0 };
+            // Dispatch to world thread for entity ops
+            world.execute(() -> {
+                int r = sweepStalePersistentNpcs(world);
+                removed[0] = r;
+                if (r > 0) {
+                    LOGGER.info("Periodic orphan sweep: removed " + r + " chunk-restored shop NPC(s)");
+                }
+            });
+            return removed[0];
+        } catch (Exception e) {
+            LOGGER.fine("runPeriodicOrphanSweep failed: " + e.getMessage());
             return 0;
         }
     }
@@ -673,17 +707,10 @@ public class ShopNpcManager {
      * CitizenDamageListener uses).
      */
     private World resolveWorld(String worldName) {
-        if (worldName == null) return null;
         try {
             Universe universe = Universe.get();
             if (universe == null) return null;
-            World defaultWorld = universe.getDefaultWorld();
-            if (defaultWorld != null && worldName.equals(defaultWorld.getName())) {
-                return defaultWorld;
-            }
-            // Fallback: accept the default world even if the stored name differs
-            // slightly. Hytale single-world setups end up here.
-            return defaultWorld;
+            return universe.getDefaultWorld();
         } catch (Exception e) {
             LOGGER.fine("resolveWorld error: " + e.getMessage());
             return null;
@@ -692,6 +719,8 @@ public class ShopNpcManager {
 
     /**
      * Internal despawn — MUST be called inside world.execute()!
+     * Removes the tracked entity, cleans tracking, and then sweeps any
+     * chunk-persisted duplicates so pickup doesn't leave a ghost NPC.
      */
     private void despawnNpcInternal(UUID shopId, World world) {
         Ref<EntityStore> entityRef = entityRefs.get(shopId);
@@ -708,6 +737,21 @@ public class ShopNpcManager {
         }
 
         cleanupTracking(shopId, npcEntityId);
+
+        // After the tracked entity is gone, sweep any chunk-persisted NPC
+        // duplicates for this role. This is what makes pickup visually work:
+        // without the sweep the ghost NPC from Hytale's chunk persistence
+        // would still be standing there, even after we removed the tracked
+        // one.
+        try {
+            int extra = sweepStalePersistentNpcs(world);
+            if (extra > 0) {
+                LOGGER.fine("despawnNpcInternal: sweep removed " + extra
+                    + " stale NPC(s) for " + shopId);
+            }
+        } catch (Exception e) {
+            LOGGER.fine("despawnNpcInternal sweep failed: " + e.getMessage());
+        }
     }
 
     /**

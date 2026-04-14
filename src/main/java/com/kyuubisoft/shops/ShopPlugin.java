@@ -244,6 +244,24 @@ public class ShopPlugin extends JavaPlugin {
             });
             scheduler.scheduleAtFixedRate(this::autoSave, 60, 60, TimeUnit.SECONDS);
 
+            // 11b. Periodic orphan sweep: removes any shop NPCs that Hytale
+            // restored from chunk persistence but are not tracked by us. This
+            // runs every 30 seconds so duplicates that appear after the player
+            // walks into a new chunk also get cleaned up - the first-player-
+            // join sweep only covers the initial world init.
+            scheduler.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        if (npcManager != null) {
+                            npcManager.runPeriodicOrphanSweep();
+                        }
+                    } catch (Exception e) {
+                        LOGGER.fine("Periodic orphan sweep tick failed: " + e.getMessage());
+                    }
+                },
+                30, 30, TimeUnit.SECONDS
+            );
+
             // 12. Rent collection scheduler (if enabled)
             if (config.getData().rent.enabled) {
                 scheduler.scheduleAtFixedRate(
