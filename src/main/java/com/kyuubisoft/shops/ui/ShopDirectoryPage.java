@@ -493,17 +493,17 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TabBar #TabFeatured",
             EventData.of("Tab", "featured"), false);
 
-        // Shop card clicks (shop mode grid)
+        // Shop card clicks (shop mode grid) — flat unique IDs per card
         for (int i = 0; i < CARDS_PER_PAGE; i++) {
             events.addEventBinding(CustomUIEventBindingType.Activating,
-                "#ShopGrid #DCard" + i + " #DBtn",
+                "#DBtn" + i,
                 EventData.of("Card", String.valueOf(i)), false);
         }
 
-        // Item card clicks (items mode grid)
+        // Item card clicks (items mode grid) — flat unique IDs per card
         for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
             events.addEventBinding(CustomUIEventBindingType.Activating,
-                "#ItemGrid #ICard" + i + " #IBtn",
+                "#IBtn" + i,
                 EventData.of("ItemCard", String.valueOf(i)), false);
         }
 
@@ -644,35 +644,33 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         int startIndex = currentPage * CARDS_PER_PAGE;
 
         for (int i = 0; i < CARDS_PER_PAGE; i++) {
-            String prefix = "#DCard" + i;
             int actualIndex = startIndex + i;
 
             if (actualIndex < filteredShops.size()) {
                 ShopData shop = filteredShops.get(actualIndex);
-                ui.set(prefix + ".Visible", true);
+                ui.set("#DCard" + i + ".Visible", true);
 
-                // Avatar: prefer the owner-chosen icon, fall back to the first shop item.
-                // Flat 2-level selector (omit #ShopGrid prefix) — nested 3-level
-                // selectors can fail silently on ItemSlot.ItemId for macro-instanced
-                // cards.
+                // Avatar icon — flat 1-level selector on the uniquely-named ItemIcon.
+                // Macro-instanced children silently fail to receive ItemId updates
+                // even with 2-level selectors, so each card has its own #DAvatarN.
                 String iconId = shop.getDisplayIconItemId();
                 if (iconId != null) {
-                    ui.set(prefix + " #DAvatar.ItemId", iconId);
+                    ui.set("#DAvatar" + i + ".ItemId", iconId);
                 }
 
                 // Shop name
                 String name = shop.getName() != null ? shop.getName() : "Shop";
-                ui.set(prefix + " #DName.Text", name);
+                ui.set("#DName" + i + ".Text", name);
 
                 // Owner name
                 if (shop.isPlayerShop() && shop.getOwnerName() != null) {
-                    ui.set(prefix + " #DOwner.Text",
+                    ui.set("#DOwner" + i + ".Text",
                         i18n.get(playerRef, "shop.directory.by", shop.getOwnerName()));
                 } else if (shop.isAdminShop()) {
-                    ui.set(prefix + " #DOwner.Text",
+                    ui.set("#DOwner" + i + ".Text",
                         i18n.get(playerRef, "shop.directory.admin_shop"));
                 } else {
-                    ui.set(prefix + " #DOwner.Text", "");
+                    ui.set("#DOwner" + i + ".Text", "");
                 }
 
                 // Rating display
@@ -680,80 +678,77 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 int totalRatings = shop.getTotalRatings();
                 if (totalRatings > 0) {
                     String stars = buildStarString(avgRating);
-                    ui.set(prefix + " #DRating.Text",
+                    ui.set("#DRating" + i + ".Text",
                         stars + " (" + String.format("%.1f", avgRating) + ")");
                 } else {
-                    ui.set(prefix + " #DRating.Text",
+                    ui.set("#DRating" + i + ".Text",
                         i18n.get(playerRef, "shop.directory.no_ratings"));
                 }
 
                 // Item count
                 int itemCount = (shop.getItems() != null) ? shop.getItems().size() : 0;
-                ui.set(prefix + " #DItems.Text",
+                ui.set("#DItems" + i + ".Text",
                     i18n.get(playerRef, "shop.directory.item_count", itemCount));
 
                 // Distance from player
                 double dx = shop.getPosX() - playerX;
                 double dz = shop.getPosZ() - playerZ;
                 double distance = Math.sqrt(dx * dx + dz * dz);
-                ui.set(prefix + " #DDistance.Text", formatDistance(distance));
+                ui.set("#DDistance" + i + ".Text", formatDistance(distance));
 
                 // Status badge
                 if (shop.isFeatured() && shop.getFeaturedUntil() > System.currentTimeMillis()) {
-                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.featured"));
-                    ui.set(prefix + " #DStatus.Style.TextColor", "#ffd700");
+                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.featured"));
+                    ui.set("#DStatus" + i + ".Style.TextColor", "#ffd700");
                 } else if (shop.isOpen()) {
-                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.open"));
-                    ui.set(prefix + " #DStatus.Style.TextColor", "#4caf50");
+                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.open"));
+                    ui.set("#DStatus" + i + ".Style.TextColor", "#4caf50");
                 } else {
-                    ui.set(prefix + " #DStatus.Text", i18n.get(playerRef, "shop.directory.status.closed"));
-                    ui.set(prefix + " #DStatus.Style.TextColor", "#cc4444");
+                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.closed"));
+                    ui.set("#DStatus" + i + ".Style.TextColor", "#cc4444");
                 }
 
                 // Category
                 if (shop.getCategory() != null && !shop.getCategory().isEmpty()) {
-                    ui.set(prefix + " #DCategory.Text", shop.getCategory());
+                    ui.set("#DCategory" + i + ".Text", shop.getCategory());
                 } else {
-                    ui.set(prefix + " #DCategory.Text", "");
+                    ui.set("#DCategory" + i + ".Text", "");
                 }
 
                 // Tooltip with description
                 if (shop.getDescription() != null && !shop.getDescription().isEmpty()) {
-                    ui.set(prefix + " #DBtn.TooltipText", shop.getDescription());
+                    ui.set("#DBtn" + i + ".TooltipText", shop.getDescription());
                 } else {
-                    ui.set(prefix + " #DBtn.TooltipText",
+                    ui.set("#DBtn" + i + ".TooltipText",
                         i18n.get(playerRef, "shop.directory.click_to_browse"));
                 }
             } else {
-                ui.set(prefix + ".Visible", false);
+                ui.set("#DCard" + i + ".Visible", false);
             }
         }
     }
 
     /**
-     * Renders the 12 item-result cards in the items-mode grid. Uses the 2-level
-     * selector form ({@code #ICardN #IIcon.ItemId}) for the ItemSlot widget -
-     * the 3-level form silently fails to propagate to macro-instantiated cards,
-     * same pitfall that was fixed for the shop-card avatars in commit
-     * {@code 9ed87a5}.
+     * Renders the 12 item-result cards in the items-mode grid. Each card has
+     * uniquely-named child widgets ({@code #IIcon0}, {@code #IName0}, ...) so
+     * we can use flat 1-level selectors. Macro-instanced children did not
+     * receive dynamic ItemId updates reliably.
      */
     private void buildItemCards(UICommandBuilder ui, ShopI18n i18n) {
         for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
-            String prefix = "#ICard" + i;
-
             if (i < itemResults.size()) {
                 ItemSearchResult r = itemResults.get(i);
                 ShopData shop = r.shop;
                 ShopItem item = r.item;
 
-                ui.set(prefix + ".Visible", true);
+                ui.set("#ICard" + i + ".Visible", true);
 
-                // Icon (2-level selector, NOT #ItemGrid #ICardN ...)
-                ui.set(prefix + " #IIcon.ItemId", item.getItemId());
+                // Icon — flat 1-level selector on the uniquely-named ItemIcon.
+                ui.set("#IIcon" + i + ".ItemId", item.getItemId());
 
                 // Name + price
-                ui.set(prefix + " #IName.Text", ShopBrowsePage.formatItemName(item.getItemId()));
-                ui.set(prefix + " #IPrice.Text", item.getBuyPrice() + " Gold");
+                ui.set("#IName" + i + ".Text", ShopBrowsePage.formatItemName(item.getItemId()));
+                ui.set("#IPrice" + i + ".Text", item.getBuyPrice() + " Gold");
 
                 // Stock
                 String stockStr;
@@ -763,25 +758,25 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                     stockStr = i18n.get(playerRef, "shop.directory.item_count_stock",
                         String.valueOf(item.getStock()));
                 }
-                ui.set(prefix + " #IStock.Text", stockStr);
+                ui.set("#IStock" + i + ".Text", stockStr);
 
                 // Shop name + owner
-                ui.set(prefix + " #IShop.Text",
+                ui.set("#IShop" + i + ".Text",
                     shop.getName() != null ? shop.getName() : "Shop");
                 if (shop.isAdminShop()) {
-                    ui.set(prefix + " #IOwner.Text",
+                    ui.set("#IOwner" + i + ".Text",
                         i18n.get(playerRef, "shop.directory.admin_shop"));
                 } else if (shop.getOwnerName() != null) {
-                    ui.set(prefix + " #IOwner.Text",
+                    ui.set("#IOwner" + i + ".Text",
                         i18n.get(playerRef, "shop.directory.by", shop.getOwnerName()));
                 } else {
-                    ui.set(prefix + " #IOwner.Text", "");
+                    ui.set("#IOwner" + i + ".Text", "");
                 }
 
-                ui.set(prefix + " #IBtn.TooltipText",
+                ui.set("#IBtn" + i + ".TooltipText",
                     i18n.get(playerRef, "shop.directory.click_to_browse"));
             } else {
-                ui.set(prefix + ".Visible", false);
+                ui.set("#ICard" + i + ".Visible", false);
             }
         }
     }

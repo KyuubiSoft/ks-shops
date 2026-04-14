@@ -1,4 +1,8 @@
 // ShopDirectory UI -- Main hub page for browsing ALL shops (960x650)
+// NOTE: Cards are inlined (NOT macros) with unique per-card IDs. Macro-
+// instanced child ItemIcons do not receive dynamic ItemId updates from Java
+// even with 2-level selectors - the bank/pets pattern (unique IDs + flat
+// selectors) is the known-working approach.
 $C = "../../Common.ui";
 
 // ===== Card button style (dark card hover) =====
@@ -21,194 +25,6 @@ $C = "../../Common.ui";
   Hovered: (Background: (Color: #1c2835)),
   Pressed: (Background: (Color: #141a22)),
 );
-
-// ===== Item Result Card Macro -- 12 cards (items mode), each 220x110 =====
-@ItemResultCard = Group {
-  Visible: false;
-  Anchor: (Width: 220, Height: 110);
-  Padding: (Full: 3);
-
-  Button #IBtn {
-    Anchor: (Full: 0);
-    LayoutMode: Full;
-    Padding: (Full: 2);
-    Style: @DirCardBtnStyle;
-    TooltipText: "";
-
-    Group #ICardContent {
-      Anchor: (Full: 0);
-      LayoutMode: Top;
-      Padding: (Full: 4);
-
-      Group #ITopRow {
-        Anchor: (Height: 48);
-        LayoutMode: Left;
-
-        Group #IIconFrame {
-          Anchor: (Width: 44, Height: 44);
-          Background: (Color: #1a2530);
-          Padding: (Full: 2);
-          LayoutMode: CenterMiddle;
-
-          ItemIcon #IIcon {
-            Anchor: (Full: 0);
-          }
-        }
-
-        Group { Anchor: (Width: 6); }
-
-        Group #INameBlock {
-          FlexWeight: 1;
-          LayoutMode: Top;
-
-          Label #IName {
-            Anchor: (Height: 18);
-            Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
-            Text: "";
-          }
-
-          Label #IPrice {
-            Anchor: (Height: 14);
-            Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true);
-            Text: "";
-          }
-
-          Label #IStock {
-            Anchor: (Height: 12);
-            Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center);
-            Text: "";
-          }
-        }
-      }
-
-      Group { Anchor: (Height: 4); }
-
-      Label #IShop {
-        Anchor: (Left: 0, Right: 0, Height: 16);
-        Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
-        Text: "";
-      }
-
-      Label #IOwner {
-        Anchor: (Left: 0, Right: 0, Height: 14);
-        Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center);
-        Text: "";
-      }
-    }
-  }
-};
-
-// ===== Directory Card Macro -- 8 cards (4x2 grid), each 220x155 =====
-@DirCard = Group {
-  Visible: false;
-  Anchor: (Width: 220, Height: 155);
-  Padding: (Full: 3);
-
-  Button #DBtn {
-    Anchor: (Full: 0);
-    LayoutMode: Full;
-    Padding: (Full: 2);
-    Style: @DirCardBtnStyle;
-    TooltipText: "";
-
-    Group #CardContent {
-      Anchor: (Full: 0);
-      LayoutMode: Top;
-      Padding: (Full: 4);
-
-      // Top row: avatar + name/owner
-      Group #TopRow {
-        Anchor: (Height: 52);
-        LayoutMode: Left;
-
-        Group #AvatarFrame {
-          Anchor: (Width: 48, Height: 48);
-          Background: (Color: #1a2530);
-          Padding: (Full: 2);
-          LayoutMode: CenterMiddle;
-
-          ItemIcon #DAvatar {
-            Anchor: (Full: 0);
-          }
-        }
-
-        Group { Anchor: (Width: 6); }
-
-        Group #NameBlock {
-          FlexWeight: 1;
-          LayoutMode: Top;
-
-          Label #DName {
-            Anchor: (Height: 20);
-            Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
-            Text: "";
-          }
-
-          Label #DOwner {
-            Anchor: (Height: 16);
-            Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
-            Text: "";
-          }
-
-          Label #DStatus {
-            Anchor: (Height: 14);
-            Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true);
-            Text: "";
-          }
-        }
-      }
-
-      // Divider
-      Group {
-        Anchor: (Height: 5);
-        LayoutMode: CenterMiddle;
-        Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); }
-      }
-
-      // Middle row: rating
-      Group #RatingRow {
-        Anchor: (Height: 20);
-        LayoutMode: Left;
-        Padding: (Left: 2);
-
-        Label #DRating {
-          Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center);
-          Text: "";
-        }
-      }
-
-      // Bottom row: item count + distance
-      Group #InfoRow {
-        Anchor: (Height: 20);
-        LayoutMode: Left;
-        Padding: (Left: 2, Right: 2);
-
-        Label #DItems {
-          Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center);
-          Text: "";
-          FlexWeight: 1;
-        }
-
-        Label #DDistance {
-          Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End);
-          Text: "";
-        }
-      }
-
-      // Category badge
-      Group #CategoryRow {
-        Anchor: (Height: 18);
-        LayoutMode: Left;
-        Padding: (Left: 2);
-
-        Label #DCategory {
-          Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true);
-          Text: "";
-        }
-      }
-    }
-  }
-};
 
 // ===== Page Layout =====
 
@@ -404,35 +220,355 @@ $C.@PageOverlay {
           ScrollbarStyle: $C.@DefaultScrollbarStyle;
           Padding: (Left: 10, Right: 10, Top: 4);
 
+          // ============ Shop Cards (8, inline with unique IDs) ============
           Group #ShopGrid {
             LayoutMode: LeftCenterWrap;
 
-            @DirCard #DCard0 {}
-            @DirCard #DCard1 {}
-            @DirCard #DCard2 {}
-            @DirCard #DCard3 {}
-            @DirCard #DCard4 {}
-            @DirCard #DCard5 {}
-            @DirCard #DCard6 {}
-            @DirCard #DCard7 {}
+            Group #DCard0 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn0 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar0 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName0 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner0 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus0 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating0 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems0 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance0 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory0 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard1 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn1 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar1 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName1 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner1 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus1 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating1 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems1 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance1 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory1 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard2 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn2 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar2 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName2 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner2 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus2 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating2 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems2 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance2 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory2 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard3 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn3 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar3 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName3 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner3 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus3 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating3 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems3 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance3 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory3 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard4 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn4 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar4 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName4 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner4 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus4 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating4 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems4 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance4 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory4 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard5 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn5 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar5 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName5 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner5 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus5 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating5 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems5 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance5 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory5 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard6 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn6 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar6 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName6 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner6 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus6 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating6 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems6 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance6 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory6 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
+
+            Group #DCard7 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
+              Button #DBtn7 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 52); LayoutMode: Left;
+                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #DAvatar7 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #DName7 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #DOwner7 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                      Label #DStatus7 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                  Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DRating7 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
+                  Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2, Right: 2);
+                    Label #DItems7 { Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; FlexWeight: 1; }
+                    Label #DDistance7 { Style: (FontSize: 10, TextColor: #7caacc, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; } }
+                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
+                    Label #DCategory7 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
           }
 
+          // ============ Item Cards (12, inline with unique IDs) ============
           Group #ItemGrid {
             Visible: false;
             LayoutMode: LeftCenterWrap;
 
-            @ItemResultCard #ICard0 {}
-            @ItemResultCard #ICard1 {}
-            @ItemResultCard #ICard2 {}
-            @ItemResultCard #ICard3 {}
-            @ItemResultCard #ICard4 {}
-            @ItemResultCard #ICard5 {}
-            @ItemResultCard #ICard6 {}
-            @ItemResultCard #ICard7 {}
-            @ItemResultCard #ICard8 {}
-            @ItemResultCard #ICard9 {}
-            @ItemResultCard #ICard10 {}
-            @ItemResultCard #ICard11 {}
+            Group #ICard0 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn0 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon0 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName0 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice0 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock0 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop0 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner0 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard1 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn1 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon1 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName1 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice1 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock1 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop1 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner1 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard2 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn2 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon2 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName2 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice2 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock2 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop2 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner2 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard3 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn3 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon3 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName3 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice3 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock3 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop3 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner3 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard4 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn4 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon4 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName4 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice4 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock4 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop4 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner4 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard5 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn5 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon5 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName5 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice5 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock5 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop5 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner5 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard6 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn6 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon6 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName6 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice6 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock6 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop6 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner6 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard7 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn7 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon7 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName7 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice7 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock7 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop7 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner7 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard8 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn8 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon8 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName8 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice8 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock8 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop8 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner8 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard9 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn9 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon9 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName9 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice9 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock9 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop9 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner9 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard10 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn10 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon10 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName10 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice10 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock10 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop10 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner10 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
+
+            Group #ICard11 { Visible: false; Anchor: (Width: 220, Height: 110); Padding: (Full: 3);
+              Button #IBtn11 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
+                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
+                  Group { Anchor: (Height: 48); LayoutMode: Left;
+                    Group { Anchor: (Width: 44, Height: 44); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
+                      ItemIcon #IIcon11 { Anchor: (Full: 0); } }
+                    Group { Anchor: (Width: 6); }
+                    Group { FlexWeight: 1; LayoutMode: Top;
+                      Label #IName11 { Anchor: (Height: 18); Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                      Label #IPrice11 { Anchor: (Height: 14); Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
+                      Label #IStock11 { Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
+                  Group { Anchor: (Height: 4); }
+                  Label #IShop11 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
+                  Label #IOwner11 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } }
           }
         }
 
@@ -484,4 +620,3 @@ $C.@PageOverlay {
     }
   }
 }
-
