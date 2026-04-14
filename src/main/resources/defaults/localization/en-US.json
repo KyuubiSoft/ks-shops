@@ -1,5 +1,5 @@
 {
-  "_localization_version": "13",
+  "_localization_version": "14",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -128,6 +128,7 @@
 
   "shop.deposit.success": "Deposited {0} into shop '{1}'!",
   "shop.deposit.failed": "Deposit failed! Check your balance.",
+  "shop.deposit.invalid_amount": "Enter a positive number in the deposit field.",
   "shop.deposit.new_balance": "New shop balance: {0}",
 
   "shop.transfer.success": "Shop '{0}' transferred to {1}.",

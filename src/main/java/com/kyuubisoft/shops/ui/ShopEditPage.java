@@ -98,7 +98,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         "Plant_Fruit_Apple", "Ingredient_Leather_Medium", "Ingredient_Feathers_Light"
     };
 
-    private enum Tab { SETTINGS, REVENUE, HISTORY }
+    private enum Tab { SETTINGS, PRICING, REVENUE, HISTORY }
 
     private final PlayerRef playerRef;
     private final Player player;
@@ -130,6 +130,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private String editedCategory;
     private String editedIconItemId;
     private String editedNpcSkin;
+    private String pendingDepositAmount = "";
 
     // FIX 1: Snapshot of original shop items at open time (multiset by itemId).
     // Used by getStagingOnlyItems() to determine which items are NEW in the staging
@@ -355,6 +356,11 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                         dirty = true;
                     }
                 }
+                case "depositAmount" -> {
+                    if (data.depositAmountVal != null) {
+                        pendingDepositAmount = data.depositAmountVal.trim();
+                    }
+                }
             }
             // For text fields, just acknowledge without full refresh
             this.sendUpdate(new UICommandBuilder(), false);
@@ -377,6 +383,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
     private void handleTabSwitch(String tab) {
         Tab newTab = switch (tab) {
+            case "pricing" -> Tab.PRICING;
             case "revenue" -> Tab.REVENUE;
             case "history" -> Tab.HISTORY;
             default -> Tab.SETTINGS;
@@ -745,7 +752,26 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
     private void handleDeposit(Ref<EntityStore> ref, Store<EntityStore> store) {
         ShopI18n i18n = plugin.getI18n();
+
+        // Parse the amount from the text field. Default 100 if empty/invalid
+        // so the button is still usable without typing anything.
         double depositAmount = 100;
+        if (pendingDepositAmount != null && !pendingDepositAmount.isBlank()) {
+            try {
+                depositAmount = Double.parseDouble(pendingDepositAmount.trim());
+            } catch (NumberFormatException ignored) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.deposit.invalid_amount")
+                ).color("#FF5555"));
+                return;
+            }
+        }
+        if (depositAmount <= 0) {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.deposit.invalid_amount")
+            ).color("#FF5555"));
+            return;
+        }
 
         boolean success = plugin.getShopService().depositToShop(
             playerRef, shopData.getId(), depositAmount
@@ -955,6 +981,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Sub-tab buttons
         events.addEventBinding(CustomUIEventBindingType.Activating, "#SettingsTab",
             EventData.of("Tab", "settings"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#PricingTab",
+            EventData.of("Tab", "pricing"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#RevenueTab",
             EventData.of("Tab", "revenue"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#HistoryTab",
@@ -1048,6 +1076,11 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Apply-skin button: commits the skin and respawns the NPC with it
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ApplySkinBtn",
             EventData.of("Button", "apply_skin"), false);
+
+        // Deposit amount field: live-sync typed value into pendingDepositAmount
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#DepositField",
+            EventData.of("Field", "depositAmount")
+                .append("@DepositAmount", "#DepositField.Value"));
     }
 
     // ==================== BUILD UI ====================
@@ -1062,18 +1095,28 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         switch (activeTab) {
             case SETTINGS -> {
                 ui.set("#SettingsPanel.Visible", true);
+                ui.set("#PricingPanel.Visible", false);
                 ui.set("#RevenuePanel.Visible", false);
                 ui.set("#HistoryPanel.Visible", false);
                 buildSettingsPanel(ui);
             }
+            case PRICING -> {
+                ui.set("#SettingsPanel.Visible", false);
+                ui.set("#PricingPanel.Visible", true);
+                ui.set("#RevenuePanel.Visible", false);
+                ui.set("#HistoryPanel.Visible", false);
+                buildPricingPanel(ui);
+            }
             case REVENUE -> {
                 ui.set("#SettingsPanel.Visible", false);
+                ui.set("#PricingPanel.Visible", false);
                 ui.set("#RevenuePanel.Visible", true);
                 ui.set("#HistoryPanel.Visible", false);
                 buildRevenuePanel(ui);
             }
             case HISTORY -> {
                 ui.set("#SettingsPanel.Visible", false);
+                ui.set("#PricingPanel.Visible", false);
                 ui.set("#RevenuePanel.Visible", false);
                 ui.set("#HistoryPanel.Visible", true);
                 buildHistoryPanel(ui);
@@ -1108,6 +1151,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         String inactiveColor = "#96a9be";
 
         ui.set("#SettingsTabLbl.Style.TextColor", activeTab == Tab.SETTINGS ? activeColor : inactiveColor);
+        ui.set("#PricingTabLbl.Style.TextColor", activeTab == Tab.PRICING ? activeColor : inactiveColor);
         ui.set("#RevenueTabLbl.Style.TextColor", activeTab == Tab.REVENUE ? activeColor : inactiveColor);
         ui.set("#HistoryTabLbl.Style.TextColor", activeTab == Tab.HISTORY ? activeColor : inactiveColor);
     }
@@ -1220,25 +1264,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     // ==================== SETTINGS PANEL ====================
 
     private void buildSettingsPanel(UICommandBuilder ui) {
-        // BUG #10: Localize the owner-facing labels for the price/quota/stock/mode
-        // fields. These used to read "Buy Price" / "Sell Price" / "Want Qty" — which
-        // is customer-perspective wording on a page the shop owner uses to edit their
-        // own shop. Rephrase as "Sell to customers at" / "Buy from customers at" /
-        // "Buyback quota" / "Stock" so the owner can reason about the economics.
         ShopI18n i18n = plugin.getI18n();
-        ui.set("#BuyPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.sell_to_customers"));
-        ui.set("#SellPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.buy_from_customers"));
-        ui.set("#BuyQuotaLabel.Text", i18n.get(playerRef, "shop.edit.label.buyback_quota"));
-        ui.set("#StockLimitLabel.Text", i18n.get(playerRef, "shop.edit.label.stock_available"));
-        ui.set("#ModeLabel.Text", i18n.get(playerRef, "shop.edit.label.mode"));
 
-        // FIX 5: Only push text-field values to the client when the server has a "fresh"
-        // value the client doesn't know yet. Otherwise refreshUI() triggered by an unrelated
-        // event (e.g. mode click) would clobber whatever the user is currently typing.
-        //
-        // Global fields (name/desc/category) are pushed once at open: after that the
-        // client owns the value. Per-item fields (price/stock/quota) are pushed on slot
-        // change since they're tied to the selection.
+        // Global shop fields. Pushed once at open; after that the client owns
+        // the value so refreshUI() does not clobber what the user is typing.
         if (pushGlobalFields) {
             ui.set("#EditNameField.Value", editedName);
             ui.set("#EditDescField.Value", editedDesc);
@@ -1255,8 +1284,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             ui.set("#NpcSkinStatusLabel.Text", "CURRENT: " + editedNpcSkin);
         }
 
-        // Name tag toggle label reflects the current state so clicking updates
-        // immediately without waiting for a respawn.
+        // Name tag toggle reflects current state live.
         if (shopData.isShowNameTag()) {
             ui.set("#ToggleNameTagLbl.Text",
                 i18n.get(playerRef, "shop.edit.name_tag.on"));
@@ -1267,7 +1295,39 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             ui.set("#ToggleNameTagLbl.Style.TextColor", "#888888");
         }
 
-        // Selected item section
+        // Icon picker: highlight the selected tile and update the status label.
+        for (int i = 0; i < ICON_OPTIONS.length; i++) {
+            boolean isSelected = ICON_OPTIONS[i].equals(editedIconItemId);
+            ui.set("#IconPick" + i + "Selector.Visible", isSelected);
+        }
+        if (editedIconItemId != null && !editedIconItemId.isBlank()) {
+            ui.set("#IconPickSelectedLabel.Text",
+                "SELECTED: " + ShopBrowsePage.formatItemName(editedIconItemId));
+        } else {
+            ui.set("#IconPickSelectedLabel.Text", "SELECTED: (first item fallback)");
+        }
+
+        // Clear the global push flag - subsequent refreshes leave user typing alone.
+        pushGlobalFields = false;
+    }
+
+    // ==================== PRICING PANEL ====================
+
+    /**
+     * Dedicated sub-tab for per-item pricing. Populates the buy/sell/quota/stock
+     * fields + mode button state for the currently selected slot. Split out from
+     * buildSettingsPanel so the Settings tab only shows shop-level config (name,
+     * category, icon, NPC skin, name tag) and this tab owns the item-level state.
+     */
+    private void buildPricingPanel(UICommandBuilder ui) {
+        ShopI18n i18n = plugin.getI18n();
+
+        ui.set("#BuyPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.sell_to_customers"));
+        ui.set("#SellPriceLabel.Text", i18n.get(playerRef, "shop.edit.label.buy_from_customers"));
+        ui.set("#BuyQuotaLabel.Text", i18n.get(playerRef, "shop.edit.label.buyback_quota"));
+        ui.set("#StockLimitLabel.Text", i18n.get(playerRef, "shop.edit.label.stock_available"));
+        ui.set("#ModeLabel.Text", i18n.get(playerRef, "shop.edit.label.mode"));
+
         if (selectedSlot >= 0 && selectedSlot < stagingContainer.getCapacity()) {
             ItemStack stack = stagingContainer.getItemStack((short) selectedSlot);
             if (stack != null && !stack.isEmpty()) {
@@ -1285,15 +1345,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                     ui.set("#StockLimitField.Value", String.valueOf(meta.maxStock));
                 }
 
-                // FIX 2: Mode buttons must be mutually exclusive in display so the user can
-                // tell which mode is actually active. Previously BOTH lit up all 3 labels.
+                // Mutually exclusive mode highlighting (BUG #2 fix).
                 boolean isBoth = meta.buyEnabled && meta.sellEnabled;
                 boolean isBuyOnly = meta.buyEnabled && !meta.sellEnabled;
                 boolean isSellOnly = !meta.buyEnabled && meta.sellEnabled;
-
-                String activeColor = "#ffd700";   // Gold for the single active mode
+                String activeColor = "#ffd700";
                 String inactiveColor = "#555555";
-
                 ui.set("#ModeBuyLbl.Style.TextColor", isBuyOnly ? activeColor : inactiveColor);
                 ui.set("#ModeSellLbl.Style.TextColor", isSellOnly ? activeColor : inactiveColor);
                 ui.set("#ModeBothLbl.Style.TextColor", isBoth ? activeColor : inactiveColor);
@@ -1304,21 +1361,6 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             showNoItemSelected(ui);
         }
 
-        // Icon picker: highlight the selected tile's selector indicator and update the label.
-        for (int i = 0; i < ICON_OPTIONS.length; i++) {
-            boolean isSelected = ICON_OPTIONS[i].equals(editedIconItemId);
-            ui.set("#IconPick" + i + "Selector.Visible", isSelected);
-        }
-        if (editedIconItemId != null && !editedIconItemId.isBlank()) {
-            ui.set("#IconPickSelectedLabel.Text",
-                "SELECTED: " + ShopBrowsePage.formatItemName(editedIconItemId));
-        } else {
-            ui.set("#IconPickSelectedLabel.Text", "SELECTED: (first item fallback)");
-        }
-
-        // FIX 5: Clear the "fresh value" flags so subsequent refreshes leave the user's
-        // typing alone. Slot changes / page changes will re-arm pushItemFields.
-        pushGlobalFields = false;
         pushItemFields = false;
     }
 
@@ -1812,6 +1854,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("@NpcSkin", Codec.STRING),
                 (data, value) -> data.npcSkinVal = value,
                 data -> data.npcSkinVal)
+            .addField(new KeyedCodec<>("@DepositAmount", Codec.STRING),
+                (data, value) -> data.depositAmountVal = value,
+                data -> data.depositAmountVal)
             // Grid drop/click events (native ItemGrid interaction)
             .addField(new KeyedCodec<>("Action", Codec.STRING),
                 (data, value) -> data.action = value,
@@ -1842,6 +1887,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String stockLimitVal;
         private String categoryVal;
         private String npcSkinVal;
+        private String depositAmountVal;
         // Grid interaction fields
         private String action;
         private Integer slotIndex;

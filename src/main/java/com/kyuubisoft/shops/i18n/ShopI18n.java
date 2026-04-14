@@ -43,8 +43,9 @@ public class ShopI18n {
      * - v12: NPC-only shop creation refactor — Shop_NPC_Token interaction keys,
      *        NPC skin picker labels, shop block -> NPC migration log string
      * - v13: NPC name tag toggle labels (shop.edit.name_tag.on/off)
+     * - v14: deposit invalid-amount error key
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 13;
+    private static final int CURRENT_LOCALIZATION_VERSION = 14;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

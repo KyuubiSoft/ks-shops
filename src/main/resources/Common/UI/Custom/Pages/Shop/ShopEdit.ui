@@ -178,6 +178,13 @@ $C.@PageOverlay {
                                 Label #SettingsTabLbl { Style: (FontSize: 10, TextColor: #e8c547, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "SETTINGS"; }
                             }
                             Group { Anchor: (Width: 4); }
+                            Button #PricingTab {
+                                FlexWeight: 1;
+                                Anchor: (Height: 26);
+                                Style: @SubTabBtnStyle;
+                                Label #PricingTabLbl { Style: (FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true); Text: "PRICING"; }
+                            }
+                            Group { Anchor: (Width: 4); }
                             Button #RevenueTab {
                                 FlexWeight: 1;
                                 Anchor: (Height: 26);
@@ -377,17 +384,23 @@ $C.@PageOverlay {
                                 }
 
                                 Group { Anchor: (Height: 10); }
+                            }
 
-                                // Separator
-                                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+                            // ==================== PRICING PANEL ====================
+                            // Item-level pricing lives in its own sub-tab. Click an
+                            // item in the shop grid on the left, then open PRICING to
+                            // edit buy/sell/quota/stock/mode for that slot.
+                            Group #PricingPanel {
+                                Visible: false;
+                                Anchor: (Left: 0, Right: 0);
+                                LayoutMode: Top;
+                                Padding: (Top: 8);
 
-                                Group { Anchor: (Height: 8); }
-
-                                // Selected Item Section Header
+                                // Section header
                                 Label #ItemSectionLabel {
                                     Anchor: (Height: 18);
                                     Style: (FontSize: 10, TextColor: #44ff44, RenderBold: true, RenderUppercase: true);
-                                    Text: "SELECTED ITEM";
+                                    Text: "ITEM PRICING";
                                 }
 
                                 Group { Anchor: (Height: 4); }
@@ -576,16 +589,32 @@ $C.@PageOverlay {
                                 }
                                 Group { Anchor: (Height: 4); }
 
-                                // Deposit Button
+                                // Deposit amount field + button. The amount is
+                                // what the owner wants to move from their wallet
+                                // into the shop's buyback pool.
                                 Group {
                                     Anchor: (Left: 0, Right: 0, Height: 34);
-                                    LayoutMode: CenterMiddle;
+                                    LayoutMode: Left;
+                                    Padding: (Left: 8, Right: 8);
+
+                                    Label #DepositFieldLabel {
+                                        Anchor: (Width: 70, Height: 28);
+                                        Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+                                        Text: "Amount";
+                                    }
+                                    $C.@TextField #DepositField {
+                                        @PlaceholderText = "100";
+                                        FlexWeight: 1;
+                                        Anchor: (Height: 28);
+                                        MaxLength: 10;
+                                    }
+                                    Group { Anchor: (Width: 6); }
                                     Button #DepositBtn {
-                                        Anchor: (Width: 180, Height: 30);
+                                        Anchor: (Width: 100, Height: 28);
                                         Style: ButtonStyle(Default: (Background: (Color: #2a6e2a60)), Hovered: (Background: (Color: #3a8e3a80)), Pressed: (Background: (Color: #1a5e1a90)));
                                         Label #DepositBtnLbl {
                                             Style: (FontSize: 11, TextColor: #55ff55, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
-                                            Text: "DEPOSIT 100G";
+                                            Text: "DEPOSIT";
                                         }
                                     }
                                 }
