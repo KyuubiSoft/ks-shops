@@ -768,33 +768,66 @@ public class ShopNpcManager {
 
     /**
      * Despawns all active shop NPCs. Called on plugin shutdown.
-     * Iterates all tracked NPCs and removes them from the world.
+     *
+     * Crucially this now removes the ECS entities BEFORE Hytale serialises
+     * the chunks, so there is no persistent ghost to re-appear next restart.
+     * Because world.execute() can no longer be relied upon during shutdown,
+     * entity removal is done synchronously on the calling thread (same
+     * pattern Pets uses in despawnActivePetInternal with synchronous=true).
+     *
+     * Also runs a synchronous sweep over every remaining Shop_Keeper_Role
+     * NPC in the default world to catch anything that was untracked but
+     * still belongs to us (e.g. a crash-restored ghost from a previous run).
      */
     public void despawnAll() {
         int count = shopNpcIds.size();
-        if (count == 0) return;
 
-        // Copy keys to avoid ConcurrentModificationException
+        World world = resolveWorld(null);
+
+        // Step 1: tracked entities - remove synchronously.
         Set<UUID> shopIds = new HashSet<>(shopNpcIds.keySet());
         for (UUID shopId : shopIds) {
             try {
                 String npcEntityId = shopNpcIds.get(shopId);
+                Ref<EntityStore> ref = entityRefs.get(shopId);
+
+                if (world != null && ref != null && ref.isValid()) {
+                    try {
+                        var store = world.getEntityStore().getStore();
+                        store.removeEntity(ref, RemoveReason.REMOVE);
+                    } catch (Exception e) {
+                        LOGGER.fine("despawnAll: synchronous remove failed for " + shopId
+                            + ": " + e.getMessage());
+                    }
+                }
+
                 cleanupTracking(shopId, npcEntityId);
             } catch (Exception e) {
                 LOGGER.warning("Error despawning NPC for shop " + shopId + ": " + e.getMessage());
             }
         }
 
-        // Note: On shutdown, world.execute() may no longer be available.
-        // Entity cleanup is handled by the server on world unload.
+        // Step 2: catch any chunk-persisted ghosts that are not in our tracking.
+        // Sweep runs synchronously here as well - we're already past the point
+        // where dispatching via world.execute is reliable.
+        int extra = 0;
+        if (world != null) {
+            try {
+                extra = sweepStalePersistentNpcs(world);
+            } catch (Exception e) {
+                LOGGER.fine("despawnAll: final sweep failed: " + e.getMessage());
+            }
+        }
+
         shopNpcIds.clear();
         npcToShopMap.clear();
         entityRefs.clear();
         entityUuids.clear();
         spawnedWorlds.clear();
 
-        if (count > 0) {
-            LOGGER.info("Despawned " + count + " shop NPC(s)");
+        if (count > 0 || extra > 0) {
+            LOGGER.info("Despawned " + count + " tracked shop NPC(s) + "
+                + extra + " stale ghost(s) on shutdown");
         }
     }
 
