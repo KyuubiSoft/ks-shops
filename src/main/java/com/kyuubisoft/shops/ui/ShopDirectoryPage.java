@@ -653,10 +653,13 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 // Avatar icon — flat 1-level selector on the uniquely-named ItemIcon.
                 // Macro-instanced children silently fail to receive ItemId updates
                 // even with 2-level selectors, so each card has its own #DAvatarN.
+                // Falls back to a gold bar for shops with no chosen icon / no items,
+                // because an empty #DAvatar renders as a blank square.
                 String iconId = shop.getDisplayIconItemId();
-                if (iconId != null) {
-                    ui.set("#DAvatar" + i + ".ItemId", iconId);
+                if (iconId == null || iconId.isBlank()) {
+                    iconId = "Ingredient_Bar_Gold";
                 }
+                ui.set("#DAvatar" + i + ".ItemId", iconId);
 
                 // Shop name
                 String name = shop.getName() != null ? shop.getName() : "Shop";
