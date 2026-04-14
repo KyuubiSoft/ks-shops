@@ -328,8 +328,14 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                             .purchaseItemWithReason(playerRef, shopData.getId(),
                                 item.getSlot(), confirmQuantity);
                         if (result.isSuccess()) {
+                            int totalPaid = item.getBuyPrice() * confirmQuantity;
+                            String currencyName = plugin.getEconomyBridge().getCurrencyName();
                             player.sendMessage(Message.raw(
-                                i18n.get(playerRef, "shop.buy.success", confirmQuantity, item.getItemId())).color("#44FF44"));
+                                i18n.get(playerRef, "shop.buy.success",
+                                    confirmQuantity,
+                                    formatItemName(item.getItemId()),
+                                    totalPaid,
+                                    currencyName)).color("#44FF44"));
                         } else {
                             String key = result.getErrorKey() != null
                                 ? result.getErrorKey()

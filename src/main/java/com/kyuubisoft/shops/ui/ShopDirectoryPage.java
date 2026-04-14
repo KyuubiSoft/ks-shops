@@ -333,9 +333,14 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                     .purchaseItemWithReason(playerRef, buyConfirmShop.getId(),
                         buyConfirmItem.getSlot(), buyConfirmQuantity);
                 if (result.isSuccess()) {
+                    int totalPaid = buyConfirmItem.getBuyPrice() * buyConfirmQuantity;
+                    String currencyName = plugin.getEconomyBridge().getCurrencyName();
                     player.sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.buy.success",
-                            buyConfirmQuantity, buyConfirmItem.getItemId()))
+                            buyConfirmQuantity,
+                            ShopBrowsePage.formatItemName(buyConfirmItem.getItemId()),
+                            totalPaid,
+                            currencyName))
                         .color("#44FF44"));
                 } else {
                     String key = result.getErrorKey() != null
