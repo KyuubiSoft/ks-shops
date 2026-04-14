@@ -245,10 +245,20 @@ public class ShopPlugin extends JavaPlugin {
             scheduler.scheduleAtFixedRate(this::autoSave, 60, 60, TimeUnit.SECONDS);
 
             // 11b. Periodic orphan sweep: removes any shop NPCs that Hytale
-            // restored from chunk persistence but are not tracked by us. This
-            // runs every 30 seconds so duplicates that appear after the player
-            // walks into a new chunk also get cleaned up - the first-player-
-            // join sweep only covers the initial world init.
+            // restored from chunk persistence but are not tracked by us.
+            //
+            // Hytale's PersistentModel component keeps NPCEntity instances
+            // alive inside chunk save data. We cannot remove PersistentModel
+            // without crashing (documented pitfall in ShopNpcManager), so the
+            // next-best fix is to let the ghosts reload on chunk-restore and
+            // purge them shortly after. The sweep only matches Shop_Keeper_Role
+            // and skips UUIDs we track ourselves, so other mods' NPCs are
+            // safe.
+            //
+            // 3s initial delay + 5s tick keeps the window between "ghost
+            // appears" and "ghost disappears" short enough that players
+            // barely notice. Pets uses the same pattern for its own NPC
+            // duplicates.
             scheduler.scheduleAtFixedRate(
                 () -> {
                     try {
@@ -259,7 +269,7 @@ public class ShopPlugin extends JavaPlugin {
                         LOGGER.fine("Periodic orphan sweep tick failed: " + e.getMessage());
                     }
                 },
-                30, 30, TimeUnit.SECONDS
+                3, 5, TimeUnit.SECONDS
             );
 
             // 12. Rent collection scheduler (if enabled)

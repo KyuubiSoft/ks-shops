@@ -199,11 +199,10 @@ public class ShopNpcManager {
             var query = Archetype.of(NPCEntity.getComponentType());
             List<Ref<EntityStore>> toRemove = new ArrayList<>();
 
-            // Collect currently-tracked UUIDs so we can distinguish "ours" from
-            // "orphan chunk-restored duplicate". The orphan scan runs on every
-            // chunk load / periodic tick, so we can't rely on the scan
-            // happening before our fresh spawn - we must keep the fresh spawn
-            // and only remove anything NOT in our tracking.
+            // Only match OUR shop role. The legacy KS_NPC_Interactable_Role is
+            // also used by Core Citizens, quest NPCs, pet NPCs, etc. - matching
+            // on it would delete other mods' NPCs. Shop_Keeper_Role is a
+            // shops-only identifier.
             Set<UUID> trackedUuids = new HashSet<>(entityUuids.values());
 
             store.forEachChunk(query, (chunk, commandBuffer) -> {
@@ -212,11 +211,7 @@ public class ShopNpcManager {
                         NPCEntity npc = chunk.getComponent(i, NPCEntity.getComponentType());
                         if (npc == null) continue;
                         String roleName = npc.getRoleName();
-                        if (roleName == null) continue;
-                        if (!NPC_ROLE_INTERACTABLE.equals(roleName)
-                            && !NPC_ROLE_LEGACY_FALLBACK.equals(roleName)) {
-                            continue;
-                        }
+                        if (!NPC_ROLE_INTERACTABLE.equals(roleName)) continue;
                         Ref<EntityStore> ref = chunk.getReferenceTo(i);
                         if (ref == null || !ref.isValid()) continue;
                         UUIDComponent uuidComp = store.getComponent(ref, UUIDComponent.getComponentType());
