@@ -56,8 +56,11 @@ public class ShopI18n {
      * - v19: item-search grid tooltip keys — shop.directory.tooltip.*
      *        (shop/owner/price/stock/unlimited/click_hint) for the native
      *        ItemGridSlot setName/setDescription override in the items tab
+     * - v20: in-place buy confirm overlay for the directory's items tab —
+     *        shop.directory.buy.* keys (title/price_each/stock/total/
+     *        confirm/visit/cancel) for the single-click fast-buy dialog
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 19;
+    private static final int CURRENT_LOCALIZATION_VERSION = 20;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

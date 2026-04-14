@@ -22,11 +22,14 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 
 import org.bson.BsonDocument;
 
+import com.hypixel.hytale.server.core.Message;
+
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.service.DirectoryService;
+import com.kyuubisoft.shops.service.ShopService;
 import com.kyuubisoft.shops.util.BsonMetadataCodec;
 
 import javax.annotation.Nonnull;
@@ -86,6 +89,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     private List<ShopData> filteredShops = new ArrayList<>();
     private List<ItemSearchResult> itemResults = new ArrayList<>();
     private int totalResults = 0;
+
+    // In-place buy confirm overlay state (items-mode fast-buy dialog)
+    private boolean buyConfirmActive = false;
+    private ShopData buyConfirmShop = null;
+    private ShopItem buyConfirmItem = null;
+    private int buyConfirmQuantity = 1;
 
     private final UUID onlyOwnerUuid; // set via the /ksshop myshops entry point
 
@@ -147,6 +156,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         if (data.itemSlot != null) {
             handleItemSlotClick(data.itemSlot);
+            return;
+        }
+
+        if (data.buyAction != null) {
+            handleBuyAction(data.buyAction);
             return;
         }
 
@@ -266,9 +280,10 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== ITEM SLOT CLICK ====================
 
     /**
-     * Routes an item-search grid slot click to the shop that sells the
-     * clicked item. {@code slotIndex} is the slot position within the
-     * visible page (0..{@link #ITEMS_PER_PAGE}-1), not a global index.
+     * A single click on a slot in {@code #ItemSearchGrid} opens the in-place
+     * buy-confirm overlay prefilled with the clicked item. From the overlay
+     * the user can BUY (instant purchase), VISIT SHOP (navigate to
+     * {@link ShopBrowsePage}), or CANCEL.
      */
     private void handleItemSlotClick(Integer slotIndex) {
         if (slotIndex == null || slotIndex < 0 || slotIndex >= itemResults.size()) {
@@ -276,24 +291,104 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             return;
         }
         ItemSearchResult r = itemResults.get(slotIndex);
-        if (r == null || r.shop == null) {
+        if (r == null || r.shop == null || r.item == null) {
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
 
-        if (lastRef == null || lastStore == null) {
-            LOGGER.warning("[ShopDirectory] Cannot open shop: ref/store not available");
+        buyConfirmActive = true;
+        buyConfirmShop = r.shop;
+        buyConfirmItem = r.item;
+        buyConfirmQuantity = 1;
+        refreshUI();
+    }
+
+    // ==================== BUY OVERLAY ACTIONS ====================
+
+    /**
+     * Handles the buttons on the in-place buy-confirm overlay:
+     * {@code yes} (purchase), {@code visit} (open {@link ShopBrowsePage}),
+     * {@code cancel} (close overlay), {@code plus}/{@code minus} (quantity).
+     */
+    private void handleBuyAction(String action) {
+        if (action == null) {
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
 
-        try {
-            ShopBrowsePage browsePage = new ShopBrowsePage(playerRef, player, plugin, r.shop);
-            player.getPageManager().openCustomPage(lastRef, lastStore, browsePage);
-        } catch (Exception e) {
-            LOGGER.warning("[ShopDirectory] Failed to open shop browse page: " + e.getMessage());
-            this.sendUpdate(new UICommandBuilder(), false);
+        switch (action) {
+            case "yes" -> {
+                if (!buyConfirmActive || buyConfirmShop == null || buyConfirmItem == null) {
+                    clearBuyConfirm();
+                    refreshUI();
+                    return;
+                }
+                ShopI18n i18n = plugin.getI18n();
+                ShopService.PurchaseResult result = plugin.getShopService()
+                    .purchaseItemWithReason(playerRef, buyConfirmShop.getId(),
+                        buyConfirmItem.getSlot(), buyConfirmQuantity);
+                if (result.isSuccess()) {
+                    player.sendMessage(Message.raw(
+                        i18n.get(playerRef, "shop.buy.success",
+                            buyConfirmQuantity, buyConfirmItem.getItemId()))
+                        .color("#44FF44"));
+                } else {
+                    String key = result.getErrorKey() != null
+                        ? result.getErrorKey()
+                        : "shop.browse.purchase_failed";
+                    player.sendMessage(Message.raw(
+                        i18n.get(playerRef, key)).color("#FF5555"));
+                }
+                clearBuyConfirm();
+                executeQuery();
+                refreshUI();
+            }
+            case "visit" -> {
+                ShopData shop = buyConfirmShop;
+                clearBuyConfirm();
+                if (shop == null || lastRef == null || lastStore == null) {
+                    LOGGER.warning("[ShopDirectory] Cannot visit shop: no active buy target");
+                    refreshUI();
+                    return;
+                }
+                try {
+                    ShopBrowsePage browsePage = new ShopBrowsePage(playerRef, player, plugin, shop);
+                    player.getPageManager().openCustomPage(lastRef, lastStore, browsePage);
+                } catch (Exception e) {
+                    LOGGER.warning("[ShopDirectory] Failed to open shop browse page: " + e.getMessage());
+                    refreshUI();
+                }
+            }
+            case "cancel" -> {
+                clearBuyConfirm();
+                refreshUI();
+            }
+            case "plus" -> {
+                if (buyConfirmActive && buyConfirmItem != null) {
+                    int max = getBuyConfirmMaxQuantity();
+                    if (buyConfirmQuantity < max) buyConfirmQuantity++;
+                }
+                refreshUI();
+            }
+            case "minus" -> {
+                if (buyConfirmActive && buyConfirmQuantity > 1) buyConfirmQuantity--;
+                refreshUI();
+            }
+            default -> this.sendUpdate(new UICommandBuilder(), false);
         }
+    }
+
+    private void clearBuyConfirm() {
+        buyConfirmActive = false;
+        buyConfirmShop = null;
+        buyConfirmItem = null;
+        buyConfirmQuantity = 1;
+    }
+
+    private int getBuyConfirmMaxQuantity() {
+        if (buyConfirmItem == null) return 1;
+        if (buyConfirmItem.isUnlimitedStock()) return 64;
+        return Math.max(1, buyConfirmItem.getStock());
     }
 
     // ==================== PAGINATION ====================
@@ -512,6 +607,18 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             "#ItemSearchGrid",
             EventData.of("ItemSlot", ""), true);
 
+        // Buy confirm overlay buttons
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmBuy",
+            EventData.of("BuyAction", "yes"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmVisit",
+            EventData.of("BuyAction", "visit"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmCancel",
+            EventData.of("BuyAction", "cancel"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmPlus",
+            EventData.of("BuyAction", "plus"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmMinus",
+            EventData.of("BuyAction", "minus"), false);
+
         // Pagination
         events.addEventBinding(CustomUIEventBindingType.Activating, "#Footer #DPrevBtn",
             EventData.of("Button", "prev"), false);
@@ -578,6 +685,72 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         // ---- Pagination ----
         buildPagination(ui, i18n);
+
+        // ---- Buy confirm overlay (items tab fast-buy) ----
+        buildBuyConfirmOverlay(ui, i18n);
+    }
+
+    /**
+     * Drives the in-place buy-confirm overlay visibility + content. Hides the
+     * overlay when {@link #buyConfirmActive} is false. All info lines are
+     * colored via the Label styles baked into ShopDirectory.ui - this method
+     * only pushes the text content.
+     */
+    private void buildBuyConfirmOverlay(UICommandBuilder ui, ShopI18n i18n) {
+        ui.set("#DirConfirmOverlay.Visible", buyConfirmActive);
+        if (!buyConfirmActive || buyConfirmShop == null || buyConfirmItem == null) return;
+
+        ShopData shop = buyConfirmShop;
+        ShopItem item = buyConfirmItem;
+        int unitPrice = item.getBuyPrice();
+
+        int maxQty = getBuyConfirmMaxQuantity();
+        if (buyConfirmQuantity > maxQty) buyConfirmQuantity = maxQty;
+        if (buyConfirmQuantity < 1) buyConfirmQuantity = 1;
+        int grandTotal = unitPrice * buyConfirmQuantity;
+
+        ui.set("#DirConfirmTitle.Text", i18n.get(playerRef, "shop.directory.buy.title"));
+
+        // Item icon
+        ui.set("#DirConfirmIcon.ItemId", item.getItemId());
+
+        // Item name (white) + shop (cyan) + owner (lavender)
+        ui.set("#DirConfirmItemName.Text", ShopBrowsePage.formatItemName(item.getItemId()));
+        ui.set("#DirConfirmShop.Text",
+            i18n.get(playerRef, "shop.directory.tooltip.shop",
+                shop.getName() != null ? shop.getName() : "Shop"));
+        if (shop.isAdminShop()) {
+            ui.set("#DirConfirmOwner.Text", i18n.get(playerRef, "shop.directory.admin_shop"));
+        } else if (shop.getOwnerName() != null) {
+            ui.set("#DirConfirmOwner.Text",
+                i18n.get(playerRef, "shop.directory.tooltip.owner", shop.getOwnerName()));
+        } else {
+            ui.set("#DirConfirmOwner.Text", "");
+        }
+
+        // Price per unit (gold) + stock (green)
+        ui.set("#DirConfirmPrice.Text",
+            i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice));
+        if (item.isUnlimitedStock()) {
+            ui.set("#DirConfirmStock.Text", i18n.get(playerRef, "shop.directory.buy.stock_unlimited"));
+        } else {
+            ui.set("#DirConfirmStock.Text",
+                i18n.get(playerRef, "shop.directory.buy.stock", item.getStock()));
+        }
+
+        // Quantity selector
+        ui.set("#DirConfirmQty.Text", String.valueOf(buyConfirmQuantity));
+        ui.set("#DirConfirmMinus.Visible", buyConfirmQuantity > 1);
+        ui.set("#DirConfirmPlus.Visible", buyConfirmQuantity < maxQty);
+
+        // Total (gold)
+        ui.set("#DirConfirmTotal.Text",
+            i18n.get(playerRef, "shop.directory.buy.total", grandTotal));
+
+        // Button labels
+        ui.set("#DirConfirmBuy.Text", i18n.get(playerRef, "shop.directory.buy.confirm"));
+        ui.set("#DirConfirmVisit.Text", i18n.get(playerRef, "shop.directory.buy.visit"));
+        ui.set("#DirConfirmCancel.Text", i18n.get(playerRef, "shop.directory.buy.cancel"));
     }
 
     private void buildModeHighlights(UICommandBuilder ui) {
@@ -928,6 +1101,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             .addField(new KeyedCodec<>("SlotIndex", Codec.INTEGER),
                 (data, value) -> data.itemSlot = value,
                 data -> data.itemSlot)
+            .addField(new KeyedCodec<>("BuyAction", Codec.STRING),
+                (data, value) -> data.buyAction = value,
+                data -> data.buyAction)
             .addField(new KeyedCodec<>("Mode", Codec.STRING),
                 (data, value) -> data.mode = value,
                 data -> data.mode)
@@ -949,6 +1125,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         private String tab;
         private String card;
         private Integer itemSlot;
+        private String buyAction;
         private String mode;
         private String search;
         private String sort;

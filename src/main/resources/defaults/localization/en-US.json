@@ -1,5 +1,5 @@
 {
-  "_localization_version": "19",
+  "_localization_version": "20",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -303,7 +303,15 @@
   "shop.directory.tooltip.price": "Price: {0} Gold",
   "shop.directory.tooltip.stock": "Stock: {0}",
   "shop.directory.tooltip.unlimited": "Stock: Unlimited",
-  "shop.directory.tooltip.click_hint": "Click to visit this shop",
+  "shop.directory.tooltip.click_hint": "Left click to buy | Right buttons to visit the shop",
+  "shop.directory.buy.title": "CONFIRM PURCHASE",
+  "shop.directory.buy.price_each": "{0} Gold each",
+  "shop.directory.buy.stock": "{0} in stock",
+  "shop.directory.buy.stock_unlimited": "Unlimited stock",
+  "shop.directory.buy.total": "Total: {0} Gold",
+  "shop.directory.buy.confirm": "BUY",
+  "shop.directory.buy.visit": "VISIT SHOP",
+  "shop.directory.buy.cancel": "CANCEL",
   "shop.directory.no_ratings": "No ratings",
   "shop.directory.item_count": "{0} items",
   "shop.directory.item_count_stock": "Stock: {0}",

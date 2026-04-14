@@ -456,4 +456,155 @@ $C.@PageOverlay {
       }
     }
   }
+
+  // ==================== BUY CONFIRM OVERLAY ====================
+  // In-place fast-buy dialog for the items-search mode. Clicking a slot in
+  // #ItemSearchGrid shows this overlay; the user can hit BUY (instant purchase),
+  // VISIT SHOP (navigate to ShopBrowsePage), or CANCEL.
+  Group #DirConfirmOverlay {
+    Visible: false;
+    Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+    LayoutMode: CenterMiddle;
+    Background: (Color: #000000aa);
+
+    $C.@Container #DirConfirmDialog {
+      Anchor: (Width: 400, Height: 380);
+
+      #Title {
+        Label #DirConfirmTitle {
+          Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+          Padding: (Horizontal: 19);
+          Text: "BUY ITEM";
+        }
+      }
+
+      #Content {
+        LayoutMode: Top;
+        Padding: (Full: 14);
+
+        // ---- Item row: icon + item name + shop name ----
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 60);
+
+          Group #DirConfirmIconBg {
+            Anchor: (Width: 54, Height: 54);
+            Background: (Color: #1a2530);
+            Padding: (Full: 3);
+            LayoutMode: CenterMiddle;
+            ItemIcon #DirConfirmIcon { Anchor: (Width: 48, Height: 48); ItemId: "Ingredient_Bar_Gold"; }
+          }
+
+          Group { Anchor: (Width: 12); }
+
+          Group {
+            FlexWeight: 1;
+            LayoutMode: Top;
+            Label #DirConfirmItemName {
+              Anchor: (Height: 22);
+              Style: (FontSize: 15, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+            Label #DirConfirmShop {
+              Anchor: (Height: 18);
+              Style: (FontSize: 12, TextColor: #4fc3f7, RenderBold: true, VerticalAlignment: Center);
+              Text: "";
+            }
+            Label #DirConfirmOwner {
+              Anchor: (Height: 16);
+              Style: (FontSize: 10, TextColor: #9fa8da, VerticalAlignment: Center);
+              Text: "";
+            }
+          }
+        }
+
+        Group { Anchor: (Height: 10); }
+
+        // ---- Info rows: price per unit, stock ----
+        Group {
+          Anchor: (Height: 1);
+          Background: (Color: #252f3a);
+        }
+
+        Group { Anchor: (Height: 6); }
+
+        Label #DirConfirmPrice {
+          Anchor: (Height: 18);
+          Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Label #DirConfirmStock {
+          Anchor: (Height: 16);
+          Style: (FontSize: 11, TextColor: #81c784, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Group { Anchor: (Height: 8); }
+
+        // ---- Quantity selector ----
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 34);
+          Padding: (Left: 60, Right: 60);
+
+          $C.@SmallSecondaryTextButton #DirConfirmMinus {
+            @Anchor = (Width: 44);
+            @Text = "-";
+          }
+
+          Group {
+            FlexWeight: 1;
+            LayoutMode: CenterMiddle;
+            Label #DirConfirmQty {
+              Style: (FontSize: 20, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center);
+              Text: "1";
+            }
+          }
+
+          $C.@SmallSecondaryTextButton #DirConfirmPlus {
+            @Anchor = (Width: 44);
+            @Text = "+";
+          }
+        }
+
+        Group { Anchor: (Height: 4); }
+
+        // ---- Total ----
+        Label #DirConfirmTotal {
+          Anchor: (Height: 22);
+          Style: (FontSize: 14, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+        }
+
+        Group { FlexWeight: 1; }
+
+        // ---- Button row: BUY / VISIT SHOP / CANCEL ----
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 38);
+          Padding: (Left: 4, Right: 4);
+
+          $C.@TextButton #DirConfirmBuy {
+            @Anchor = (Width: 110);
+            @Text = "BUY";
+          }
+
+          Group { FlexWeight: 1; }
+
+          $C.@TextButton #DirConfirmVisit {
+            @Anchor = (Width: 130);
+            @Text = "VISIT SHOP";
+          }
+
+          Group { FlexWeight: 1; }
+
+          $C.@CancelTextButton #DirConfirmCancel {
+            @Anchor = (Width: 110);
+            @Text = "CANCEL";
+          }
+        }
+      }
+    }
+  }
 }
