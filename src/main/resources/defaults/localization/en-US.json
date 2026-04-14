@@ -1,5 +1,5 @@
 {
-  "_localization_version": "20",
+  "_localization_version": "21",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -270,6 +270,8 @@
   "shop.browse.tab.sell": "SELL",
   "shop.browse.page": "Page {0} / {1}",
   "shop.browse.stock": "Stock: {0}",
+  "shop.browse.stock_count": "{0} in stock",
+  "shop.browse.stock_unlimited": "Unlimited",
   "shop.browse.daily_limit": "Daily limit: {0}",
   "shop.browse.out_of_stock": "Out of stock",
   "shop.browse.not_enough": "Not enough funds",

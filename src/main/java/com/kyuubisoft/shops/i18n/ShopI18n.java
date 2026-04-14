@@ -59,8 +59,10 @@ public class ShopI18n {
      * - v20: in-place buy confirm overlay for the directory's items tab —
      *        shop.directory.buy.* keys (title/price_each/stock/total/
      *        confirm/visit/cancel) for the single-click fast-buy dialog
+     * - v21: browse card grid — shop.browse.stock_count / stock_unlimited
+     *        for the always-visible stock label below each browse card
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 20;
+    private static final int CURRENT_LOCALIZATION_VERSION = 21;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
