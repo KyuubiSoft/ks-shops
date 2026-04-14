@@ -215,6 +215,10 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
     /**
      * Gives the mail contents to the player and marks the mail claimed on success.
      * Returns true if the dispense + DB update both succeeded.
+     *
+     * <p>For ITEM mails the stored BSON metadata is passed through so the
+     * delivered ItemStack carries enchantments / custom stats / pet ids /
+     * weapon mastery levels exactly as the seller listed them.</p>
      */
     private boolean dispenseAndClaim(MailboxEntry mail) {
         MailboxService mailboxService = plugin.getMailboxService();
@@ -223,7 +227,8 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
                 // giveItem is void + catches its own exceptions; any remainder is
                 // dropped at the player's feet by the Priority 1 fix. We consider
                 // the call successful unless it throws an unchecked exception.
-                plugin.getShopService().giveItem(playerRef, mail.getItemId(), mail.getQuantity());
+                plugin.getShopService().giveItem(playerRef, mail.getItemId(),
+                    mail.getQuantity(), mail.getItemMetadata());
                 return mailboxService.markClaimed(mail.getId());
             }
 

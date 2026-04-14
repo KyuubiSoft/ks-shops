@@ -18,8 +18,22 @@ public class MailboxService {
 
     public void createItemMail(UUID ownerUuid, UUID shopId, String shopName,
                                String buyerName, String itemId, int quantity) {
+        createItemMail(ownerUuid, shopId, shopName, buyerName, itemId, quantity, null);
+    }
+
+    /**
+     * Creates an ITEM mail that carries an optional BSON metadata blob so the
+     * claim path can reconstruct enchantments / custom stats / pet ids /
+     * weapon mastery levels on the receiving side. Pass {@code null} for
+     * {@code itemMetadata} to send a vanilla item with no metadata (legacy
+     * behaviour).
+     */
+    public void createItemMail(UUID ownerUuid, UUID shopId, String shopName,
+                               String buyerName, String itemId, int quantity,
+                               String itemMetadata) {
         if (ownerUuid == null || itemId == null || quantity <= 0) return;
-        MailboxEntry entry = MailboxEntry.itemMail(ownerUuid, shopId, shopName, buyerName, itemId, quantity);
+        MailboxEntry entry = MailboxEntry.itemMail(ownerUuid, shopId, shopName,
+            buyerName, itemId, quantity, itemMetadata);
         database.insertMailboxEntry(entry);
     }
 

@@ -187,6 +187,7 @@ public class ShopDatabase {
                 "from_player_name VARCHAR(64)," +
                 "created_at BIGINT NOT NULL," +
                 "claimed INT DEFAULT 0," +
+                "item_metadata TEXT," +
                 "INDEX idx_mailbox_owner (owner_uuid, claimed)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         } else {
@@ -289,7 +290,8 @@ public class ShopDatabase {
                 "from_shop_name TEXT," +
                 "from_player_name TEXT," +
                 "created_at INTEGER NOT NULL," +
-                "claimed INTEGER DEFAULT 0" +
+                "claimed INTEGER DEFAULT 0," +
+                "item_metadata TEXT" +
                 ")";
         }
 
@@ -348,6 +350,27 @@ public class ShopDatabase {
                 : "ALTER TABLE shop_shops ADD COLUMN packed BOOLEAN DEFAULT 0";
             provider.executeUpdate(alterSql);
             LOGGER.info("Migrated: added packed column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+
+        // Migration: add item_metadata column to shop_items if missing.
+        // Required for BSON ItemStack metadata capture (enchantments, pet ids,
+        // weapon mastery levels etc.) on shop listings created before the
+        // metadata pipeline was introduced.
+        try {
+            provider.executeUpdate("ALTER TABLE shop_items ADD COLUMN item_metadata TEXT");
+            LOGGER.info("Migrated: added item_metadata column to shop_items");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+
+        // Migration: add item_metadata column to shop_mailbox if missing.
+        // Required for BSON metadata on ITEM mails so enchanted purchases
+        // survive the mailbox round-trip on their way to the buyer.
+        try {
+            provider.executeUpdate("ALTER TABLE shop_mailbox ADD COLUMN item_metadata TEXT");
+            LOGGER.info("Migrated: added item_metadata column to shop_mailbox");
         } catch (SQLException ignored) {
             // Column already exists - expected after first migration
         }
@@ -861,8 +884,8 @@ public class ShopDatabase {
 
     public void insertMailboxEntry(MailboxEntry entry) {
         String sql = "INSERT INTO shop_mailbox (owner_uuid, mail_type, item_id, quantity, amount, " +
-            "from_shop_id, from_shop_name, from_player_name, created_at, claimed) " +
-            "VALUES (?,?,?,?,?,?,?,?,?,?)";
+            "from_shop_id, from_shop_name, from_player_name, created_at, claimed, item_metadata) " +
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)";
         try {
             int rows = provider.executeUpdate(sql,
                 entry.getOwnerUuid().toString(),
@@ -874,7 +897,8 @@ public class ShopDatabase {
                 entry.getFromShopName(),
                 entry.getFromPlayerName(),
                 entry.getCreatedAt(),
-                entry.isClaimed() ? 1 : 0);
+                entry.isClaimed() ? 1 : 0,
+                entry.getItemMetadata());
             if (rows > 0) {
                 long lastId = fetchLastInsertId();
                 entry.setId(lastId);
@@ -988,8 +1012,15 @@ public class ShopDatabase {
         String fromPlayerName = rs.getString("from_player_name");
         long createdAt = rs.getLong("created_at");
         boolean claimed = rs.getInt("claimed") != 0;
+
+        // Read item_metadata safely (column may not exist on legacy rows).
+        // Legacy mails simply get null metadata and deliver a vanilla item.
+        String itemMetadata = null;
+        try { itemMetadata = rs.getString("item_metadata"); } catch (SQLException ignored) {}
+
         return MailboxEntry.fromDatabase(rs.getLong("id"), ownerUuid, type, itemId,
-            quantity, amount, fromShopId, fromShopName, fromPlayerName, createdAt, claimed);
+            quantity, amount, fromShopId, fromShopName, fromPlayerName, createdAt,
+            itemMetadata, claimed);
     }
 
     // ==================== INNER CLASSES ====================
@@ -1131,6 +1162,11 @@ public class ShopDatabase {
 
     private ShopItem readShopItem(ResultSet rs) {
         try {
+            // Read item_metadata safely (column may not exist if migration
+            // has not run yet against a very old DB snapshot).
+            String itemMetadata = null;
+            try { itemMetadata = rs.getString("item_metadata"); } catch (SQLException ignored) {}
+
             return new ShopItem(
                 rs.getString("item_id"),
                 rs.getInt("buy_price"),
@@ -1143,7 +1179,7 @@ public class ShopDatabase {
                 rs.getString("category"),
                 rs.getInt("daily_buy_limit"),
                 rs.getInt("daily_sell_limit"),
-                rs.getString("item_metadata")
+                itemMetadata
             );
         } catch (Exception e) {
             LOGGER.warning("Failed to read shop item row: " + e.getMessage());

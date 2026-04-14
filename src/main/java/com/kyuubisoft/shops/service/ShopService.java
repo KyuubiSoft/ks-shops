@@ -28,7 +28,10 @@ import com.kyuubisoft.shops.event.ShopDeleteEvent;
 import com.kyuubisoft.shops.event.ShopEventBus;
 import com.kyuubisoft.shops.event.ShopTransactionEvent;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.util.BsonMetadataCodec;
 import com.kyuubisoft.shops.util.PlayerInventoryAccess;
+
+import org.bson.BsonDocument;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -182,14 +185,18 @@ public class ShopService {
         // mail first — if it fails, no money mail exists yet to clean up.
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
         try {
-            // 3a. ITEM mail to the buyer (always — admin and player shops alike)
+            // 3a. ITEM mail to the buyer (always — admin and player shops alike).
+            // Pass the persisted BSON metadata so the buyer receives the exact
+            // same enchanted / customised ItemStack the owner listed, not a
+            // vanilla copy.
             plugin.getMailboxService().createItemMail(
                 buyerUuid,
                 shop.getId(),
                 shop.getName(),
                 shop.getName(), // ITEM mails show the shop name as the "sender"
                 shopItem.getItemId(),
-                quantity
+                quantity,
+                shopItem.getItemMetadata()
             );
 
             // 3b. MONEY mail to the seller (player shops only — admin shops skip)
@@ -737,8 +744,11 @@ public class ShopService {
             int stock = item.getStock();
             if (stock <= 0) continue;
             try {
+                // Preserve the ItemStack metadata so the owner gets back the
+                // exact same enchanted / customised items they listed.
                 plugin.getMailboxService().createItemMail(
-                    ownerUuid, shopId, shopName, "[Shop Pickup]", item.getItemId(), stock);
+                    ownerUuid, shopId, shopName, "[Shop Pickup]",
+                    item.getItemId(), stock, item.getItemMetadata());
                 refundedItemCount += stock;
                 refundedMailCount++;
             } catch (Exception e) {
@@ -1631,6 +1641,17 @@ public class ShopService {
      * Public so the MailboxPage (and other dispensers) can reuse it.
      */
     public void giveItem(PlayerRef playerRef, String itemId, int quantity) {
+        giveItem(playerRef, itemId, quantity, null);
+    }
+
+    /**
+     * Gives items to a player with optional BSON metadata attached. Used by
+     * the mailbox claim path to preserve enchantments / custom stats / pet
+     * ids / weapon mastery levels captured when the seller listed the item.
+     * Pass {@code null} for {@code metadataJson} to deliver a vanilla item
+     * (equivalent to the 3-arg overload).
+     */
+    public void giveItem(PlayerRef playerRef, String itemId, int quantity, String metadataJson) {
         if (playerRef == null || itemId == null || quantity <= 0) return;
 
         try {
@@ -1641,7 +1662,12 @@ public class ShopService {
             }
             Store<EntityStore> store = ref.getStore();
 
-            ItemStack stack = new ItemStack(itemId, quantity);
+            // Reconstruct the full ItemStack with metadata when present so
+            // enchantments / custom stats / pet ids survive the delivery.
+            BsonDocument meta = BsonMetadataCodec.decode(metadataJson);
+            ItemStack stack = (meta != null)
+                ? new ItemStack(itemId, quantity, meta)
+                : new ItemStack(itemId, quantity);
 
             // Resolve the Player entity from the store so we can use PlayerInventoryAccess
             Player player = store.getComponent(ref, Player.getComponentType());

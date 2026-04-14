@@ -28,6 +28,9 @@ import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
+import com.kyuubisoft.shops.util.BsonMetadataCodec;
+
+import org.bson.BsonDocument;
 
 import javax.annotation.Nonnull;
 import java.text.SimpleDateFormat;
@@ -701,8 +704,24 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 int finalStock = originalUnlimitedItems.contains(stack.getItemId())
                     ? -1
                     : stack.getQuantity();
+
+                // Capture BSON metadata (enchantments, custom stats, pet IDs,
+                // weapon mastery levels etc.) from the staged ItemStack so it
+                // can be restored on the buyer side. The canonical item id
+                // strips any DTT virtual-suffix so persisted rows never
+                // contain runtime-only cache state.
+                String metadataJson = null;
+                try {
+                    BsonDocument bsonMeta = stack.getMetadata();
+                    metadataJson = BsonMetadataCodec.encode(bsonMeta);
+                } catch (Exception ignored) {
+                    // Items without metadata throw -> treat as null
+                }
+
+                String canonicalId = BsonMetadataCodec.stripDttSuffix(stack.getItemId());
+
                 ShopItem item = new ShopItem(
-                    stack.getItemId(),
+                    canonicalId,
                     meta != null ? meta.buyPrice : 10,
                     meta != null ? meta.sellPrice : 5,
                     finalStock,
@@ -713,7 +732,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                     editedCategory,
                     meta != null ? meta.buyQuota : 0,  // Reuse dailyBuyLimit as buy quota (persistent)
                     0,   // dailySellLimit
-                    null // itemMetadata
+                    metadataJson // itemMetadata — round-tripped by ShopDatabase
                 );
                 newItems.add(item);
             }
@@ -1597,6 +1616,11 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
     /**
      * Copies existing shop items from ShopData into the staging container.
+     *
+     * <p>Restores any persisted BSON metadata so the editor shows the
+     * enchanted / modified version of the item exactly as it was captured
+     * at save time. Legacy rows (null itemMetadata) fall back to a vanilla
+     * ItemStack without metadata.</p>
      */
     private void populateStagingFromShop() {
         List<ShopItem> items = shopData.getItems();
@@ -1606,7 +1630,10 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 String itemId = item.getItemId();
                 int quantity = item.isUnlimitedStock() ? 1 : Math.max(1, item.getStock());
 
-                ItemStack stack = new ItemStack(itemId, quantity);
+                BsonDocument bsonMeta = BsonMetadataCodec.decode(item.getItemMetadata());
+                ItemStack stack = (bsonMeta != null)
+                    ? new ItemStack(itemId, quantity, bsonMeta)
+                    : new ItemStack(itemId, quantity);
                 stagingContainer.setItemStackForSlot((short) slot, stack);
 
                 // Copy metadata

@@ -25,6 +25,9 @@ import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.data.ShopType;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.service.ShopService;
+import com.kyuubisoft.shops.util.BsonMetadataCodec;
+
+import org.bson.BsonDocument;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -546,7 +549,15 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 }
 
                 try {
-                    ItemStack stack = new ItemStack(itemId, quantityToShow);
+                    // Attach any persisted BSON metadata (enchantments,
+                    // custom stats, pet ids, weapon mastery levels...) to
+                    // the browse slot so Hytale's native tooltip + DTT
+                    // render the full item state on hover, not a vanilla
+                    // icon stripped of metadata.
+                    BsonDocument meta = BsonMetadataCodec.decode(item.getItemMetadata());
+                    ItemStack stack = (meta != null)
+                        ? new ItemStack(itemId, quantityToShow, meta)
+                        : new ItemStack(itemId, quantityToShow);
                     slot = new ItemGridSlot(stack);
                 } catch (Exception e) {
                     LOGGER.warning("[ShopBrowse] Failed to build slot for item " + itemId
