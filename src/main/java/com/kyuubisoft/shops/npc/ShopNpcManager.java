@@ -10,6 +10,9 @@ import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
+import com.hypixel.hytale.component.Archetype;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -155,10 +158,22 @@ public class ShopNpcManager {
 
         // PITFALL: Entity operations MUST run inside world.execute()
         world.execute(() -> {
+            // First: sweep any persisted shop NPCs left over from a previous
+            // server run. Hytale's PersistentModel keeps the NPC entity alive
+            // across restarts in the chunk data, but the PlayerSkinComponent is
+            // not persisted - so these "naked" duplicates would stack on top
+            // of the freshly spawned (skinned) NPCs we create below.
+            int removed = sweepStalePersistentNpcs(world);
+            if (removed > 0) {
+                LOGGER.info("onPlayerAddedToWorld: removed " + removed
+                    + " stale persisted shop NPC(s) in " + worldName);
+            }
+
             for (UUID shopId : shopsInWorld) {
                 ShopData shop = shopManager.getShop(shopId);
                 if (shop == null) continue;
                 if (!shop.isOpen()) continue; // Don't spawn NPCs for closed shops
+                if (shop.isPacked()) continue; // Packed shops stay despawned
 
                 try {
                     spawnNpcInternal(shop, world);
@@ -167,6 +182,62 @@ public class ShopNpcManager {
                 }
             }
         });
+    }
+
+    /**
+     * Scans the world's ECS for any NPC entity running the {@code Shop_Keeper_Role}
+     * and removes it. Used on first-player-in-world to clean out NPCs that Hytale
+     * persisted across a server restart - these entities come back without their
+     * PlayerSkinComponent and would stack on top of the fresh skinned NPCs we
+     * spawn in {@link #onPlayerAddedToWorld}.
+     *
+     * Must run inside {@code world.execute()}.
+     */
+    private int sweepStalePersistentNpcs(World world) {
+        try {
+            var store = world.getEntityStore().getStore();
+            var query = Archetype.of(NPCEntity.getComponentType());
+            List<UUID> staleUuids = new ArrayList<>();
+
+            store.forEachChunk(query, (chunk, commandBuffer) -> {
+                for (int i = 0; i < chunk.size(); i++) {
+                    try {
+                        NPCEntity npc = chunk.getComponent(i, NPCEntity.getComponentType());
+                        if (npc == null) continue;
+                        String roleName = npc.getRoleName();
+                        if (roleName == null) continue;
+                        // Match both our canonical role and the legacy core role
+                        // used by pre-standalone shop NPCs.
+                        if (!NPC_ROLE_INTERACTABLE.equals(roleName)
+                            && !NPC_ROLE_LEGACY_FALLBACK.equals(roleName)) {
+                            continue;
+                        }
+                        UUIDComponent uuidComp = chunk.getComponent(i, UUIDComponent.getComponentType());
+                        if (uuidComp == null || uuidComp.getUuid() == null) continue;
+                        staleUuids.add(uuidComp.getUuid());
+                    } catch (Exception ignored) {
+                        // Skip broken entities
+                    }
+                }
+            });
+
+            int removed = 0;
+            for (UUID uuid : staleUuids) {
+                try {
+                    var ref = world.getEntityRef(uuid);
+                    if (ref != null && ref.isValid()) {
+                        store.removeEntity(ref, RemoveReason.REMOVE);
+                        removed++;
+                    }
+                } catch (Exception e) {
+                    LOGGER.fine("sweepStalePersistentNpcs: remove failed for " + uuid + ": " + e.getMessage());
+                }
+            }
+            return removed;
+        } catch (Exception e) {
+            LOGGER.warning("sweepStalePersistentNpcs: scan failed: " + e.getMessage());
+            return 0;
+        }
     }
 
     // ==================== NPC LIFECYCLE ====================
@@ -563,37 +634,60 @@ public class ShopNpcManager {
     }
 
     /**
-     * Despawns the NPC for a given shop.
-     * Safe to call from any thread — dispatches to world.execute() internally.
+     * Despawns the NPC for a given shop. Removes the live entity from the
+     * world (not just the tracking maps) so the pickup flow and admin delete
+     * actions actually make the NPC disappear. Safe to call from any thread
+     * - dispatches the ECS removal via world.execute().
      */
     public void despawnNpc(UUID shopId) {
         if (shopId == null) return;
 
         String npcEntityId = shopNpcIds.get(shopId);
-        if (npcEntityId == null) {
-            LOGGER.fine("No NPC tracked for shop: " + shopId);
+        ShopData shop = shopManager.getShop(shopId);
+
+        // No shop row left (already deleted) - just clean the tracking map.
+        if (shop == null) {
+            if (npcEntityId != null) cleanupTracking(shopId, npcEntityId);
             return;
         }
 
-        // Resolve world from ShopData
-        ShopData shop = shopManager.getShop(shopId);
-        if (shop == null) {
-            // Shop already deleted — clean up tracking only
+        World world = resolveWorld(shop.getWorldName());
+        if (world == null) {
+            LOGGER.warning("despawnNpc: could not resolve world '" + shop.getWorldName()
+                + "' for shop " + shopId + " - cleaning tracking only");
             cleanupTracking(shopId, npcEntityId);
             return;
         }
 
-        // TODO: Resolve world reference from Hytale API and dispatch to world.execute()
-        // World world = HytaleServer.getInstance().getWorld(shop.getWorldName());
-        // if (world != null) {
-        //     world.execute(() -> despawnNpcInternal(shopId, world));
-        // } else {
-        //     cleanupTracking(shopId, npcEntityId);
-        // }
+        // Dispatch the ECS removal to the world thread. The internal method
+        // handles both the entityRefs map lookup and the cleanupTracking call,
+        // so the maps stay consistent even if the entity ref is null/invalid.
+        final UUID finalShopId = shopId;
+        world.execute(() -> despawnNpcInternal(finalShopId, world));
+        LOGGER.fine("despawnNpc: dispatched removal for shop " + shopId);
+    }
 
-        // For now, clean up tracking immediately
-        cleanupTracking(shopId, npcEntityId);
-        LOGGER.fine("NPC despawned for shop: " + shopId);
+    /**
+     * Finds a world by its stored name. Hytale does not expose Universe.getWorld(name)
+     * as public API, so we fall back to the default world (same pattern Core's
+     * CitizenDamageListener uses).
+     */
+    private World resolveWorld(String worldName) {
+        if (worldName == null) return null;
+        try {
+            Universe universe = Universe.get();
+            if (universe == null) return null;
+            World defaultWorld = universe.getDefaultWorld();
+            if (defaultWorld != null && worldName.equals(defaultWorld.getName())) {
+                return defaultWorld;
+            }
+            // Fallback: accept the default world even if the stored name differs
+            // slightly. Hytale single-world setups end up here.
+            return defaultWorld;
+        } catch (Exception e) {
+            LOGGER.fine("resolveWorld error: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
