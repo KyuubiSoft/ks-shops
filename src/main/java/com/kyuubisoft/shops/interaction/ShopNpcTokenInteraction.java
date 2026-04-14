@@ -182,7 +182,7 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                 return;
             }
 
-            String shopName = buildDefaultShopName(playerRef.getUsername(), ownedCount);
+            String shopName = buildDefaultShopName(plugin, playerRef.getUsername());
 
             CreateShopResult result = shopService.createPlayerShop(
                 playerRef, shopName, "", "", worldName, pos.x, pos.y, pos.z
@@ -231,18 +231,46 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
     }
 
     /**
-     * Builds a sensible default shop name based on the owner's username.
-     * Ensures we pass a name that survives the min-length validator.
+     * Builds a sensible default shop name that is GUARANTEED to be unique
+     * against {@link ShopPlugin#getShopManager()}. Tries {@code "<user>'s Shop"}
+     * first, then falls back to numbered suffixes ({@code "#2"}, {@code "#3"},
+     * ...) until an unused slot is found. Previously this method just counted
+     * the owner's existing shops and appended {@code " Shop N"} — which could
+     * collide with a pre-existing name from another player or a deleted-then-
+     * recreated shop, triggering the server-side uniqueness check and
+     * surfacing "name already exists" to the user.
      */
-    private String buildDefaultShopName(String username, int currentCount) {
+    private String buildDefaultShopName(ShopPlugin plugin, String username) {
         String base = (username == null || username.isBlank()) ? "Player" : username.trim();
-        String suffix = currentCount > 0 ? " Shop " + (currentCount + 1) : "'s Shop";
-        // Cap length to a safe upper bound (matches nameMaxLength default 32/48).
-        String name = base + suffix;
-        if (name.length() > 48) {
-            name = name.substring(0, 48);
+
+        String first = clampName(base + "'s Shop");
+        if (!isShopNameTaken(plugin, first)) {
+            return first;
         }
-        return name;
+
+        for (int n = 2; n <= 999; n++) {
+            String candidate = clampName(base + "'s Shop #" + n);
+            if (!isShopNameTaken(plugin, candidate)) {
+                return candidate;
+            }
+        }
+
+        // Safety valve — should never hit unless the player already has 999
+        // shops named "<base>'s Shop #N". Fall back to a timestamp tail.
+        return clampName(base + " Shop " + (System.currentTimeMillis() % 100000));
+    }
+
+    private static String clampName(String name) {
+        return name.length() > 48 ? name.substring(0, 48) : name;
+    }
+
+    private static boolean isShopNameTaken(ShopPlugin plugin, String candidate) {
+        if (plugin == null || candidate == null) return false;
+        for (ShopData existing : plugin.getShopManager().getAllShops()) {
+            if (existing == null || existing.getName() == null) continue;
+            if (existing.getName().equalsIgnoreCase(candidate)) return true;
+        }
+        return false;
     }
 
     /**
