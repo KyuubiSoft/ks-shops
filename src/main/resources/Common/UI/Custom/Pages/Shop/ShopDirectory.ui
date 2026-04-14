@@ -542,29 +542,32 @@ $C.@PageOverlay {
 
         Group { Anchor: (Height: 8); }
 
-        // ---- Quantity selector ----
+        // ---- Quantity slider (SliderNumberField + big label) ----
         Group {
           LayoutMode: Left;
           Anchor: (Height: 34);
-          Padding: (Left: 60, Right: 60);
+          Padding: (Left: 18, Right: 18, Top: 8);
 
-          $C.@SmallSecondaryTextButton #DirConfirmMinus {
-            @Anchor = (Width: 44);
-            @Text = "-";
+          Label {
+            Anchor: (Width: 36, Height: 18);
+            Style: (FontSize: 12, TextColor: #96a9be, VerticalAlignment: Center);
+            Text: "Qty";
           }
 
-          Group {
+          SliderNumberField #DirConfirmQtySlider {
             FlexWeight: 1;
-            LayoutMode: CenterMiddle;
-            Label #DirConfirmQty {
-              Style: (FontSize: 20, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: Center, VerticalAlignment: Center);
-              Text: "1";
-            }
+            Anchor: (Height: 5);
+            Padding: (Left: 8, Right: 8);
+            SliderStyle: $C.@DefaultSliderStyle;
+            NumberFieldStyle: $C.@DefaultInputFieldStyle;
+            Min: 1;
+            Max: 64;
           }
 
-          $C.@SmallSecondaryTextButton #DirConfirmPlus {
-            @Anchor = (Width: 44);
-            @Text = "+";
+          Label #DirConfirmQty {
+            Anchor: (Width: 50, Height: 18);
+            Style: (FontSize: 18, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: Center);
+            Text: "1";
           }
         }
 

@@ -146,6 +146,12 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             return;
         }
 
+        // Slider-driven quantity (replaces the old +/- buttons)
+        if (data.confirmQty != null) {
+            handleConfirmQty(data.confirmQty);
+            return;
+        }
+
         if (data.rate != null) {
             handleRate();
             return;
@@ -195,8 +201,43 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     this.sendUpdate(new UICommandBuilder(), false);
                 }
             }
+            case "back" -> {
+                if (lastRef == null || lastStore == null) {
+                    this.sendUpdate(new UICommandBuilder(), false);
+                    return;
+                }
+                try {
+                    ShopDirectoryPage dir = new ShopDirectoryPage(playerRef, player, plugin);
+                    player.getPageManager().openCustomPage(lastRef, lastStore, dir);
+                } catch (Exception e) {
+                    LOGGER.warning("[ShopBrowse] Failed to open directory page: " + e.getMessage());
+                    this.sendUpdate(new UICommandBuilder(), false);
+                }
+            }
             default -> this.sendUpdate(new UICommandBuilder(), false);
         }
+    }
+
+    /**
+     * Slider-driven quantity update. Clamps to [1, max] where max comes from
+     * {@link #getConfirmMaxQuantity()}; values outside the range are silently
+     * coerced so the slider's static 1..64 range never lets the user overshoot
+     * the real stock / stack limit.
+     */
+    private void handleConfirmQty(int qty) {
+        if (!confirmActive || confirmItem == null) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        int max = getConfirmMaxQuantity();
+        if (qty < 1) qty = 1;
+        if (qty > max) qty = max;
+        if (qty == confirmQuantity) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        confirmQuantity = qty;
+        refreshUI();
     }
 
     // ==================== BROWSE GRID CLICK ====================
@@ -311,17 +352,6 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 confirmItem = null;
                 refreshUI();
             }
-            case "plus" -> {
-                if (confirmActive && confirmItem != null) {
-                    int max = getConfirmMaxQuantity();
-                    if (confirmQuantity < max) confirmQuantity++;
-                }
-                refreshUI();
-            }
-            case "minus" -> {
-                if (confirmActive && confirmQuantity > 1) confirmQuantity--;
-                refreshUI();
-            }
             default -> this.sendUpdate(new UICommandBuilder(), false);
         }
     }
@@ -384,21 +414,23 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 EventData.of("Tab", "sell"), false);
         }
 
+        // Back button (navigates back to the Shop Directory)
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#BackBtn",
+            EventData.of("Button", "back"), false);
+
         // Rate button
         if (shopData.isPlayerShop()) {
             events.addEventBinding(CustomUIEventBindingType.Activating, "#RateButton",
                 EventData.of("Rate", "rate"), false);
         }
 
-        // Confirmation buttons
+        // Confirmation buttons (SliderNumberField replaces the old +/- buttons)
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmYes",
             EventData.of("Confirm", "yes"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmNo",
             EventData.of("Confirm", "no"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmPlus",
-            EventData.of("Confirm", "plus"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmMinus",
-            EventData.of("Confirm", "minus"), false);
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ConfirmQtySlider",
+            EventData.of("@ConfirmQty", "#ConfirmQtySlider.Value"), false);
     }
 
     // ==================== BUILD UI ====================
@@ -621,10 +653,11 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         // BUG #7 fix: Tax UI is hidden because tax is disabled in ShopService.
         ui.set("#ConfirmTax.Visible", false);
 
-        // Quantity selector
+        // Quantity slider + big label (replaces the old +/- buttons).
+        // SliderNumberField.Min/Max are static in the .ui (1..64); Java
+        // clamps purchase to the real stock in handleConfirmQty.
+        ui.set("#ConfirmQtySlider.Value", confirmQuantity);
         ui.set("#ConfirmQty.Text", String.valueOf(confirmQuantity));
-        ui.set("#ConfirmMinus.Visible", confirmQuantity > 1);
-        ui.set("#ConfirmPlus.Visible", confirmQuantity < maxQty);
 
         // Total (no tax — grandTotal == subtotal)
         ui.set("#ConfirmTotal.Text",
@@ -780,6 +813,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             .addField(new KeyedCodec<>("SlotIndex", Codec.INTEGER),
                 (data, value) -> data.slotIndex = value,
                 data -> data.slotIndex)
+            .addField(new KeyedCodec<>("@ConfirmQty", Codec.INTEGER),
+                (data, value) -> data.confirmQty = value,
+                data -> data.confirmQty)
             .build();
 
         private String button;
@@ -789,6 +825,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         // Grid interaction fields
         private String action;
         private Integer slotIndex;
+        // Slider-driven quantity (replaces the old +/- buttons)
+        private Integer confirmQty;
 
         public ShopBrowseData() {}
     }

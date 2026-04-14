@@ -164,6 +164,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             return;
         }
 
+        if (data.buyQty != null) {
+            handleBuyQty(data.buyQty);
+            return;
+        }
+
         if (data.button != null) {
             handleButton(data.button);
             return;
@@ -363,19 +368,30 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 clearBuyConfirm();
                 refreshUI();
             }
-            case "plus" -> {
-                if (buyConfirmActive && buyConfirmItem != null) {
-                    int max = getBuyConfirmMaxQuantity();
-                    if (buyConfirmQuantity < max) buyConfirmQuantity++;
-                }
-                refreshUI();
-            }
-            case "minus" -> {
-                if (buyConfirmActive && buyConfirmQuantity > 1) buyConfirmQuantity--;
-                refreshUI();
-            }
             default -> this.sendUpdate(new UICommandBuilder(), false);
         }
+    }
+
+    /**
+     * Slider-driven quantity update for the buy-confirm overlay. Clamps to
+     * [1, max] where max = {@link #getBuyConfirmMaxQuantity()}; the static
+     * slider range (1..64) may exceed the real stock, so we coerce silently
+     * instead of rejecting the event.
+     */
+    private void handleBuyQty(int qty) {
+        if (!buyConfirmActive || buyConfirmItem == null) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        int max = getBuyConfirmMaxQuantity();
+        if (qty < 1) qty = 1;
+        if (qty > max) qty = max;
+        if (qty == buyConfirmQuantity) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        buyConfirmQuantity = qty;
+        refreshUI();
     }
 
     private void clearBuyConfirm() {
@@ -614,10 +630,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             EventData.of("BuyAction", "visit"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmCancel",
             EventData.of("BuyAction", "cancel"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmPlus",
-            EventData.of("BuyAction", "plus"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#DirConfirmMinus",
-            EventData.of("BuyAction", "minus"), false);
+        // Quantity slider (replaces the old +/- buttons)
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#DirConfirmQtySlider",
+            EventData.of("@BuyQty", "#DirConfirmQtySlider.Value"), false);
 
         // Pagination
         events.addEventBinding(CustomUIEventBindingType.Activating, "#Footer #DPrevBtn",
@@ -738,10 +753,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 i18n.get(playerRef, "shop.directory.buy.stock", item.getStock()));
         }
 
-        // Quantity selector
+        // Quantity slider + big label (replaces the old +/- buttons). Slider
+        // Min/Max are 1..64 static; Java clamps the real purchase to current
+        // stock in handleBuyQty.
+        ui.set("#DirConfirmQtySlider.Value", buyConfirmQuantity);
         ui.set("#DirConfirmQty.Text", String.valueOf(buyConfirmQuantity));
-        ui.set("#DirConfirmMinus.Visible", buyConfirmQuantity > 1);
-        ui.set("#DirConfirmPlus.Visible", buyConfirmQuantity < maxQty);
 
         // Total (gold)
         ui.set("#DirConfirmTotal.Text",
@@ -1104,6 +1120,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             .addField(new KeyedCodec<>("BuyAction", Codec.STRING),
                 (data, value) -> data.buyAction = value,
                 data -> data.buyAction)
+            .addField(new KeyedCodec<>("@BuyQty", Codec.INTEGER),
+                (data, value) -> data.buyQty = value,
+                data -> data.buyQty)
             .addField(new KeyedCodec<>("Mode", Codec.STRING),
                 (data, value) -> data.mode = value,
                 data -> data.mode)
@@ -1126,6 +1145,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         private String card;
         private Integer itemSlot;
         private String buyAction;
+        private Integer buyQty;
         private String mode;
         private String search;
         private String sort;
