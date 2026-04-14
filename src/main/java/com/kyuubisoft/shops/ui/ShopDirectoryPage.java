@@ -9,6 +9,8 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.ui.ItemGridSlot;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -18,11 +20,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 
+import org.bson.BsonDocument;
+
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.service.DirectoryService;
+import com.kyuubisoft.shops.util.BsonMetadataCodec;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -49,7 +54,8 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
     static final int CARDS_PER_PAGE = 8;
-    static final int ITEM_CARDS_PER_PAGE = 12;
+    /** Items mode uses a native ItemGrid sized 9x5, matching ShopBrowsePage. */
+    static final int ITEMS_PER_PAGE = 45;
 
     // Sort options matching the dropdown indices
     private static final String[] SORT_OPTIONS = {
@@ -139,8 +145,8 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             return;
         }
 
-        if (data.itemCard != null) {
-            handleItemCardClick(data.itemCard);
+        if (data.itemSlot != null) {
+            handleItemSlotClick(data.itemSlot);
             return;
         }
 
@@ -257,36 +263,35 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         }
     }
 
-    // ==================== ITEM CARD CLICK ====================
+    // ==================== ITEM SLOT CLICK ====================
 
-    private void handleItemCardClick(String cardIndexStr) {
+    /**
+     * Routes an item-search grid slot click to the shop that sells the
+     * clicked item. {@code slotIndex} is the slot position within the
+     * visible page (0..{@link #ITEMS_PER_PAGE}-1), not a global index.
+     */
+    private void handleItemSlotClick(Integer slotIndex) {
+        if (slotIndex == null || slotIndex < 0 || slotIndex >= itemResults.size()) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        ItemSearchResult r = itemResults.get(slotIndex);
+        if (r == null || r.shop == null) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+
+        if (lastRef == null || lastStore == null) {
+            LOGGER.warning("[ShopDirectory] Cannot open shop: ref/store not available");
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+
         try {
-            int cardIndex = Integer.parseInt(cardIndexStr);
-            if (cardIndex < 0 || cardIndex >= itemResults.size()) {
-                this.sendUpdate(new UICommandBuilder(), false);
-                return;
-            }
-            ItemSearchResult r = itemResults.get(cardIndex);
-            if (r == null || r.shop == null) {
-                this.sendUpdate(new UICommandBuilder(), false);
-                return;
-            }
-
-            if (lastRef == null || lastStore == null) {
-                LOGGER.warning("[ShopDirectory] Cannot open shop: ref/store not available");
-                this.sendUpdate(new UICommandBuilder(), false);
-                return;
-            }
-
-            try {
-                ShopBrowsePage browsePage = new ShopBrowsePage(playerRef, player, plugin, r.shop);
-                player.getPageManager().openCustomPage(lastRef, lastStore, browsePage);
-            } catch (Exception e) {
-                LOGGER.warning("[ShopDirectory] Failed to open shop browse page: " + e.getMessage());
-                this.sendUpdate(new UICommandBuilder(), false);
-            }
-        } catch (NumberFormatException e) {
-            LOGGER.warning("[ShopDirectory] Invalid item card index: " + cardIndexStr);
+            ShopBrowsePage browsePage = new ShopBrowsePage(playerRef, player, plugin, r.shop);
+            player.getPageManager().openCustomPage(lastRef, lastStore, browsePage);
+        } catch (Exception e) {
+            LOGGER.warning("[ShopDirectory] Failed to open shop browse page: " + e.getMessage());
             this.sendUpdate(new UICommandBuilder(), false);
         }
     }
@@ -459,8 +464,8 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         matches.sort(Comparator.comparingInt(r -> r.item.getBuyPrice()));
 
         totalResults = matches.size();
-        int start = Math.min(currentPage * ITEM_CARDS_PER_PAGE, matches.size());
-        int end = Math.min(start + ITEM_CARDS_PER_PAGE, matches.size());
+        int start = Math.min(currentPage * ITEMS_PER_PAGE, matches.size());
+        int end = Math.min(start + ITEMS_PER_PAGE, matches.size());
         itemResults = new ArrayList<>(matches.subList(start, end));
     }
 
@@ -500,12 +505,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 EventData.of("Card", String.valueOf(i)), false);
         }
 
-        // Item card clicks (items mode grid) — flat unique IDs per card
-        for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating,
-                "#IBtn" + i,
-                EventData.of("ItemCard", String.valueOf(i)), false);
-        }
+        // Item search grid click — native ItemGrid SlotClicking.
+        // SlotIndex is auto-populated by Hytale into DirData.itemSlot via the
+        // new KeyedCodec<>("SlotIndex", Codec.INTEGER) field on the codec.
+        events.addEventBinding(CustomUIEventBindingType.SlotClicking,
+            "#ItemSearchGrid",
+            EventData.of("ItemSlot", ""), true);
 
         // Pagination
         events.addEventBinding(CustomUIEventBindingType.Activating, "#Footer #DPrevBtn",
@@ -616,7 +621,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         if ("items".equals(searchMode)) {
             ui.set("#ShopGrid.Visible", false);
             ui.set("#ItemGrid.Visible", true);
-            buildItemCards(ui, i18n);
+            populateItemSearchGrid(ui);
         } else {
             ui.set("#ShopGrid.Visible", true);
             ui.set("#ItemGrid.Visible", false);
@@ -732,60 +737,58 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     }
 
     /**
-     * Renders the 12 item-result cards in the items-mode grid. Each card has
-     * uniquely-named child widgets ({@code #IIcon0}, {@code #IName0}, ...) so
-     * we can use flat 1-level selectors. Macro-instanced children did not
-     * receive dynamic ItemId updates reliably.
+     * Populates the native {@code #ItemSearchGrid} (9x5 = 45 slots) with the
+     * current page of {@link #itemResults}. Each slot carries the full item
+     * metadata so Hytale's native tooltip + DTT render enchantments, stats,
+     * etc. on hover. Stock is shown as the native slot-quantity badge.
+     *
+     * Clicking a slot fires a {@code SlotClicking} event with the slot index,
+     * which routes to {@link #handleItemSlotClick(Integer)} and opens the
+     * shop that sells the clicked item.
+     *
+     * PITFALL #121: {@code openCustomPage()} never auto-populates an ItemGrid;
+     * slots MUST be set via {@code ui.set("#ItemSearchGrid.Slots", List)} and
+     * every slot MUST be {@code setActivatable(true)} for SlotClicking to fire.
      */
-    private void buildItemCards(UICommandBuilder ui, ShopI18n i18n) {
-        for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
+    private void populateItemSearchGrid(UICommandBuilder ui) {
+        // Grid flags: display-only (no drag), show stock as the slot quantity.
+        ui.set("#ItemSearchGrid.AreItemsDraggable", false);
+        ui.set("#ItemSearchGrid.DisplayItemQuantity", true);
+
+        List<ItemGridSlot> slots = new ArrayList<>(ITEMS_PER_PAGE);
+        for (int i = 0; i < ITEMS_PER_PAGE; i++) {
+            ItemGridSlot slot;
             if (i < itemResults.size()) {
                 ItemSearchResult r = itemResults.get(i);
-                ShopData shop = r.shop;
                 ShopItem item = r.item;
+                String itemId = item.getItemId();
+                int quantityToShow = item.isUnlimitedStock()
+                    ? 1
+                    : Math.max(1, item.getStock());
 
-                ui.set("#ICard" + i + ".Visible", true);
-
-                // Icon — flat 1-level selector on the uniquely-named ItemIcon.
-                ui.set("#IIcon" + i + ".ItemId", item.getItemId());
-
-                // Name + price
-                ui.set("#IName" + i + ".Text", ShopBrowsePage.formatItemName(item.getItemId()));
-                ui.set("#IPrice" + i + ".Text", item.getBuyPrice() + " Gold");
-
-                // Stock
-                String stockStr;
-                if (item.isUnlimitedStock()) {
-                    stockStr = i18n.get(playerRef, "shop.directory.item_count_stock", "unlimited");
-                } else {
-                    stockStr = i18n.get(playerRef, "shop.directory.item_count_stock",
-                        String.valueOf(item.getStock()));
+                try {
+                    BsonDocument meta = BsonMetadataCodec.decode(item.getItemMetadata());
+                    ItemStack stack = (meta != null)
+                        ? new ItemStack(itemId, quantityToShow, meta)
+                        : new ItemStack(itemId, quantityToShow);
+                    slot = new ItemGridSlot(stack);
+                } catch (Exception e) {
+                    LOGGER.warning("[ShopDirectory] Failed to build search slot for "
+                        + itemId + ": " + e.getMessage());
+                    slot = new ItemGridSlot();
                 }
-                ui.set("#IStock" + i + ".Text", stockStr);
-
-                // Shop name + owner
-                ui.set("#IShop" + i + ".Text",
-                    shop.getName() != null ? shop.getName() : "Shop");
-                if (shop.isAdminShop()) {
-                    ui.set("#IOwner" + i + ".Text",
-                        i18n.get(playerRef, "shop.directory.admin_shop"));
-                } else if (shop.getOwnerName() != null) {
-                    ui.set("#IOwner" + i + ".Text",
-                        i18n.get(playerRef, "shop.directory.by", shop.getOwnerName()));
-                } else {
-                    ui.set("#IOwner" + i + ".Text", "");
-                }
-
-                ui.set("#IBtn" + i + ".TooltipText",
-                    i18n.get(playerRef, "shop.directory.click_to_browse"));
             } else {
-                ui.set("#ICard" + i + ".Visible", false);
+                slot = new ItemGridSlot();
             }
+            slot.setActivatable(true);
+            slots.add(slot);
         }
+
+        ui.set("#ItemSearchGrid.Slots", slots);
     }
 
     private void buildPagination(UICommandBuilder ui, ShopI18n i18n) {
-        int perPage = "items".equals(searchMode) ? ITEM_CARDS_PER_PAGE : CARDS_PER_PAGE;
+        int perPage = "items".equals(searchMode) ? ITEMS_PER_PAGE : CARDS_PER_PAGE;
         int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) perPage));
 
         // Clamp page
@@ -805,7 +808,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== HELPERS ====================
 
     private int getMaxPage() {
-        int perPage = "items".equals(searchMode) ? ITEM_CARDS_PER_PAGE : CARDS_PER_PAGE;
+        int perPage = "items".equals(searchMode) ? ITEMS_PER_PAGE : CARDS_PER_PAGE;
         int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) perPage));
         return totalPages - 1;
     }
@@ -880,9 +883,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             .addField(new KeyedCodec<>("Card", Codec.STRING),
                 (data, value) -> data.card = value,
                 data -> data.card)
-            .addField(new KeyedCodec<>("ItemCard", Codec.STRING),
-                (data, value) -> data.itemCard = value,
-                data -> data.itemCard)
+            .addField(new KeyedCodec<>("SlotIndex", Codec.INTEGER),
+                (data, value) -> data.itemSlot = value,
+                data -> data.itemSlot)
             .addField(new KeyedCodec<>("Mode", Codec.STRING),
                 (data, value) -> data.mode = value,
                 data -> data.mode)
@@ -903,7 +906,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         private String button;
         private String tab;
         private String card;
-        private String itemCard;
+        private Integer itemSlot;
         private String mode;
         private String search;
         private String sort;

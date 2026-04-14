@@ -5,6 +5,14 @@
 // selectors) is the known-working approach.
 $C = "../../Common.ui";
 
+// ===== ItemGrid Style for the item-search grid (mirrors ShopBrowse) =====
+@SearchSlotStyle = ItemGridStyle(
+    SlotSpacing: 4,
+    SlotSize: 48,
+    SlotIconSize: 40,
+    SlotBackground: "../../Pages/Bank/BankSlot.png"
+);
+
 // ===== Card button style (dark card hover) =====
 @DirCardBtnStyle = ButtonStyle(
   Default: (Background: (Color: #1c2835)),
@@ -385,214 +393,19 @@ $C.@PageOverlay {
                     Label #DCategory7 { Style: (FontSize: 9, TextColor: #5a6a7a, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } } } }
           }
 
-          // ============ Item Cards (12, inline with unique IDs, 220x155 to match shop cards) ============
+          // ============ Item Search Grid (native 9x5 ItemGrid = 45 slots) ============
           Group #ItemGrid {
             Visible: false;
-            LayoutMode: LeftCenterWrap;
+            LayoutMode: CenterMiddle;
+            Padding: (Top: 6);
 
-            Group #ICard0 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn0 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon0 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName0 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice0 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock0 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop0 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner0 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard1 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn1 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon1 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName1 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice1 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock1 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop1 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner1 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard2 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn2 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon2 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName2 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice2 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock2 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop2 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner2 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard3 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn3 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon3 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName3 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice3 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock3 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop3 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner3 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard4 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn4 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon4 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName4 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice4 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock4 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop4 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner4 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard5 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn5 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon5 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName5 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice5 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock5 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop5 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner5 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard6 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn6 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon6 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName6 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice6 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock6 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop6 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner6 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard7 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn7 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon7 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName7 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice7 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock7 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop7 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner7 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard8 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn8 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon8 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName8 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice8 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock8 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop8 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner8 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard9 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn9 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon9 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName9 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice9 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock9 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop9 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner9 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard10 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn10 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon10 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName10 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice10 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock10 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop10 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner10 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
-
-            Group #ICard11 { Visible: false; Anchor: (Width: 220, Height: 155); Padding: (Full: 3);
-              Button #IBtn11 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 2); Style: @DirCardBtnStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 6);
-                  Group { Anchor: (Height: 52); LayoutMode: Left;
-                    Group { Anchor: (Width: 48, Height: 48); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #IIcon11 { Anchor: (Width: 44, Height: 44); ItemId: "Ingredient_Bar_Gold"; } }
-                    Group { Anchor: (Width: 8); }
-                    Group { FlexWeight: 1; LayoutMode: Top;
-                      Label #IName11 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
-                      Label #IPrice11 { Anchor: (Height: 16); Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true); Text: ""; }
-                      Label #IStock11 { Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #778899, VerticalAlignment: Center); Text: ""; } } }
-                  Group { Anchor: (Height: 6); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
-                  Group { Anchor: (Height: 18); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IShop11 { Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center, RenderBold: true); Text: ""; } }
-                  Group { Anchor: (Height: 16); LayoutMode: Left; Padding: (Left: 2);
-                    Label #IOwner11 { Style: (FontSize: 10, TextColor: #7a9cc6, VerticalAlignment: Center); Text: ""; } } } } }
+            ItemGrid #ItemSearchGrid {
+              Anchor: (Width: 488, Height: 260);
+              SlotsPerRow: 9;
+              Style: @SearchSlotStyle;
+              Background: #1a2332(0);
+              Padding: 0;
+            }
           }
         }
 
