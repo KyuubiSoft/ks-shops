@@ -421,6 +421,10 @@ public class ShopCommand extends AbstractCommandCollection {
 
             for (ShopData shop : shopManager.getShopsByOwner(playerUuid)) {
                 if (!world.getName().equals(shop.getWorldName())) continue;
+                // Packed shops have no NPC and stale coords - they are dormant
+                // until the owner replants them via the Shop_NPC_Token. Skip
+                // them here so /ksshop edit always targets a live shop.
+                if (shop.isPacked()) continue;
                 double dx = shop.getPosX() - px;
                 double dy = shop.getPosY() - py;
                 double dz = shop.getPosZ() - pz;
