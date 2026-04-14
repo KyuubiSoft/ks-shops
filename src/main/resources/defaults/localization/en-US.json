@@ -1,5 +1,5 @@
 {
-  "_localization_version": "16",
+  "_localization_version": "17",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -248,6 +248,10 @@
   "shop.mailbox.claim": "CLAIM",
   "shop.mailbox.row.item": "{0} sent you {1}x {2}",
   "shop.mailbox.row.money": "{0} bought from {1}: {2}",
+  "shop.mailbox.row.item_title": "{0}x {1}",
+  "shop.mailbox.row.money_title": "{0}",
+  "shop.mailbox.row.from_item": "From: {0}",
+  "shop.mailbox.row.from_money": "From: {0} ({1})",
   "shop.mailbox.claimed_item": "Claimed {0}x {1} from mailbox.",
   "shop.mailbox.claimed_money": "Claimed {0} from mailbox.",
   "shop.mailbox.claimed_all": "Claimed {0} mail(s): {1} items, {2} gold.",

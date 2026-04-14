@@ -398,9 +398,11 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
                     : MONEY_ICON;
                 ui.set(entryId + " " + entryId + "Icon.ItemId", iconId);
 
-                // Detail text
-                String detail = buildDetailText(i18n, mail);
-                ui.set(entryId + " " + entryId + "Detail.Text", detail);
+                // Title line (item + amount, or money amount)
+                ui.set(entryId + " " + entryId + "Detail.Text", buildTitleText(i18n, mail));
+
+                // From line (shop name + optional buyer)
+                ui.set(entryId + " " + entryId + "From.Text", buildFromText(i18n, mail));
 
                 // Time
                 ui.set(entryId + " " + entryId + "Time.Text",
@@ -411,21 +413,36 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
         }
     }
 
-    private String buildDetailText(ShopI18n i18n, MailboxEntry mail) {
-        String shopName = mail.getFromShopName() != null ? mail.getFromShopName() : "Shop";
-        String fromPlayer = mail.getFromPlayerName() != null ? mail.getFromPlayerName() : "";
-
+    /**
+     * Builds the top line of a mail row. For ITEM mails this is the
+     * quantity + item name ("5x Iron Sword"), for MONEY mails it is
+     * the formatted amount ("250 Gold").
+     */
+    private String buildTitleText(ShopI18n i18n, MailboxEntry mail) {
         if (mail.getType() == MailboxEntry.Type.ITEM) {
-            // ITEM mail: "{shopName} sent you {qty}x {itemLabel}"
             String itemLabel = formatItemName(mail.getItemId());
-            return i18n.get(playerRef, "shop.mailbox.row.item",
-                shopName, mail.getQuantity(), itemLabel);
+            return i18n.get(playerRef, "shop.mailbox.row.item_title",
+                mail.getQuantity(), itemLabel);
         }
-
-        // MONEY mail: "{buyerName} bought from {shopName}: {amountFormatted}"
         String amountFormatted = plugin.getEconomyBridge().format(mail.getAmount());
-        return i18n.get(playerRef, "shop.mailbox.row.money",
-            fromPlayer, shopName, amountFormatted);
+        return i18n.get(playerRef, "shop.mailbox.row.money_title", amountFormatted);
+    }
+
+    /**
+     * Builds the bottom line of a mail row. For ITEM mails this is just
+     * "From: ShopName". For MONEY mails it includes the buyer name
+     * ("From: ShopName (BuyerName)") so the owner can see who paid.
+     */
+    private String buildFromText(ShopI18n i18n, MailboxEntry mail) {
+        String shopName = mail.getFromShopName() != null ? mail.getFromShopName() : "Shop";
+        if (mail.getType() == MailboxEntry.Type.ITEM) {
+            return i18n.get(playerRef, "shop.mailbox.row.from_item", shopName);
+        }
+        String fromPlayer = mail.getFromPlayerName() != null ? mail.getFromPlayerName() : "";
+        if (fromPlayer.isEmpty()) {
+            return i18n.get(playerRef, "shop.mailbox.row.from_item", shopName);
+        }
+        return i18n.get(playerRef, "shop.mailbox.row.from_money", shopName, fromPlayer);
     }
 
     private void buildPagination(UICommandBuilder ui) {

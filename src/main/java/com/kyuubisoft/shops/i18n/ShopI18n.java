@@ -49,8 +49,10 @@ public class ShopI18n {
      * - v16: directory item-search mode — shop.directory.mode.*,
      *        shop.directory.search.placeholder_items, shop.directory.item_count_stock,
      *        shop.directory.no_item_results
+     * - v17: mailbox two-line row layout — shop.mailbox.row.item_title/money_title,
+     *        shop.mailbox.row.from_item/from_money
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 16;
+    private static final int CURRENT_LOCALIZATION_VERSION = 17;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
