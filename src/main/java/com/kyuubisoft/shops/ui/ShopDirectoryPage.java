@@ -20,11 +20,13 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.data.ShopData;
+import com.kyuubisoft.shops.data.ShopItem;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.service.DirectoryService;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -47,6 +49,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
     static final int CARDS_PER_PAGE = 8;
+    static final int ITEM_CARDS_PER_PAGE = 12;
 
     // Sort options matching the dropdown indices
     private static final String[] SORT_OPTIONS = {
@@ -72,8 +75,10 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     private String currentCategory = "";     // empty = all categories
     private int currentRatingFilter = 0;     // 0 = any, 1-4 = minimum stars
     private String searchQuery = "";
+    private String searchMode = "shops";     // "shops" or "items" - top-level search mode
 
     private List<ShopData> filteredShops = new ArrayList<>();
+    private List<ItemSearchResult> itemResults = new ArrayList<>();
     private int totalResults = 0;
 
     private final UUID onlyOwnerUuid; // set via the /ksshop myshops entry point
@@ -119,6 +124,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         this.lastRef = ref;
         this.lastStore = store;
 
+        if (data.mode != null) {
+            handleModeSwitch(data.mode);
+            return;
+        }
+
         if (data.tab != null) {
             handleTabSwitch(data.tab);
             return;
@@ -126,6 +136,11 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         if (data.card != null) {
             handleCardClick(data.card);
+            return;
+        }
+
+        if (data.itemCard != null) {
+            handleItemCardClick(data.itemCard);
             return;
         }
 
@@ -156,6 +171,28 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         // Catch-all: send empty response to prevent permanent "Loading..." state
         this.sendUpdate(new UICommandBuilder(), false);
+    }
+
+    // ==================== MODE SWITCHING ====================
+
+    private void handleModeSwitch(String mode) {
+        if (mode == null) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        if (mode.equals(searchMode)) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        // Only accept the two known modes
+        if (!"shops".equals(mode) && !"items".equals(mode)) {
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        searchMode = mode;
+        currentPage = 0;
+        executeQuery();
+        refreshUI();
     }
 
     // ==================== TAB SWITCHING ====================
@@ -216,6 +253,40 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             }
         } catch (NumberFormatException e) {
             LOGGER.warning("[ShopDirectory] Invalid card index: " + cardIndexStr);
+            this.sendUpdate(new UICommandBuilder(), false);
+        }
+    }
+
+    // ==================== ITEM CARD CLICK ====================
+
+    private void handleItemCardClick(String cardIndexStr) {
+        try {
+            int cardIndex = Integer.parseInt(cardIndexStr);
+            if (cardIndex < 0 || cardIndex >= itemResults.size()) {
+                this.sendUpdate(new UICommandBuilder(), false);
+                return;
+            }
+            ItemSearchResult r = itemResults.get(cardIndex);
+            if (r == null || r.shop == null) {
+                this.sendUpdate(new UICommandBuilder(), false);
+                return;
+            }
+
+            if (lastRef == null || lastStore == null) {
+                LOGGER.warning("[ShopDirectory] Cannot open shop: ref/store not available");
+                this.sendUpdate(new UICommandBuilder(), false);
+                return;
+            }
+
+            try {
+                ShopBrowsePage browsePage = new ShopBrowsePage(playerRef, player, plugin, r.shop);
+                player.getPageManager().openCustomPage(lastRef, lastStore, browsePage);
+            } catch (Exception e) {
+                LOGGER.warning("[ShopDirectory] Failed to open shop browse page: " + e.getMessage());
+                this.sendUpdate(new UICommandBuilder(), false);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.warning("[ShopDirectory] Invalid item card index: " + cardIndexStr);
             this.sendUpdate(new UICommandBuilder(), false);
         }
     }
@@ -292,6 +363,14 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== QUERY EXECUTION ====================
 
     private void executeQuery() {
+        if ("items".equals(searchMode)) {
+            executeItemQuery();
+        } else {
+            executeShopQuery();
+        }
+    }
+
+    private void executeShopQuery() {
         // /ksshop myshops entry point: bypass DirectoryService entirely and return
         // just the shops owned by the requesting player. Applies the same category
         // and rating filters as the main directory so the filter bar still works.
@@ -338,6 +417,53 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         );
     }
 
+    /**
+     * Items-mode query: flatten every open shop's item list, keep only the
+     * entries whose buy side is enabled (and priced) and whose item id matches
+     * the search needle, then apply the existing rating filter. Paginates the
+     * result to fit the 12-card item grid.
+     */
+    private void executeItemQuery() {
+        String needle = searchQuery.isEmpty() ? null : searchQuery.toLowerCase();
+        List<ItemSearchResult> matches = new ArrayList<>();
+
+        for (ShopData shop : plugin.getShopManager().getAllShops()) {
+            if (!shop.isOpen()) continue;
+            // In /ksshop myshops mode the directory is locked to one owner; do
+            // the same filtering for the items view so the two modes stay
+            // consistent.
+            if (onlyOwnerUuid != null && !onlyOwnerUuid.equals(shop.getOwnerUuid())) continue;
+            if (currentRatingFilter > 0 && shop.getAverageRating() < currentRatingFilter) continue;
+
+            List<ShopItem> items = shop.getItems();
+            if (items == null) continue;
+
+            for (ShopItem item : items) {
+                if (item == null) continue;
+                if (!item.isBuyEnabled()) continue;       // only buyable from customer POV
+                if (item.getBuyPrice() <= 0) continue;    // ignore free/placeholder entries
+                if (item.getItemId() == null) continue;
+
+                if (needle != null) {
+                    String itemIdLower = item.getItemId().toLowerCase();
+                    if (!itemIdLower.contains(needle)) continue;
+                }
+
+                matches.add(new ItemSearchResult(shop, item));
+            }
+        }
+
+        // Sort cheapest first by default. The existing sort dropdown targets
+        // shop-level keys which do not apply cleanly to items, so keep a fixed
+        // price-ascending order for the items mode.
+        matches.sort(Comparator.comparingInt(r -> r.item.getBuyPrice()));
+
+        totalResults = matches.size();
+        int start = Math.min(currentPage * ITEM_CARDS_PER_PAGE, matches.size());
+        int end = Math.min(start + ITEM_CARDS_PER_PAGE, matches.size());
+        itemResults = new ArrayList<>(matches.subList(start, end));
+    }
+
     // ==================== REFRESH ====================
 
     private void refreshUI() {
@@ -351,6 +477,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== EVENT BINDING ====================
 
     private void bindAllEvents(UIEventBuilder events) {
+        // Mode switch buttons (shops vs items)
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeBar #ModeShops",
+            EventData.of("Mode", "shops"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeBar #ModeItems",
+            EventData.of("Mode", "items"), false);
+
         // Tab buttons
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TabBar #TabAll",
             EventData.of("Tab", "all"), false);
@@ -361,11 +493,18 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TabBar #TabFeatured",
             EventData.of("Tab", "featured"), false);
 
-        // Card clicks
+        // Shop card clicks (shop mode grid)
         for (int i = 0; i < CARDS_PER_PAGE; i++) {
             events.addEventBinding(CustomUIEventBindingType.Activating,
                 "#ShopGrid #DCard" + i + " #DBtn",
                 EventData.of("Card", String.valueOf(i)), false);
+        }
+
+        // Item card clicks (items mode grid)
+        for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
+            events.addEventBinding(CustomUIEventBindingType.Activating,
+                "#ItemGrid #ICard" + i + " #IBtn",
+                EventData.of("ItemCard", String.valueOf(i)), false);
         }
 
         // Pagination
@@ -401,6 +540,13 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             ui.set("#DirTitle.Text", i18n.get(playerRef, "shop.directory.title"));
         }
 
+        // ---- Mode highlights (SHOPS vs ITEMS) ----
+        buildModeHighlights(ui);
+
+        // ---- Mode labels (localized) ----
+        ui.set("#ModeBar #ModeShopsLabel.Text", i18n.get(playerRef, "shop.directory.mode.shops"));
+        ui.set("#ModeBar #ModeItemsLabel.Text", i18n.get(playerRef, "shop.directory.mode.items"));
+
         // ---- Filter / search state ----
         // Reflect the current Java filter state in the UI widgets so users always see
         // which sort / category / rating filter is active (even on first open).
@@ -408,8 +554,10 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         ui.set("#FilterBar #CategoryFilter.Value", currentCategory);
         ui.set("#FilterBar #RatingFilter.Value", String.valueOf(currentRatingFilter));
         ui.set("#FilterBar #SearchField.Value", searchQuery);
-        ui.set("#FilterBar #SearchField.PlaceholderText",
-            i18n.get(playerRef, "shop.directory.search.placeholder"));
+        String placeholderKey = "items".equals(searchMode)
+            ? "shop.directory.search.placeholder_items"
+            : "shop.directory.search.placeholder";
+        ui.set("#FilterBar #SearchField.PlaceholderText", i18n.get(playerRef, placeholderKey));
 
         // ---- Tab labels (localized) ----
         ui.set("#TabBar #TabAllLabel.Text", i18n.get(playerRef, "shop.directory.tab.all"));
@@ -425,6 +573,22 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         // ---- Pagination ----
         buildPagination(ui, i18n);
+    }
+
+    private void buildModeHighlights(UICommandBuilder ui) {
+        String activeColor = "#bfcdd5";
+        String inactiveColor = "#778899";
+
+        boolean shopsActive = !"items".equals(searchMode);
+        boolean itemsActive = "items".equals(searchMode);
+
+        ui.set("#ModeBar #ModeShopsLabel.Style.TextColor",
+            shopsActive ? activeColor : inactiveColor);
+        ui.set("#ModeBar #ModeItemsLabel.Style.TextColor",
+            itemsActive ? activeColor : inactiveColor);
+
+        ui.set("#ModeBar #ModeShopsInd.Visible", shopsActive);
+        ui.set("#ModeBar #ModeItemsInd.Visible", itemsActive);
     }
 
     private void buildTabHighlights(UICommandBuilder ui) {
@@ -449,6 +613,18 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     }
 
     private void buildCards(UICommandBuilder ui, ShopI18n i18n) {
+        if ("items".equals(searchMode)) {
+            ui.set("#ShopGrid.Visible", false);
+            ui.set("#ItemGrid.Visible", true);
+            buildItemCards(ui, i18n);
+        } else {
+            ui.set("#ShopGrid.Visible", true);
+            ui.set("#ItemGrid.Visible", false);
+            buildShopCards(ui, i18n);
+        }
+    }
+
+    private void buildShopCards(UICommandBuilder ui, ShopI18n i18n) {
         // Player position for distance calculation
         double playerX = 0;
         double playerZ = 0;
@@ -554,8 +730,65 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         }
     }
 
+    /**
+     * Renders the 12 item-result cards in the items-mode grid. Uses the 2-level
+     * selector form ({@code #ICardN #IIcon.ItemId}) for the ItemSlot widget -
+     * the 3-level form silently fails to propagate to macro-instantiated cards,
+     * same pitfall that was fixed for the shop-card avatars in commit
+     * {@code 9ed87a5}.
+     */
+    private void buildItemCards(UICommandBuilder ui, ShopI18n i18n) {
+        for (int i = 0; i < ITEM_CARDS_PER_PAGE; i++) {
+            String prefix = "#ICard" + i;
+
+            if (i < itemResults.size()) {
+                ItemSearchResult r = itemResults.get(i);
+                ShopData shop = r.shop;
+                ShopItem item = r.item;
+
+                ui.set(prefix + ".Visible", true);
+
+                // Icon (2-level selector, NOT #ItemGrid #ICardN ...)
+                ui.set(prefix + " #IIcon.ItemId", item.getItemId());
+
+                // Name + price
+                ui.set(prefix + " #IName.Text", ShopBrowsePage.formatItemName(item.getItemId()));
+                ui.set(prefix + " #IPrice.Text", item.getBuyPrice() + " Gold");
+
+                // Stock
+                String stockStr;
+                if (item.isUnlimitedStock()) {
+                    stockStr = i18n.get(playerRef, "shop.directory.item_count_stock", "unlimited");
+                } else {
+                    stockStr = i18n.get(playerRef, "shop.directory.item_count_stock",
+                        String.valueOf(item.getStock()));
+                }
+                ui.set(prefix + " #IStock.Text", stockStr);
+
+                // Shop name + owner
+                ui.set(prefix + " #IShop.Text",
+                    shop.getName() != null ? shop.getName() : "Shop");
+                if (shop.isAdminShop()) {
+                    ui.set(prefix + " #IOwner.Text",
+                        i18n.get(playerRef, "shop.directory.admin_shop"));
+                } else if (shop.getOwnerName() != null) {
+                    ui.set(prefix + " #IOwner.Text",
+                        i18n.get(playerRef, "shop.directory.by", shop.getOwnerName()));
+                } else {
+                    ui.set(prefix + " #IOwner.Text", "");
+                }
+
+                ui.set(prefix + " #IBtn.TooltipText",
+                    i18n.get(playerRef, "shop.directory.click_to_browse"));
+            } else {
+                ui.set(prefix + ".Visible", false);
+            }
+        }
+    }
+
     private void buildPagination(UICommandBuilder ui, ShopI18n i18n) {
-        int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) CARDS_PER_PAGE));
+        int perPage = "items".equals(searchMode) ? ITEM_CARDS_PER_PAGE : CARDS_PER_PAGE;
+        int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) perPage));
 
         // Clamp page
         if (currentPage >= totalPages) currentPage = totalPages - 1;
@@ -574,7 +807,8 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     // ==================== HELPERS ====================
 
     private int getMaxPage() {
-        int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) CARDS_PER_PAGE));
+        int perPage = "items".equals(searchMode) ? ITEM_CARDS_PER_PAGE : CARDS_PER_PAGE;
+        int totalPages = Math.max(1, (int) Math.ceil(totalResults / (double) perPage));
         return totalPages - 1;
     }
 
@@ -617,6 +851,23 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         LOGGER.fine("[ShopDirectory] Page dismissed for " + playerRef.getUsername());
     }
 
+    // ==================== ITEM SEARCH RESULT ====================
+
+    /**
+     * A single hit returned by the "items" search mode: a specific {@link ShopItem}
+     * instance living inside a specific {@link ShopData}. Items mode renders one
+     * card per result and clicking the card opens the browse page for the shop.
+     */
+    public static class ItemSearchResult {
+        public final ShopData shop;
+        public final ShopItem item;
+
+        public ItemSearchResult(ShopData shop, ShopItem item) {
+            this.shop = shop;
+            this.item = item;
+        }
+    }
+
     // ==================== EVENT DATA CODEC ====================
 
     public static class DirData {
@@ -631,6 +882,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             .addField(new KeyedCodec<>("Card", Codec.STRING),
                 (data, value) -> data.card = value,
                 data -> data.card)
+            .addField(new KeyedCodec<>("ItemCard", Codec.STRING),
+                (data, value) -> data.itemCard = value,
+                data -> data.itemCard)
+            .addField(new KeyedCodec<>("Mode", Codec.STRING),
+                (data, value) -> data.mode = value,
+                data -> data.mode)
             .addField(new KeyedCodec<>("@Search", Codec.STRING),
                 (data, value) -> data.search = value,
                 data -> data.search)
@@ -648,6 +905,8 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         private String button;
         private String tab;
         private String card;
+        private String itemCard;
+        private String mode;
         private String search;
         private String sort;
         private String catFilter;

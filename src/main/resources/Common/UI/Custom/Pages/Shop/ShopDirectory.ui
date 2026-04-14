@@ -22,6 +22,84 @@ $C = "../../Common.ui";
   Pressed: (Background: (Color: #141a22)),
 );
 
+// ===== Item Result Card Macro -- 12 cards (items mode), each 220x110 =====
+@ItemResultCard = Group {
+  Visible: false;
+  Anchor: (Width: 220, Height: 110);
+  Padding: (Full: 3);
+
+  Button #IBtn {
+    Anchor: (Full: 0);
+    LayoutMode: Full;
+    Padding: (Full: 2);
+    Style: @DirCardBtnStyle;
+    TooltipText: "";
+
+    Group #ICardContent {
+      Anchor: (Full: 0);
+      LayoutMode: Top;
+      Padding: (Full: 4);
+
+      Group #ITopRow {
+        Anchor: (Height: 48);
+        LayoutMode: Left;
+
+        Group #IIconFrame {
+          Anchor: (Width: 44, Height: 44);
+          Background: (Color: #1a2530);
+          Padding: (Full: 2);
+          LayoutMode: CenterMiddle;
+
+          ItemSlot #IIcon {
+            Anchor: (Full: 0);
+            ShowQualityBackground: false;
+            ShowQuantity: false;
+          }
+        }
+
+        Group { Anchor: (Width: 6); }
+
+        Group #INameBlock {
+          FlexWeight: 1;
+          LayoutMode: Top;
+
+          Label #IName {
+            Anchor: (Height: 18);
+            Style: (FontSize: 12, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
+            Text: "";
+          }
+
+          Label #IPrice {
+            Anchor: (Height: 14);
+            Style: (FontSize: 11, TextColor: #ffd700, VerticalAlignment: Center, RenderBold: true);
+            Text: "";
+          }
+
+          Label #IStock {
+            Anchor: (Height: 12);
+            Style: (FontSize: 9, TextColor: #778899, VerticalAlignment: Center);
+            Text: "";
+          }
+        }
+      }
+
+      Group { Anchor: (Height: 4); }
+
+      Label #IShop {
+        Anchor: (Left: 0, Right: 0, Height: 16);
+        Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+        Text: "";
+      }
+
+      Label #IOwner {
+        Anchor: (Left: 0, Right: 0, Height: 14);
+        Style: (FontSize: 9, TextColor: #7a9cc6, VerticalAlignment: Center);
+        Text: "";
+      }
+    }
+  }
+};
+
 // ===== Directory Card Macro -- 8 cards (4x2 grid), each 220x155 =====
 @DirCard = Group {
   Visible: false;
@@ -168,6 +246,41 @@ $C.@PageOverlay {
       #Content {
         LayoutMode: Top;
 
+        // ---- Mode Bar (SHOPS vs ITEMS search) ----
+        Group #ModeBar {
+          Anchor: (Height: 32);
+          LayoutMode: Left;
+          Padding: (Left: 12, Right: 12, Top: 4, Bottom: 4);
+
+          Button #ModeShops {
+            FlexWeight: 1;
+            Anchor: (Height: 24);
+            Style: @TabBtnActiveStyle;
+            LayoutMode: Top;
+            Label #ModeShopsLabel {
+              Style: (FontSize: 11, RenderBold: true, TextColor: #bfcdd5, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+              Text: "SHOPS";
+              FlexWeight: 1;
+            }
+            Group #ModeShopsInd { Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
+          }
+
+          Group { Anchor: (Width: 6); }
+
+          Button #ModeItems {
+            FlexWeight: 1;
+            Anchor: (Height: 24);
+            Style: @TabBtnInactiveStyle;
+            LayoutMode: Top;
+            Label #ModeItemsLabel {
+              Style: (FontSize: 11, RenderBold: true, TextColor: #778899, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+              Text: "ITEMS";
+              FlexWeight: 1;
+            }
+            Group #ModeItemsInd { Visible: false; Anchor: (Left: 0, Right: 0, Height: 2); Background: (Color: #00bcd4); }
+          }
+        }
+
         // ---- Tab Bar ----
         Group #TabBar {
           Anchor: (Height: 36);
@@ -288,7 +401,7 @@ $C.@PageOverlay {
           }
         }
 
-        // ---- Shop Card Grid ----
+        // ---- Card Grid (both shops-mode and items-mode grids live here) ----
         Group #GridContainer {
           FlexWeight: 1;
           LayoutMode: TopScrolling;
@@ -306,6 +419,24 @@ $C.@PageOverlay {
             @DirCard #DCard5 {}
             @DirCard #DCard6 {}
             @DirCard #DCard7 {}
+          }
+
+          Group #ItemGrid {
+            Visible: false;
+            LayoutMode: LeftCenterWrap;
+
+            @ItemResultCard #ICard0 {}
+            @ItemResultCard #ICard1 {}
+            @ItemResultCard #ICard2 {}
+            @ItemResultCard #ICard3 {}
+            @ItemResultCard #ICard4 {}
+            @ItemResultCard #ICard5 {}
+            @ItemResultCard #ICard6 {}
+            @ItemResultCard #ICard7 {}
+            @ItemResultCard #ICard8 {}
+            @ItemResultCard #ICard9 {}
+            @ItemResultCard #ICard10 {}
+            @ItemResultCard #ICard11 {}
           }
         }
 
