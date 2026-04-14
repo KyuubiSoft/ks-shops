@@ -50,10 +50,8 @@ $C = "../../Common.ui";
           Padding: (Full: 2);
           LayoutMode: CenterMiddle;
 
-          ItemSlot #IIcon {
+          ItemIcon #IIcon {
             Anchor: (Full: 0);
-            ShowQualityBackground: false;
-            ShowQuantity: false;
           }
         }
 
@@ -129,10 +127,8 @@ $C = "../../Common.ui";
           Padding: (Full: 2);
           LayoutMode: CenterMiddle;
 
-          ItemSlot #DAvatar {
+          ItemIcon #DAvatar {
             Anchor: (Full: 0);
-            ShowQualityBackground: false;
-            ShowQuantity: false;
           }
         }
 

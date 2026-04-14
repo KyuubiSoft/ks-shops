@@ -233,6 +233,14 @@ public class ShopSkinManager {
      */
     public void applySkin(Ref<EntityStore> entityRef, PlayerSkin skin, float scale) {
         if (entityRef == null || skin == null) return;
+        // The async fetch path can race with our orphan sweep / despawn flow.
+        // Bail before we touch the ECS if the ref is no longer valid -
+        // store.putComponent on a stale ref throws and we'd just log a noisy
+        // "Invalid entity reference" warning for a NPC that's already gone.
+        if (!entityRef.isValid()) {
+            LOGGER.fine("applySkin: entity ref no longer valid, skipping");
+            return;
+        }
 
         PlayerSkin safeSkin = ensureNoNullFields(skin);
 
@@ -241,34 +249,43 @@ public class ShopSkinManager {
             float safeScale = Math.max(0.01f, scale);
 
             CosmeticsModule cosmetics = CosmeticsModule.get();
-            if (cosmetics != null) {
-                Model playerModel = cosmetics.createModel(safeSkin, safeScale);
-                if (playerModel != null) {
-                    PlayerSkinComponent skinComponent = new PlayerSkinComponent(safeSkin);
-                    store.putComponent(entityRef, PlayerSkinComponent.getComponentType(), skinComponent);
+            if (cosmetics == null) return;
 
-                    ModelComponent modelComponent = new ModelComponent(playerModel);
-                    store.putComponent(entityRef, ModelComponent.getComponentType(), modelComponent);
-
-                    try {
-                        PersistentModel pm = store.getComponent(entityRef, PersistentModel.getComponentType());
-                        if (pm != null) {
-                            pm.setModelReference(new Model.ModelReference(
-                                playerModel.getModelAssetId(),
-                                safeScale,
-                                playerModel.getRandomAttachmentIds(),
-                                playerModel.getAnimationSetMap() == null
-                            ));
-                        }
-                    } catch (Exception e) {
-                        LOGGER.fine("Could not update PersistentModel after skin: " + e.getMessage());
-                    }
-
-                    LOGGER.fine("Applied skin to shop NPC (scale=" + safeScale + ")");
-                } else {
-                    LOGGER.warning("createModel returned null - skin NOT applied");
-                }
+            Model playerModel = cosmetics.createModel(safeSkin, safeScale);
+            if (playerModel == null) {
+                LOGGER.warning("createModel returned null - skin NOT applied");
+                return;
             }
+
+            // Re-check validity right before the actual writes - the async
+            // gap between createModel and putComponent is small but still
+            // gives the periodic sweep enough room to race in.
+            if (!entityRef.isValid()) {
+                LOGGER.fine("applySkin: entity ref invalidated before put, skipping");
+                return;
+            }
+
+            PlayerSkinComponent skinComponent = new PlayerSkinComponent(safeSkin);
+            store.putComponent(entityRef, PlayerSkinComponent.getComponentType(), skinComponent);
+
+            ModelComponent modelComponent = new ModelComponent(playerModel);
+            store.putComponent(entityRef, ModelComponent.getComponentType(), modelComponent);
+
+            try {
+                PersistentModel pm = store.getComponent(entityRef, PersistentModel.getComponentType());
+                if (pm != null) {
+                    pm.setModelReference(new Model.ModelReference(
+                        playerModel.getModelAssetId(),
+                        safeScale,
+                        playerModel.getRandomAttachmentIds(),
+                        playerModel.getAnimationSetMap() == null
+                    ));
+                }
+            } catch (Exception e) {
+                LOGGER.fine("Could not update PersistentModel after skin: " + e.getMessage());
+            }
+
+            LOGGER.fine("Applied skin to shop NPC (scale=" + safeScale + ")");
         } catch (Exception e) {
             LOGGER.warning("Failed to apply skin: " + e.getMessage());
         }

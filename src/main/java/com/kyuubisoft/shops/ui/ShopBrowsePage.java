@@ -393,10 +393,13 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         String title = shopData.getName() != null ? shopData.getName() : i18n.get(playerRef, "shop.browse.title");
         ui.set("#Title #ShopTitle.Text", title);
 
-        // Shop avatar: prefer owner-picked icon, fall back to first shop item
+        // Shop avatar: prefer owner-picked icon, fall back to first shop item.
+        // Use the FLAT selector (#ShopAvatar.ItemId) because #Title is a
+        // DecoratedContainer macro slot, not a normal element. 3-level
+        // selectors through #Title silently drop on the client.
         String avatarIconId = shopData.getDisplayIconItemId();
         if (avatarIconId != null) {
-            ui.set("#Title #ShopAvatar.ItemId", avatarIconId);
+            ui.set("#ShopAvatar.ItemId", avatarIconId);
         }
 
         // Currency display
@@ -500,7 +503,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         int startIndex = currentPage * ITEMS_PER_PAGE;
 
         for (int i = 0; i < ITEMS_PER_PAGE; i++) {
-            String prefix = "#CardGrid #Card" + i;
+            String prefix = "#Card" + i;
             int actualIndex = startIndex + i;
 
             if (activeItems != null && actualIndex < activeItems.size()) {

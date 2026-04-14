@@ -611,18 +611,40 @@ public class ShopNpcManager {
             return;
         }
 
+        // The entity ref returned by spawnEntity becomes valid only after the
+        // ECS commit at the end of the current tick. The async PlayerDB fetch
+        // can resolve before that commit, and applySkin would then run against
+        // a stale ref ("Invalid entity reference"). Resolve a fresh ref via
+        // the entity UUID inside the world.execute callback so we always touch
+        // a committed entity.
         final String resolvedUsername = skinUsername;
-        skinManager.fetchAndApplySkin(resolvedUsername, 1.0f, entityRef, world::execute)
-            .thenAccept(skin -> {
-                if (skin != null) {
-                    LOGGER.fine("Applied skin '" + resolvedUsername + "' to shop NPC: " + shop.getName());
+        final UUID shopId = shop.getId();
+        skinManager.fetchSkin(resolvedUsername).thenAcceptAsync(skin -> {
+            if (skin == null) return;
+            try {
+                UUID npcUuid = entityUuids.get(shopId);
+                if (npcUuid == null) {
+                    LOGGER.fine("applySkinIfAvailable: shop " + shop.getName()
+                        + " has no tracked NPC UUID - skipping");
+                    return;
                 }
-            })
-            .exceptionally(ex -> {
-                LOGGER.warning("Skin fetch/apply failed for shop '" + shop.getName()
-                    + "' (username=" + resolvedUsername + "): " + ex.getMessage());
-                return null;
-            });
+                Ref<EntityStore> freshRef = world.getEntityRef(npcUuid);
+                if (freshRef == null || !freshRef.isValid()) {
+                    LOGGER.fine("applySkinIfAvailable: fresh ref invalid for "
+                        + shop.getName() + " - NPC may have been removed");
+                    return;
+                }
+                skinManager.applySkin(freshRef, skin, 1.0f);
+                LOGGER.fine("Applied skin '" + resolvedUsername + "' to shop NPC: " + shop.getName());
+            } catch (Exception e) {
+                LOGGER.warning("Skin apply failed for shop '" + shop.getName()
+                    + "' (username=" + resolvedUsername + "): " + e.getMessage());
+            }
+        }, world::execute).exceptionally(ex -> {
+            LOGGER.warning("Skin fetch failed for shop '" + shop.getName()
+                + "' (username=" + resolvedUsername + "): " + ex.getMessage());
+            return null;
+        });
     }
 
     /**

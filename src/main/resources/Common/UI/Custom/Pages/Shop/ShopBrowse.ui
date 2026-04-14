@@ -39,10 +39,8 @@ $C = "../../Common.ui";
             Background: (Color: #1a2530);
             Padding: (Full: 2);
 
-            ItemSlot #ItemIcon {
+            ItemIcon #ItemIcon {
               Anchor: (Full: 0);
-              ShowQualityBackground: true;
-              ShowQuantity: false;
             }
           }
 
