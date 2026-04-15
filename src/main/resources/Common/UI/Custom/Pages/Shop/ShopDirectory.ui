@@ -6,10 +6,12 @@
 $C = "../../Common.ui";
 
 // ===== ItemGrid Style for the item-search grid (mirrors ShopBrowse) =====
+// Bigger slots (72 instead of 48) so the items tab matches the browse
+// page's slot size and the directory feels less sparse.
 @SearchSlotStyle = ItemGridStyle(
-    SlotSpacing: 4,
-    SlotSize: 48,
-    SlotIconSize: 40,
+    SlotSpacing: 6,
+    SlotSize: 72,
+    SlotIconSize: 60,
     SlotBackground: "../../Pages/Bank/BankSlot.png"
 );
 
@@ -416,7 +418,7 @@ $C.@PageOverlay {
             Padding: (Top: 6);
 
             ItemGrid #ItemSearchGrid {
-              Anchor: (Width: 488, Height: 260);
+              Anchor: (Width: 700, Height: 395);
               SlotsPerRow: 9;
               Style: @SearchSlotStyle;
               Background: #1a2332(0);
