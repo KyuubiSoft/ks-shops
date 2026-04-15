@@ -2,10 +2,12 @@
 $C = "../../Common.ui";
 
 // ===== ItemGrid Style for the browse grid =====
+// Bigger slots (72 instead of the stock 48) because the shop page has
+// plenty of horizontal room and the previous grid felt sparse.
 @BrowseSlotStyle = ItemGridStyle(
-    SlotSpacing: 4,
-    SlotSize: 48,
-    SlotIconSize: 40,
+    SlotSpacing: 6,
+    SlotSize: 72,
+    SlotIconSize: 60,
     SlotBackground: "../../Pages/Bank/BankSlot.png"
 );
 
@@ -261,7 +263,7 @@ $C.@PageOverlay {
           Padding: (Left: 10, Right: 10, Top: 6);
 
           ItemGrid #BrowseGrid {
-            Anchor: (Width: 488, Height: 260);
+            Anchor: (Width: 700, Height: 395);
             SlotsPerRow: 9;
             Style: @BrowseSlotStyle;
             Background: #1a2332(0);

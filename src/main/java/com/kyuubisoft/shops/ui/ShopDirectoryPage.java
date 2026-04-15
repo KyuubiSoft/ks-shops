@@ -906,24 +906,30 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 double distance = Math.sqrt(dx * dx + dz * dz);
                 ui.set("#DDistance" + i + ".Text", formatDistance(distance));
 
-                // Status badge — dynamic color via <color> markup because
-                // Label.Style.TextColor is not runtime-settable.
+                // Status badge — visibility-toggle pattern because
+                // Label.Style.TextColor is not runtime-settable and Label.
+                // Text does not parse <color> markup. Each card has three
+                // pre-colored labels (#DStatusOpen / #DStatusClosed /
+                // #DStatusFeatured) in ShopDirectory.ui and we flip
+                // Visible on the one matching the current state.
                 String statusKey;
-                String statusColor;
+                String activeStatus;
                 if (shop.isFeatured() && shop.getFeaturedUntil() > System.currentTimeMillis()) {
                     statusKey = "shop.directory.status.featured";
-                    statusColor = "#ffd700";
+                    activeStatus = "Featured";
                 } else if (shop.isOpen()) {
                     statusKey = "shop.directory.status.open";
-                    statusColor = "#4caf50";
+                    activeStatus = "Open";
                 } else {
                     statusKey = "shop.directory.status.closed";
-                    statusColor = "#cc4444";
+                    activeStatus = "Closed";
                 }
-                ui.set("#DStatus" + i + ".Text",
-                    "<color is=\"" + statusColor + "\">"
-                        + i18n.get(playerRef, statusKey)
-                        + "</color>");
+                String statusText = i18n.get(playerRef, statusKey);
+                for (String variant : new String[]{"Open", "Closed", "Featured"}) {
+                    boolean active = variant.equals(activeStatus);
+                    ui.set("#DStatus" + variant + i + ".Visible", active);
+                    ui.set("#DStatus" + variant + i + ".Text", active ? statusText : "");
+                }
 
                 // Category
                 if (shop.getCategory() != null && !shop.getCategory().isEmpty()) {

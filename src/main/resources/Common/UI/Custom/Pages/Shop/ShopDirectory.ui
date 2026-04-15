@@ -242,7 +242,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName0 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner0 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus0 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen0 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed0 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured0 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating0 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -262,7 +264,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName1 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner1 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus1 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen1 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed1 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured1 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating1 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -282,7 +286,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName2 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner2 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus2 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen2 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed2 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured2 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating2 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -302,7 +308,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName3 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner3 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus3 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen3 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed3 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured3 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating3 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -322,7 +330,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName4 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner4 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus4 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen4 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed4 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured4 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating4 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -342,7 +352,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName5 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner5 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus5 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen5 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed5 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured5 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating5 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -362,7 +374,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName6 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner6 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus6 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen6 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed6 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured6 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating6 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
@@ -382,7 +396,9 @@ $C.@PageOverlay {
                     Group { FlexWeight: 1; LayoutMode: Top;
                       Label #DName7 { Anchor: (Height: 20); Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center); Text: ""; }
                       Label #DOwner7 { Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center); Text: ""; }
-                      Label #DStatus7 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
+                      Label #DStatusOpen7 { Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4caf50, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusClosed7 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #cc4444, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; }
+                      Label #DStatusFeatured7 { Visible: false; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center, RenderUppercase: true); Text: ""; } } }
                   Group { Anchor: (Height: 5); LayoutMode: CenterMiddle; Group { Anchor: (Width: 190, Height: 1); Background: (Color: #252f3a); } }
                   Group { Anchor: (Height: 20); LayoutMode: Left; Padding: (Left: 2);
                     Label #DRating7 { Style: (FontSize: 12, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; } }
