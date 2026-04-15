@@ -110,10 +110,10 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         // Configure native ItemGrid (display-only, click-to-buy).
         // No ContainerWindow is backing this grid -- it is pure display
         // driven by ui.set("#BrowseGrid.Slots", ...). DisplayItemQuantity
-        // is off because the native quantity badge would overlap the stack
-        // count in the tooltip; stock is shown via setDescription instead.
+        // is on so the native slot quantity badge shows the stock count
+        // (we set ItemStack.quantity = stock in BUY mode below).
         ui.set("#BrowseGrid.AreItemsDraggable", false);
-        ui.set("#BrowseGrid.DisplayItemQuantity", false);
+        ui.set("#BrowseGrid.DisplayItemQuantity", true);
 
         bindAllEvents(events);
         buildUI(ui);
@@ -586,11 +586,22 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 String itemId = item.getItemId();
                 int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
 
+                // ItemStack quantity drives the native slot badge when
+                // DisplayItemQuantity is on. BUY mode shows the remaining
+                // stock as the badge (unlimited -> 1 since the badge cannot
+                // render "infinite"); SELL mode is always a single unit.
+                int quantityToShow;
+                if (mode == Mode.BUY) {
+                    quantityToShow = item.isUnlimitedStock() ? 1 : Math.max(1, item.getStock());
+                } else {
+                    quantityToShow = 1;
+                }
+
                 try {
                     BsonDocument meta = BsonMetadataCodec.decode(item.getItemMetadata());
                     ItemStack stack = (meta != null)
-                        ? new ItemStack(itemId, 1, meta)
-                        : new ItemStack(itemId, 1);
+                        ? new ItemStack(itemId, quantityToShow, meta)
+                        : new ItemStack(itemId, quantityToShow);
                     slot = new ItemGridSlot(stack);
                 } catch (Exception e) {
                     LOGGER.warning("[ShopBrowse] Failed to build slot for item " + itemId
@@ -667,8 +678,22 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#ConfirmPrice.Text",
             i18n.get(playerRef, "shop.browse.confirm.price", unitPrice));
 
-        // BUG #7 fix: Tax UI is hidden because tax is disabled in ShopService.
-        ui.set("#ConfirmTax.Visible", false);
+        // Stock line with dynamic color: green/amber/red for low stock,
+        // cyan for unlimited. Same palette as the directory buy overlay.
+        if (item.isUnlimitedStock()) {
+            ui.set("#ConfirmStock.Text",
+                i18n.get(playerRef, "shop.browse.stock_unlimited"));
+            ui.set("#ConfirmStock.Style.TextColor", "#26c6da");
+        } else {
+            int stock = item.getStock();
+            ui.set("#ConfirmStock.Text",
+                i18n.get(playerRef, "shop.browse.stock_count", stock));
+            String stockColor;
+            if (stock <= 2) stockColor = "#ff5252";
+            else if (stock <= 10) stockColor = "#ffb74d";
+            else stockColor = "#66bb6a";
+            ui.set("#ConfirmStock.Style.TextColor", stockColor);
+        }
 
         // Quantity slider + big label (replaces the old +/- buttons).
         // SliderNumberField.Min/Max are static in the .ui (1..64); Java

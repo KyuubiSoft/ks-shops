@@ -362,12 +362,12 @@ $C.@PageOverlay {
             FlexWeight: 2;
             LayoutMode: Top;
             Label #ConfirmItemName {
-              Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true);
+              Style: (FontSize: 15, TextColor: #ffffff, RenderBold: true);
               Text: "";
               Anchor: (Height: 22);
             }
             Label #ConfirmPrice {
-              Style: (FontSize: 12, TextColor: #7caacc, RenderBold: true);
+              Style: (FontSize: 13, TextColor: #ffb74d, RenderBold: true);
               Text: "";
               Anchor: (Height: 18);
             }
@@ -376,12 +376,12 @@ $C.@PageOverlay {
           Group { FlexWeight: 1; }
         }
 
-        // Tax display
-        Label #ConfirmTax {
-          Style: (FontSize: 10, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+        // Stock line (repurposed from the old hidden #ConfirmTax slot).
+        // Text + color pushed dynamically from buildConfirmOverlay.
+        Label #ConfirmStock {
+          Style: (FontSize: 11, TextColor: #66bb6a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "";
           Anchor: (Height: 16);
-          Visible: false;
         }
 
         Group { Anchor: (Height: 6); }
@@ -421,9 +421,9 @@ $C.@PageOverlay {
         }
 
         Label #ConfirmTotal {
-          Style: (FontSize: 12, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Style: (FontSize: 14, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "";
-          Anchor: (Height: 20);
+          Anchor: (Height: 22);
         }
 
         Group { FlexWeight: 1; }
