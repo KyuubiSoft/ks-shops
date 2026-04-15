@@ -678,21 +678,26 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#ConfirmPrice.Text",
             i18n.get(playerRef, "shop.browse.confirm.price", unitPrice));
 
-        // Stock line with dynamic color: green/amber/red for low stock,
-        // cyan for unlimited. Same palette as the directory buy overlay.
+        // Stock line — visibility-toggle pattern because
+        // Label.Style.TextColor is not dynamically settable in Hytale UI.
+        // Four pre-colored labels: good (green) / low (amber) / crit (red)
+        // / unlim (cyan). Only the matching one is Visible.
+        String stockText;
+        String activeLabel;
         if (item.isUnlimitedStock()) {
-            ui.set("#ConfirmStock.Text",
-                i18n.get(playerRef, "shop.browse.stock_unlimited"));
-            ui.set("#ConfirmStock.Style.TextColor", "#26c6da");
+            stockText = i18n.get(playerRef, "shop.browse.stock_unlimited");
+            activeLabel = "Unlim";
         } else {
             int stock = item.getStock();
-            ui.set("#ConfirmStock.Text",
-                i18n.get(playerRef, "shop.browse.stock_count", stock));
-            String stockColor;
-            if (stock <= 2) stockColor = "#ff5252";
-            else if (stock <= 10) stockColor = "#ffb74d";
-            else stockColor = "#66bb6a";
-            ui.set("#ConfirmStock.Style.TextColor", stockColor);
+            stockText = i18n.get(playerRef, "shop.browse.stock_count", stock);
+            if (stock <= 2) activeLabel = "Crit";
+            else if (stock <= 10) activeLabel = "Low";
+            else activeLabel = "Good";
+        }
+        for (String key : new String[]{"Good", "Low", "Crit", "Unlim"}) {
+            boolean active = key.equals(activeLabel);
+            ui.set("#ConfirmStock" + key + ".Visible", active);
+            ui.set("#ConfirmStock" + key + ".Text", active ? stockText : "");
         }
 
         // Quantity slider + big label (replaces the old +/- buttons).
