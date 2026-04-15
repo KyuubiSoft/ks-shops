@@ -6,7 +6,7 @@
       "Type": "Walk"
     }
   ],
-  "Appearance": "Trork",
+  "Appearance": "Mannequin",
   "MaxHealth": { "Compute": "MaxHealth" },
   "Parameters": {
     "MaxHealth": {
