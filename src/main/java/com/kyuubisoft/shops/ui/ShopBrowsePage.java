@@ -599,26 +599,24 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 }
 
                 // Tooltip header: item name with price inline so buyers see
-                // the cost the moment they hover over a slot. No need to
-                // click each item anymore.
-                slot.setName("\u00a7f" + formatItemName(itemId)
-                    + "  \u00a76" + unitPrice + " " + currencyName);
+                // the cost the moment they hover over a slot. Plain text -
+                // Hytale's slot tooltip renderer does not parse Minecraft
+                // §-color codes, they render literally.
+                slot.setName(formatItemName(itemId)
+                    + "  -  " + unitPrice + " " + currencyName);
 
-                // Tooltip description: stock (color-coded by remaining
-                // quantity) + a mode-aware click hint.
+                // Tooltip description: stock + mode-aware click hint.
                 StringBuilder desc = new StringBuilder();
                 if (item.isUnlimitedStock()) {
-                    desc.append("\u00a7bStock: \u00a7fUnlimited");
+                    desc.append("Stock: Unlimited");
                 } else {
-                    int s = item.getStock();
-                    String stockColor = s <= 2 ? "\u00a7c" : (s <= 10 ? "\u00a7e" : "\u00a7a");
-                    desc.append("\u00a7aStock: ").append(stockColor).append(s);
+                    desc.append("Stock: ").append(item.getStock());
                 }
                 desc.append('\n');
                 if (mode == Mode.SELL) {
-                    desc.append("\u00a78Click to sell");
+                    desc.append("Click to sell");
                 } else {
-                    desc.append("\u00a78Click to buy");
+                    desc.append("Click to buy");
                 }
                 slot.setDescription(desc.toString());
             } else {

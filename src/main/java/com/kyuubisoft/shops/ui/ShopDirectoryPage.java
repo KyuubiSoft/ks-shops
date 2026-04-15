@@ -999,51 +999,37 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                     slot = new ItemGridSlot();
                 }
 
-                // Override tooltip name + description so the user can see at a
-                // glance WHICH SHOP sells this item. The item's native tooltip
-                // (enchantments, custom stats, DTT extras) is still rendered
-                // by the client; only the name/description lines are overridden
-                // by the slot-level setName/setDescription calls below.
-                //
-                // Minecraft-style §-codes are used for per-line coloring (same
-                // codes Bank/ChatPlus use for chat messages). If Hytale's
-                // tooltip renderer strips them the lines just show as plain
-                // text with a few visible §-chars; functionality unaffected.
-                //
-                //   §b = aqua       (shop label)
-                //   §f = white      (values)
-                //   §7 = gray       (owner "by ...")
-                //   §e = yellow     (price label)
-                //   §6 = gold       (price number)
-                //   §a = green      (stock ok)
-                //   §c = red        (stock critical, 1-2 left)
-                //   §8 = dark gray  (click hint, subtle)
+                // Override tooltip name + description so the user can see at
+                // a glance WHICH SHOP sells this item. The item's native
+                // tooltip (enchantments, custom stats, DTT extras) is still
+                // rendered by the client; only the name/description lines
+                // are overridden by the slot-level setName/setDescription
+                // calls below. Plain text only - Hytale's slot tooltip
+                // renderer does not parse Minecraft §-color codes, they
+                // render literally.
                 slot.setName(ShopBrowsePage.formatItemName(itemId));
 
                 StringBuilder desc = new StringBuilder();
                 String shopName = shop.getName() != null ? shop.getName() : "Shop";
-                desc.append("\u00a7bShop: \u00a7f").append(shopName).append('\n');
+                desc.append("Shop: ").append(shopName).append('\n');
 
                 if (shop.isAdminShop()) {
-                    desc.append("\u00a7dAdmin Shop");
+                    desc.append("Admin Shop");
                 } else if (shop.getOwnerName() != null) {
-                    desc.append("\u00a77by \u00a7f").append(shop.getOwnerName());
+                    desc.append("by ").append(shop.getOwnerName());
                 }
                 desc.append('\n');
 
-                desc.append("\u00a7ePrice: \u00a76").append(item.getBuyPrice())
-                    .append(" \u00a7eGold").append('\n');
+                desc.append("Price: ").append(item.getBuyPrice()).append(" Gold")
+                    .append('\n');
 
                 if (item.isUnlimitedStock()) {
-                    desc.append("\u00a7bStock: \u00a7fUnlimited");
+                    desc.append("Stock: Unlimited");
                 } else {
-                    int s = item.getStock();
-                    String stockColor = s <= 2 ? "\u00a7c" : (s <= 5 ? "\u00a7e" : "\u00a7a");
-                    desc.append("\u00a7aStock: ").append(stockColor).append(s);
+                    desc.append("Stock: ").append(item.getStock());
                 }
                 desc.append('\n');
-                desc.append("\u00a78")
-                    .append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
+                desc.append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
 
                 slot.setDescription(desc.toString());
             } else {
