@@ -204,6 +204,19 @@ public class ShopConfig {
         public int nameMaxLength = 24;
         public int descriptionMaxLength = 100;
         public int maxTagsPerShop = 5;
+
+        // --- Directory listing (paid) ---
+        // When enabled, new player shops are NOT automatically listed in
+        // the public directory. Owners must either buy a listing via
+        // /ksshop list <days> (price = listingPricePerDay * days) or have
+        // one of the permission shortcuts (see PermissionLimits below).
+        // Admin shops are never affected by this - they are always listed.
+        public boolean listingEnabled = true;
+        public int listingPricePerDay = 100;
+        public int listingMinDays = 1;
+        public int listingMaxDays = 30;
+        // Free listing days granted on shop creation (0 = off).
+        public int listingFreeDaysOnCreate = 7;
     }
 
     public static class AdminShops {

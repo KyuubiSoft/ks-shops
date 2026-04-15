@@ -112,6 +112,7 @@ public class ShopDatabase {
                 "open BOOLEAN DEFAULT TRUE," +
                 "show_name_tag BOOLEAN DEFAULT TRUE," +
                 "packed BOOLEAN DEFAULT FALSE," +
+                "listed_until BIGINT DEFAULT 0," +
                 "created_at BIGINT NOT NULL," +
                 "last_activity BIGINT NOT NULL" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -222,6 +223,7 @@ public class ShopDatabase {
                 "open BOOLEAN DEFAULT 1," +
                 "show_name_tag BOOLEAN DEFAULT 1," +
                 "packed BOOLEAN DEFAULT 0," +
+                "listed_until BIGINT DEFAULT 0," +
                 "created_at BIGINT NOT NULL," +
                 "last_activity BIGINT NOT NULL" +
                 ")";
@@ -354,6 +356,21 @@ public class ShopDatabase {
             // Column already exists - expected after first migration
         }
 
+        // Migration: add listed_until column. Existing rows get
+        // Long.MAX_VALUE (permanent listing) so shops that were already
+        // visible in the directory before this feature landed stay
+        // grandfathered in. New rows inserted by code override this via
+        // the explicit listed_until in the INSERT statement.
+        try {
+            String alterSql = "ALTER TABLE shop_shops ADD COLUMN listed_until BIGINT DEFAULT "
+                + Long.MAX_VALUE;
+            provider.executeUpdate(alterSql);
+            LOGGER.info("Migrated: added listed_until column to shop_shops "
+                + "(existing shops grandfathered as permanent)");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+
         // Migration: add item_metadata column to shop_items if missing.
         // Required for BSON ItemStack metadata capture (enchantments, pet ids,
         // weapon mastery levels etc.) on shop listings created before the
@@ -408,12 +425,12 @@ public class ShopDatabase {
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, packed, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+              "open, show_name_tag, packed, listed_until, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             : "INSERT OR REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, packed, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+              "open, show_name_tag, packed, listed_until, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try {
             provider.executeUpdate(sql,
@@ -446,6 +463,7 @@ public class ShopDatabase {
                 shop.isOpen(),
                 shop.isShowNameTag(),
                 shop.isPacked(),
+                shop.getListedUntil(),
                 shop.getCreatedAt(),
                 shop.getLastActivity()
             );
@@ -1119,6 +1137,12 @@ public class ShopDatabase {
             boolean packed = false;
             try { packed = rs.getBoolean("packed"); } catch (SQLException ignored) {}
 
+            // Read listed_until safely. Default to Long.MAX_VALUE so shops
+            // from DBs that never had the column get treated as permanently
+            // listed (grandfathering matches the migration default).
+            long listedUntil = Long.MAX_VALUE;
+            try { listedUntil = rs.getLong("listed_until"); } catch (SQLException ignored) {}
+
             ShopData shop = ShopData.fromDatabase(
                 UUID.fromString(rs.getString("id")),
                 rs.getString("name"),
@@ -1153,6 +1177,8 @@ public class ShopDatabase {
             shop.setShopBalance(shopBalance);
             shop.setShowNameTag(showNameTag);
             shop.setPacked(packed);
+            shop.setListedUntil(listedUntil);
+            shop.clearDirty();  // just loaded from DB, no pending changes
             return shop;
         } catch (Exception e) {
             LOGGER.warning("Failed to read shop row: " + e.getMessage());

@@ -109,6 +109,10 @@ public class DirectoryService {
         for (ShopData shop : shopManager.getAllShops()) {
             // Only open shops unless we have no filter that would show closed
             if (!shop.isOpen()) continue;
+            // Player shops must have an active directory listing; admin
+            // shops are always listed (they're admin-controlled, not
+            // commercial). See ShopData.isListedInDirectory.
+            if (shop.isPlayerShop() && !shop.isListedInDirectory()) continue;
 
             // Category filter
             if (category != null && !category.isEmpty()) {
@@ -182,6 +186,10 @@ public class DirectoryService {
         int count = 0;
         for (ShopData shop : shopManager.getAllShops()) {
             if (!shop.isOpen()) continue;
+            // Player shops must have an active directory listing; admin
+            // shops are always listed (they're admin-controlled, not
+            // commercial). See ShopData.isListedInDirectory.
+            if (shop.isPlayerShop() && !shop.isListedInDirectory()) continue;
 
             // Type filter
             if ("admin".equals(typeFilter) && !shop.isAdminShop()) continue;
@@ -235,6 +243,10 @@ public class DirectoryService {
         List<ShopData> filtered = new ArrayList<>();
         for (ShopData shop : shopManager.getAllShops()) {
             if (!shop.isOpen()) continue;
+            // Player shops must have an active directory listing; admin
+            // shops are always listed (they're admin-controlled, not
+            // commercial). See ShopData.isListedInDirectory.
+            if (shop.isPlayerShop() && !shop.isListedInDirectory()) continue;
 
             // Type filter
             if ("admin".equals(typeFilter) && !shop.isAdminShop()) continue;
@@ -313,6 +325,10 @@ public class DirectoryService {
         int count = 0;
         for (ShopData shop : shopManager.getAllShops()) {
             if (!shop.isOpen()) continue;
+            // Player shops must have an active directory listing; admin
+            // shops are always listed (they're admin-controlled, not
+            // commercial). See ShopData.isListedInDirectory.
+            if (shop.isPlayerShop() && !shop.isListedInDirectory()) continue;
             if ("admin".equals(typeFilter) && !shop.isAdminShop()) continue;
             if ("player".equals(typeFilter) && !shop.isPlayerShop()) continue;
             if ("featured".equals(typeFilter) && !(shop.isFeatured() && shop.getFeaturedUntil() > now)) continue;
@@ -383,9 +399,10 @@ public class DirectoryService {
         List<ShopData> result = new ArrayList<>();
 
         for (ShopData shop : shopManager.getAllShops()) {
-            if (shop.isFeatured() && shop.getFeaturedUntil() > now && shop.isOpen()) {
-                result.add(shop);
-            }
+            if (!shop.isFeatured() || shop.getFeaturedUntil() <= now) continue;
+            if (!shop.isOpen()) continue;
+            if (shop.isPlayerShop() && !shop.isListedInDirectory()) continue;
+            result.add(shop);
         }
 
         // Sort featured by rating descending
@@ -402,6 +419,7 @@ public class DirectoryService {
     public List<ShopData> getTopRatedShops(int limit) {
         return shopManager.getAllShops().stream()
             .filter(ShopData::isOpen)
+            .filter(s -> !s.isPlayerShop() || s.isListedInDirectory())
             .filter(s -> s.getTotalRatings() >= MIN_RATINGS_THRESHOLD)
             .sorted(Comparator.comparingDouble(ShopData::getAverageRating).reversed())
             .limit(limit)

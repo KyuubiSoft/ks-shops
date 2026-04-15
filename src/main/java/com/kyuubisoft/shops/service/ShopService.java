@@ -640,6 +640,29 @@ public class ShopService {
         );
         shopData.setCategory(category != null ? category : "");
 
+        // --- Directory listing bootstrap ---
+        // New shops get an initial listing state based on the config +
+        // the owner's permissions:
+        //   - ks.shop.list.permanent        -> listed forever
+        //   - ks.shop.list.free             -> listed for listingFreeDaysOnCreate
+        //   - listing feature disabled      -> listed forever (legacy)
+        //   - otherwise                     -> listingFreeDaysOnCreate free days
+        //                                     (0 days = not listed; owner must
+        //                                     /ksshop list <days> to get seen)
+        if (!cfg.playerShops.listingEnabled) {
+            shopData.setListedUntil(Long.MAX_VALUE);
+        } else if (player != null && player.hasPermission("ks.shop.list.permanent", false)) {
+            shopData.setListedUntil(Long.MAX_VALUE);
+        } else {
+            int freeDays = Math.max(0, cfg.playerShops.listingFreeDaysOnCreate);
+            if (freeDays > 0) {
+                shopData.setListedUntil(
+                    System.currentTimeMillis() + (long) freeDays * 86_400_000L);
+            } else {
+                shopData.setListedUntil(0L);
+            }
+        }
+
         // --- Persist ---
         shopManager.createShop(shopData);
 
@@ -707,6 +730,8 @@ public class ShopService {
             0.0f
         );
         shopData.setCategory(category != null ? category : "");
+        // Admin shops are always listed in the directory.
+        shopData.setListedUntil(Long.MAX_VALUE);
 
         shopManager.createShop(shopData);
 
@@ -717,6 +742,105 @@ public class ShopService {
         LOGGER.info("Admin shop created: '" + trimmedName + "' at "
             + worldName + " [" + (int) x + ", " + (int) y + ", " + (int) z + "]");
         return CreateShopResult.success(shopData);
+    }
+
+    // ==================== DIRECTORY LISTING ====================
+
+    /** Typed result for listing-purchase attempts (same pattern as PurchaseResult). */
+    public static final class ListingResult {
+        private final boolean success;
+        private final String errorKey;
+        private final long newListedUntil;
+        private final int costCharged;
+
+        private ListingResult(boolean success, String errorKey, long newListedUntil, int costCharged) {
+            this.success = success;
+            this.errorKey = errorKey;
+            this.newListedUntil = newListedUntil;
+            this.costCharged = costCharged;
+        }
+
+        public static ListingResult success(long newListedUntil, int costCharged) {
+            return new ListingResult(true, null, newListedUntil, costCharged);
+        }
+
+        public static ListingResult error(String errorKey) {
+            return new ListingResult(false, errorKey, 0, 0);
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getErrorKey() { return errorKey; }
+        public long getNewListedUntil() { return newListedUntil; }
+        public int getCostCharged() { return costCharged; }
+    }
+
+    /**
+     * Extends a shop's directory listing by {@code days} days. Honors the
+     * {@code ks.shop.list.permanent} (sets listing to forever, free) and
+     * {@code ks.shop.list.free} (extends without charging) permission
+     * shortcuts; otherwise charges
+     * {@code listingPricePerDay * days} gold from the owner's balance.
+     *
+     * Days are clamped to {@code [listingMinDays, listingMaxDays]}.
+     */
+    public ListingResult purchaseListing(Player player, PlayerRef ownerRef, UUID shopId, int days) {
+        if (ownerRef == null || shopId == null) {
+            return ListingResult.error("shop.list.invalid_input");
+        }
+        ShopConfig.ConfigData cfg = config.getData();
+        if (!cfg.playerShops.listingEnabled) {
+            return ListingResult.error("shop.list.disabled");
+        }
+
+        ShopData shop = shopManager.getShop(shopId);
+        if (shop == null) {
+            return ListingResult.error("shop.error.shop_not_found");
+        }
+        if (shop.isAdminShop()) {
+            return ListingResult.error("shop.list.admin_always_listed");
+        }
+        if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(ownerRef.getUuid())) {
+            return ListingResult.error("shop.error.not_owner");
+        }
+
+        // Permanent permission short-circuit: free and forever.
+        if (player != null && player.hasPermission("ks.shop.list.permanent", false)) {
+            shop.setListedUntil(Long.MAX_VALUE);
+            database.saveShop(shop);
+            return ListingResult.success(Long.MAX_VALUE, 0);
+        }
+
+        // Clamp days.
+        int minDays = Math.max(1, cfg.playerShops.listingMinDays);
+        int maxDays = Math.max(minDays, cfg.playerShops.listingMaxDays);
+        if (days < minDays) days = minDays;
+        if (days > maxDays) days = maxDays;
+
+        // Free permission bypasses payment but stays day-limited.
+        boolean free = player != null && player.hasPermission("ks.shop.list.free", false);
+        int cost = free ? 0 : Math.max(0, cfg.playerShops.listingPricePerDay * days);
+
+        if (cost > 0) {
+            if (!economyBridge.isAvailable()) {
+                return ListingResult.error("shop.create.economy_unavailable");
+            }
+            if (!economyBridge.has(ownerRef.getUuid(), cost)) {
+                return ListingResult.error("shop.list.not_enough_funds");
+            }
+            if (!economyBridge.withdraw(ownerRef.getUuid(), cost)) {
+                return ListingResult.error("shop.list.withdraw_failed");
+            }
+        }
+
+        long now = System.currentTimeMillis();
+        long start = Math.max(now, shop.getListedUntil());
+        long newUntil = start + (long) days * 86_400_000L;
+        shop.setListedUntil(newUntil);
+        database.saveShop(shop);
+
+        LOGGER.info("Shop listed: '" + shop.getName() + "' +"
+            + days + " days (cost=" + cost + ") -> expires at " + newUntil);
+        return ListingResult.success(newUntil, cost);
     }
 
     // ==================== SHOP DELETION ====================

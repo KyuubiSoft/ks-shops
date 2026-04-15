@@ -63,8 +63,11 @@ public class ShopI18n {
      *        for the always-visible stock label below each browse card
      * - v22: shop.directory.disabled — admin kill-switch error message
      *        when features.directory is set to false in the server config
+     * - v23: directory listing purchase flow — shop.list.* keys for
+     *        /ksshop list <days> (usage, no_shop, disabled, not_enough_
+     *        funds, success, success_permanent) + shop.error.not_owner
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 22;
+    private static final int CURRENT_LOCALIZATION_VERSION = 23;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

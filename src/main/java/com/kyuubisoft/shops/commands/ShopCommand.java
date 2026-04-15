@@ -115,6 +115,7 @@ public class ShopCommand extends AbstractCommandCollection {
         addSubCommand(new DepositCmd());
         addSubCommand(new StatsCmd());
         addSubCommand(new TransferCmd());
+        addSubCommand(new ListCmd());
     }
 
     // ==================== PLAYER COMMANDS ====================
@@ -1373,6 +1374,78 @@ public class ShopCommand extends AbstractCommandCollection {
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.transfer.confirm_prompt",
                     shopIdentifier, resolvedTargetName, shopName)).color("#FFAA00"));
+        }
+    }
+
+    /**
+     * /ksshop list &lt;days&gt;
+     *
+     * Extends the owner's nearest shop's directory listing by N days.
+     * Charges {@code listingPricePerDay * days} gold from the owner's
+     * balance, unless the player has {@code ks.shop.list.free} (no charge)
+     * or {@code ks.shop.list.permanent} (forever, no charge).
+     */
+    private class ListCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        ListCmd() {
+            super("list", "Buy or extend a shop directory listing");
+            withRequiredArg("days", "Number of days to list the shop", ArgTypes.INTEGER);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
+
+            String[] parts = ctx.getInputString().split("\\s+", 3);
+            int days = 0;
+            if (parts.length > 2) {
+                try {
+                    days = Integer.parseInt(parts[2].trim());
+                } catch (NumberFormatException ignored) {}
+            }
+            if (days <= 0) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.list.usage")).color("#FF5555"));
+                return;
+            }
+
+            // Resolve nearest owned shop in this world.
+            List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerRef.getUuid());
+            if (ownedShops.isEmpty()) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.list.no_shop")).color("#FF5555"));
+                return;
+            }
+            ShopData targetShop = findNearestOwnedShop(ownedShops, player, world);
+            if (targetShop == null) targetShop = ownedShops.get(0);
+
+            ShopService.ListingResult result = plugin.getShopService()
+                .purchaseListing(player, playerRef, targetShop.getId(), days);
+            if (!result.isSuccess()) {
+                String key = result.getErrorKey() != null
+                    ? result.getErrorKey()
+                    : "shop.list.failed";
+                player.sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
+                return;
+            }
+
+            long until = result.getNewListedUntil();
+            int cost = result.getCostCharged();
+            if (until == Long.MAX_VALUE) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.list.success_permanent", targetShop.getName())
+                ).color("#55FF55"));
+            } else {
+                long daysLeft = Math.max(0,
+                    (until - System.currentTimeMillis()) / 86_400_000L);
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.list.success",
+                        targetShop.getName(), daysLeft, cost)
+                ).color("#55FF55"));
+            }
         }
     }
 

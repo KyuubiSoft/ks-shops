@@ -37,6 +37,10 @@ public class ShopData {
     private boolean open;
     private boolean showNameTag = true;
     private boolean packed = false;
+    /** Timestamp (ms) up to which this shop is listed in the public directory.
+     *  0 = never listed, {@link Long#MAX_VALUE} = permanent (via permission
+     *  or admin override), anything else = expires at that time. */
+    private long listedUntil = 0L;
     private long createdAt;
     private long lastActivity;
     private transient volatile boolean dirty;
@@ -140,6 +144,17 @@ public class ShopData {
     public boolean isOpen() { return open; }
     public boolean isShowNameTag() { return showNameTag; }
     public boolean isPacked() { return packed; }
+    public long getListedUntil() { return listedUntil; }
+
+    /**
+     * True when this shop is currently listed in the public directory.
+     * Admin shops are always considered listed regardless of the field
+     * (the directory filter special-cases them in DirectoryService).
+     */
+    public boolean isListedInDirectory() {
+        if (listedUntil == Long.MAX_VALUE) return true;
+        return listedUntil > System.currentTimeMillis();
+    }
     public long getCreatedAt() { return createdAt; }
     public long getLastActivity() { return lastActivity; }
 
@@ -180,6 +195,7 @@ public class ShopData {
     public void setFeaturedUntil(long featuredUntil) { this.featuredUntil = featuredUntil; markDirty(); }
     public void setOpen(boolean open) { this.open = open; markDirty(); }
     public void setShowNameTag(boolean showNameTag) { this.showNameTag = showNameTag; markDirty(); }
+    public void setListedUntil(long listedUntil) { this.listedUntil = listedUntil; markDirty(); }
     public void setPacked(boolean packed) { this.packed = packed; markDirty(); }
     public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; markDirty(); }
 
