@@ -650,12 +650,17 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             EventData.of("@Search", "#FilterBar #SearchField.Value"));
 
         // Dropdowns (ValueChanged)
+        // Dropdown ValueChanged bindings use the "@Key" + "#Widget.Value"
+        // form so Hytale auto-populates the codec field from the widget's
+        // current value. The empty-second-arg variant I previously used
+        // silently dropped the value so handleSort/handleCategoryFilter/
+        // handleRatingFilter never fired.
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#TabBar #SortDropdown",
-            EventData.of("Sort", ""), true);
+            EventData.of("@Sort", "#TabBar #SortDropdown.Value"));
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterBar #CategoryFilter",
-            EventData.of("CatFilter", ""), true);
+            EventData.of("@CatFilter", "#FilterBar #CategoryFilter.Value"));
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterBar #RatingFilter",
-            EventData.of("RatFilter", ""), true);
+            EventData.of("@RatFilter", "#FilterBar #RatingFilter.Value"));
     }
 
     // ==================== BUILD UI ====================
@@ -1169,13 +1174,13 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             .addField(new KeyedCodec<>("@Search", Codec.STRING),
                 (data, value) -> data.search = value,
                 data -> data.search)
-            .addField(new KeyedCodec<>("Sort", Codec.STRING),
+            .addField(new KeyedCodec<>("@Sort", Codec.STRING),
                 (data, value) -> data.sort = value,
                 data -> data.sort)
-            .addField(new KeyedCodec<>("CatFilter", Codec.STRING),
+            .addField(new KeyedCodec<>("@CatFilter", Codec.STRING),
                 (data, value) -> data.catFilter = value,
                 data -> data.catFilter)
-            .addField(new KeyedCodec<>("RatFilter", Codec.STRING),
+            .addField(new KeyedCodec<>("@RatFilter", Codec.STRING),
                 (data, value) -> data.ratFilter = value,
                 data -> data.ratFilter)
             .build();
