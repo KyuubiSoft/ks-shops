@@ -600,47 +600,36 @@ public class ShopNpcManager {
      * the rotation manager along with the spawn position. No-op when the
      * config flag {@code npc.lookAtPlayer} is disabled.
      *
-     * The NetworkId component is typically not attached to a freshly
-     * spawned entity in the same tick the spawn runs - it's committed at
-     * the end of the tick. Reading it immediately returns null and the
-     * shop would then never be added to the rotation tracker. We defer
-     * the read by one tick via a nested {@code world.execute(...)} so
-     * the NetworkId is guaranteed to be committed when we look it up.
-     *
      * Must be called from inside {@code world.execute()} (same context
-     * as spawn) so that the nested deferral happens on the world thread.
+     * as spawn). This mirrors {@code CitizenService.java:1210-1216} which
+     * reads NetworkId immediately after {@code npcPlugin.spawnEntity}
+     * with no deferral and which reportedly works for Citizen NPCs.
      */
     private void cacheRotationTarget(UUID shopId, Ref<EntityStore> entityRef,
                                       Store<EntityStore> store, Vector3d position,
                                       World world) {
         if (!config.getData().npc.lookAtPlayer) return;
-        if (world == null) return;
-        final UUID trackedUuid = entityUuids.get(shopId);
-        world.execute(() -> {
-            try {
-                Ref<EntityStore> freshRef = (trackedUuid != null)
-                    ? world.getEntityRef(trackedUuid)
-                    : entityRef;
-                if (freshRef == null || !freshRef.isValid()) {
-                    LOGGER.fine("cacheRotationTarget: ref invalid for shop " + shopId);
-                    return;
-                }
-                var freshStore = world.getEntityStore().getStore();
-                NetworkId nid = freshStore.getComponent(
-                    freshRef, NetworkId.getComponentType());
-                if (nid != null) {
-                    rotationManager.trackNpc(shopId, nid.getId(), position);
-                    LOGGER.info("[Rotation] tracked shop NPC " + shopId
-                        + " netId=" + nid.getId());
-                } else {
-                    LOGGER.warning("[Rotation] NetworkId still null one tick after "
-                        + "spawn for shop " + shopId + " - NPC will not rotate.");
-                }
-            } catch (Exception e) {
-                LOGGER.warning("[Rotation] cacheRotationTarget failed for "
-                    + shopId + ": " + e.getMessage());
+        if (entityRef == null || !entityRef.isValid()) {
+            LOGGER.warning("[Rotation] cacheRotationTarget: entityRef invalid for "
+                + shopId);
+            return;
+        }
+        try {
+            NetworkId nid = store.getComponent(entityRef, NetworkId.getComponentType());
+            if (nid != null && nid.getId() > 0) {
+                rotationManager.trackNpc(shopId, nid.getId(), position);
+                LOGGER.info("[Rotation] tracked shop NPC " + shopId
+                    + " netId=" + nid.getId() + " at ["
+                    + String.format("%.1f, %.1f, %.1f", position.x, position.y, position.z)
+                    + "]");
+            } else {
+                LOGGER.warning("[Rotation] NetworkId was null/0 at spawn for "
+                    + shopId + " - NPC will not rotate. Matches core pattern?");
             }
-        });
+        } catch (Exception e) {
+            LOGGER.warning("[Rotation] cacheRotationTarget failed for "
+                + shopId + ": " + e.getMessage());
+        }
     }
 
     /**

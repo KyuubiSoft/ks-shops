@@ -686,6 +686,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         }
 
         // Commit metadata fields to ShopData
+        boolean nameChanged = !editedName.equals(shopData.getName());
         shopData.setName(editedName);
         shopData.setDescription(editedDesc);
         shopData.setCategory(editedCategory);
@@ -758,6 +759,17 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
         saved = true;
         dirty = false; // BUG #11: successful save clears pending-changes state
+
+        // Push the (possibly renamed) shop name to the live NPC nameplate so
+        // the change is visible immediately. Previously the user had to toggle
+        // the show-name-tag flag off and on to force a refresh.
+        if (nameChanged) {
+            try {
+                plugin.getNpcManager().refreshNameTag(shopData, player.getWorld());
+            } catch (Exception e) {
+                LOGGER.warning("[ShopEdit] NPC nameplate refresh failed: " + e.getMessage());
+            }
+        }
 
         // Unlock editor session
         plugin.getSessionManager().unlockEditor(shopData.getId(), playerRef.getUuid());
