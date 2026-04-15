@@ -609,18 +609,19 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     slot = new ItemGridSlot();
                 }
 
-                // Tooltip header: item name + price with <color> markup.
-                // Hytale's native text pipeline parses
-                // <color is="#RRGGBB">...</color> tags for per-segment
-                // coloring - same format DynamicTooltipsLib, item-control
-                // tooltip providers, weapon-mastery, and ClaimCommand use.
-                slot.setName("<color is=\"#ffffff\">" + formatItemName(itemId)
-                    + "</color>  <color is=\"#ffb74d\">" + unitPrice + " "
-                    + currencyName + "</color>");
+                // Tooltip header: plain text item name. Hytale's setName
+                // renderer does NOT parse <color> markup - it shows the tags
+                // literally. Only setDescription is markup-aware.
+                slot.setName(formatItemName(itemId));
 
-                // Tooltip description: stock (dynamic color) +
-                // mode-aware click hint.
+                // Tooltip description: price (moved from name so it can be
+                // colored via <color> markup), stock (dynamic color),
+                // mode-aware click hint. Same layout as the directory item
+                // search tooltip so both views feel consistent.
                 StringBuilder desc = new StringBuilder();
+                desc.append("<color is=\"#ffd700\">Price: ").append(unitPrice)
+                    .append(" ").append(currencyName).append("</color>\n");
+
                 if (item.isUnlimitedStock()) {
                     desc.append("<color is=\"#26c6da\">Stock: Unlimited</color>");
                 } else {

@@ -1007,11 +1007,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 // calls below.
                 //
                 // Uses Hytale's <color is="#RRGGBB">...</color> markup for
-                // per-line coloring. Verified format from DynamicTooltipsLib,
-                // weapon-mastery/MasteryTooltipBuilder, item-control
-                // SoulboundTooltipProvider, and mods/claims map rendering.
-                slot.setName("<color is=\"#ffffff\">"
-                    + ShopBrowsePage.formatItemName(itemId) + "</color>");
+                // per-line coloring in the DESCRIPTION only - setName does
+                // not parse the markup (it renders the tags literally), so
+                // the name stays plain text. Markup format verified from
+                // DynamicTooltipsLib, weapon-mastery/MasteryTooltipBuilder,
+                // item-control SoulboundTooltipProvider, and claims map.
+                slot.setName(ShopBrowsePage.formatItemName(itemId));
 
                 StringBuilder desc = new StringBuilder();
                 String shopName = shop.getName() != null ? shop.getName() : "Shop";
