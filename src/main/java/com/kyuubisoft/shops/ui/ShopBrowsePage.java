@@ -672,33 +672,43 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             : i18n.get(playerRef, "shop.browse.confirm.buy");
         ui.set("#ConfirmTitle.Text", confirmTitle);
 
-        // Item info
+        // Item info — uses Hytale's native <color> markup so the text
+        // renders with the intended colors without depending on the .ui
+        // Style.TextColor, which is not dynamically settable and whose
+        // static form was unreliable here. Markup format verified from
+        // DynamicTooltipsLib, mods/claims/ClaimCommand map rendering,
+        // and mods/weapon-mastery/MasteryTooltipBuilder.
         ui.set("#ConfirmIcon.ItemId", item.getItemId());
-        ui.set("#ConfirmItemName.Text", itemName);
+        ui.set("#ConfirmItemName.Text",
+            "<color is=\"#ffffff\">" + itemName + "</color>");
         ui.set("#ConfirmPrice.Text",
-            i18n.get(playerRef, "shop.browse.confirm.price", unitPrice));
+            "<color is=\"#ffb74d\">"
+                + i18n.get(playerRef, "shop.browse.confirm.price", unitPrice)
+                + "</color>");
 
-        // Stock line — visibility-toggle pattern because
-        // Label.Style.TextColor is not dynamically settable in Hytale UI.
-        // Four pre-colored labels: good (green) / low (amber) / crit (red)
-        // / unlim (cyan). Only the matching one is Visible.
+        // Stock line — only #ConfirmStock is used now; the multi-label
+        // visibility-toggle pattern was replaced with <color> markup, which
+        // DynamicTooltipsLib / MasteryTooltipBuilder / ClaimCommand all use
+        // successfully for per-segment text coloring. The three extra
+        // labels from the previous commit are left hidden (and empty).
         String stockText;
-        String activeLabel;
+        String stockColor;
         if (item.isUnlimitedStock()) {
             stockText = i18n.get(playerRef, "shop.browse.stock_unlimited");
-            activeLabel = "Unlim";
+            stockColor = "#26c6da";
         } else {
             int stock = item.getStock();
             stockText = i18n.get(playerRef, "shop.browse.stock_count", stock);
-            if (stock <= 2) activeLabel = "Crit";
-            else if (stock <= 10) activeLabel = "Low";
-            else activeLabel = "Good";
+            if (stock <= 2) stockColor = "#ff5252";
+            else if (stock <= 10) stockColor = "#ffb74d";
+            else stockColor = "#66bb6a";
         }
-        for (String key : new String[]{"Good", "Low", "Crit", "Unlim"}) {
-            boolean active = key.equals(activeLabel);
-            ui.set("#ConfirmStock" + key + ".Visible", active);
-            ui.set("#ConfirmStock" + key + ".Text", active ? stockText : "");
-        }
+        ui.set("#ConfirmStockGood.Visible", true);
+        ui.set("#ConfirmStockGood.Text",
+            "<color is=\"" + stockColor + "\">" + stockText + "</color>");
+        ui.set("#ConfirmStockLow.Visible", false);
+        ui.set("#ConfirmStockCrit.Visible", false);
+        ui.set("#ConfirmStockUnlim.Visible", false);
 
         // Quantity slider + big label (replaces the old +/- buttons).
         // SliderNumberField.Min/Max are static in the .ui (1..64); Java
@@ -706,9 +716,12 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#ConfirmQtySlider.Value", confirmQuantity);
         ui.set("#ConfirmQty.Text", String.valueOf(confirmQuantity));
 
-        // Total (no tax — grandTotal == subtotal)
+        // Total (no tax — grandTotal == subtotal). <color> markup for
+        // reliable coloring (same pattern as the other confirm labels).
         ui.set("#ConfirmTotal.Text",
-            i18n.get(playerRef, "shop.browse.confirm.total", grandTotal));
+            "<color is=\"#ffd700\">"
+                + i18n.get(playerRef, "shop.browse.confirm.total", grandTotal)
+                + "</color>");
 
         // Buttons
         ui.set("#ConfirmYes.Text", i18n.get(playerRef, "shop.browse.confirm.yes"));
