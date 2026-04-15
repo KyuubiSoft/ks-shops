@@ -367,9 +367,11 @@ public class ShopCommand extends AbstractCommandCollection {
                 if (rotation != null) rotY = rotation.y;
             } catch (Throwable ignored) {}
 
-            // Create the shop via ShopService (handles validation, cost, limits)
+            // Create the shop via ShopService (handles validation, cost, limits).
+            // Pass the Player so per-rank ks.shop.limit.shops.N permissions
+            // are honored by the max-shops check.
             CreateShopResult result = shopService.createPlayerShop(
-                playerRef, shopName, "", "", worldName, pos.x, pos.y, pos.z
+                playerRef, player, shopName, "", "", worldName, pos.x, pos.y, pos.z
             );
 
             if (!result.isSuccess()) {
@@ -1154,7 +1156,8 @@ public class ShopCommand extends AbstractCommandCollection {
                 return;
             }
 
-            int maxShops = plugin.getShopConfig().getData().playerShops.maxShopsPerPlayer;
+            int maxShops = com.kyuubisoft.shops.util.PermissionLimits.resolveMaxShops(
+                player, plugin.getShopConfig().getData().playerShops.maxShopsPerPlayer);
 
             double totalRevenue = 0;
             double totalTax = 0;

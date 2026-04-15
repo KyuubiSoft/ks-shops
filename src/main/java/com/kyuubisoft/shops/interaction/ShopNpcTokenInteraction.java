@@ -172,9 +172,13 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                 return;
             }
 
-            // Max shops per player (pre-check so we don't waste the token)
+            // Max shops per player (pre-check so we don't waste the token).
+            // Honors per-rank ks.shop.limit.shops.N permission overrides via
+            // PermissionLimits — highest matching N wins, falling back to
+            // the global config default.
             int ownedCount = plugin.getShopManager().getShopsByOwner(playerUuid).size();
-            int maxShops = cfg.getData().playerShops.maxShopsPerPlayer;
+            int maxShops = com.kyuubisoft.shops.util.PermissionLimits.resolveMaxShops(
+                player, cfg.getData().playerShops.maxShopsPerPlayer);
             if (ownedCount >= maxShops) {
                 player.sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.token.not_enough_shops")).color("#FF5555"));
@@ -185,7 +189,7 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
             String shopName = buildDefaultShopName(plugin, playerRef.getUsername());
 
             CreateShopResult result = shopService.createPlayerShop(
-                playerRef, shopName, "", "", worldName, pos.x, pos.y, pos.z
+                playerRef, player, shopName, "", "", worldName, pos.x, pos.y, pos.z
             );
 
             if (!result.isSuccess()) {

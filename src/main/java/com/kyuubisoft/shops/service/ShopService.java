@@ -519,16 +519,34 @@ public class ShopService {
     // ==================== SHOP CREATION ====================
 
     /**
+     * Backwards-compatible overload that uses the global config default for
+     * max-shops. Prefer the {@link #createPlayerShop(PlayerRef, Player, String,
+     * String, String, String, double, double, double)} overload below
+     * whenever a {@link Player} is available so per-rank
+     * {@code ks.shop.limit.shops.N} permissions are honored.
+     */
+    public CreateShopResult createPlayerShop(PlayerRef owner, String name, String category,
+                                             String description, String worldName,
+                                             double x, double y, double z) {
+        return createPlayerShop(owner, null, name, category, description,
+            worldName, x, y, z);
+    }
+
+    /**
      * Creates a new player-owned shop at the given world position.
      *
-     * <p>Returns a {@link CreateShopResult} wrapping either the created shop
-     * or a specific i18n error key so callers can surface targeted failure
-     * messages to the player instead of a generic "failed" string.</p>
+     * <p>If {@code player} is non-null, the max-shops limit is resolved via
+     * {@link com.kyuubisoft.shops.util.PermissionLimits#resolveMaxShops}
+     * which scans {@code ks.shop.limit.shops.N} permission nodes; the
+     * highest matching {@code N} (or the global default) wins. Pass
+     * {@code null} for {@code player} to fall back to the global default
+     * unconditionally - useful for system-spawned shops.</p>
      *
      * @return a {@link CreateShopResult} — never null; call {@link CreateShopResult#isSuccess()}
      *         to distinguish success from failure
      */
-    public CreateShopResult createPlayerShop(PlayerRef owner, String name, String category,
+    public CreateShopResult createPlayerShop(PlayerRef owner, Player player,
+                                             String name, String category,
                                              String description, String worldName,
                                              double x, double y, double z) {
         if (owner == null || name == null || name.isBlank()) {
@@ -550,11 +568,13 @@ public class ShopService {
             return CreateShopResult.error("shop.create.economy_unavailable");
         }
 
-        // --- Validate max shops not reached ---
+        // --- Validate max shops not reached (per-rank perm aware) ---
+        int maxShops = com.kyuubisoft.shops.util.PermissionLimits.resolveMaxShops(
+            player, cfg.playerShops.maxShopsPerPlayer);
         List<ShopData> ownedShops = shopManager.getShopsByOwner(ownerUuid);
-        if (ownedShops.size() >= cfg.playerShops.maxShopsPerPlayer) {
+        if (ownedShops.size() >= maxShops) {
             LOGGER.fine("Create rejected: player " + owner.getUsername()
-                + " reached max shops (" + cfg.playerShops.maxShopsPerPlayer + ")");
+                + " reached max shops (" + maxShops + ")");
             return CreateShopResult.error("shop.create.max_reached");
         }
 

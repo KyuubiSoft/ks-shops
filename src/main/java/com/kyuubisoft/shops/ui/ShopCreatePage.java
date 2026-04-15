@@ -211,7 +211,7 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
         }
 
         CreateShopResult result = plugin.getShopService().createPlayerShop(
-            playerRef, shopName, category, description,
+            playerRef, player, shopName, category, description,
             worldName, x, y, z
         );
 
