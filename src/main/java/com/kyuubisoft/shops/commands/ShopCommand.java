@@ -166,6 +166,15 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
+            // Admin kill-switch: features.directory = false hides the
+            // global directory entirely so visiting requires walking up
+            // to the NPC in person.
+            if (!plugin.getShopConfig().getData().features.directory) {
+                player.sendMessage(Message.raw(
+                    plugin.getI18n().get(playerRef, "shop.directory.disabled")
+                ).color("#FF5555"));
+                return;
+            }
             ShopDirectoryPage page = new ShopDirectoryPage(playerRef, player, plugin);
             player.getPageManager().openCustomPage(ref, store, page);
         }

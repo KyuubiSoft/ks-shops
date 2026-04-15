@@ -1,5 +1,5 @@
 {
-  "_localization_version": "21",
+  "_localization_version": "22",
 
   "shop.help.header": "=== KS-Shops Help ===",
   "shop.help.gs.header": "**KS-Shops - Getting Started**",
@@ -298,6 +298,7 @@
 
   "shop.directory.title": "SHOP DIRECTORY",
   "shop.directory.title.myshops": "YOUR SHOPS",
+  "shop.directory.disabled": "The shop directory is disabled on this server.",
   "shop.directory.by": "by {0}",
   "shop.directory.admin_shop": "Admin Shop",
   "shop.directory.tooltip.shop": "Shop: {0}",

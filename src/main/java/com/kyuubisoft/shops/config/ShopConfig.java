@@ -170,7 +170,7 @@ public class ShopConfig {
             // Clamp values
             if (playerShops.maxShopsPerPlayer < 1) playerShops.maxShopsPerPlayer = 1;
             if (playerShops.maxItemsPerShop < 1) playerShops.maxItemsPerShop = 9;
-            if (playerShops.maxItemsPerShop > 54) playerShops.maxItemsPerShop = 54;
+            if (playerShops.maxItemsPerShop > 45) playerShops.maxItemsPerShop = 45;
             if (tax.buyTaxPercent < 0) tax.buyTaxPercent = 0;
             if (tax.sellTaxPercent < 0) tax.sellTaxPercent = 0;
             if (ratings.minStars < 1) ratings.minStars = 1;
@@ -194,7 +194,9 @@ public class ShopConfig {
 
     public static class PlayerShops {
         public int maxShopsPerPlayer = 3;
-        public int maxItemsPerShop = 27;
+        // Matches the 9x5 = 45 native ItemGrid in ShopBrowsePage so a fully
+        // stocked shop can fill its entire display grid in one page.
+        public int maxItemsPerShop = 45;
         public int creationCost = 500;
         public boolean requireClaim = false;
         public boolean allowNpcCustomization = true;

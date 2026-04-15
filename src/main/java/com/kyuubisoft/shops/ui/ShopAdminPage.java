@@ -369,6 +369,15 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
             int actualIdx = shopsPage * SHOPS_PER_PAGE + rowIdx;
             if (actualIdx >= 0 && actualIdx < cachedShopsList.size()) {
                 ShopData shop = cachedShopsList.get(actualIdx);
+                // Despawn the live NPC entity FIRST - delete-only would leave
+                // an orphaned NPC standing in the world. Mirrors what the
+                // /kssa deleteadmin / deleteplayer commands already do.
+                try {
+                    plugin.getNpcManager().despawnNpc(shop.getId());
+                } catch (Exception npcEx) {
+                    LOGGER.warning("[ShopAdmin] despawnNpc failed for "
+                        + shop.getId() + ": " + npcEx.getMessage());
+                }
                 plugin.getShopManager().deleteShop(shop.getId());
                 statusMessage = "Deleted shop: " + shop.getName();
             }
@@ -474,6 +483,14 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
             int actualIdx = playersPage * PLAYERS_PER_PAGE + rowIdx;
             if (actualIdx >= 0 && actualIdx < cachedPlayerShops.size()) {
                 ShopData shop = cachedPlayerShops.get(actualIdx);
+                // Despawn the live NPC entity FIRST so the deleted shop's
+                // NPC actually disappears from the world.
+                try {
+                    plugin.getNpcManager().despawnNpc(shop.getId());
+                } catch (Exception npcEx) {
+                    LOGGER.warning("[ShopAdmin] despawnNpc failed for "
+                        + shop.getId() + ": " + npcEx.getMessage());
+                }
                 plugin.getShopManager().deleteShop(shop.getId());
                 statusMessage = "Deleted player shop: " + shop.getName();
             }

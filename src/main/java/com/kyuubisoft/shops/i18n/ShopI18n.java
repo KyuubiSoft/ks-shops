@@ -61,8 +61,10 @@ public class ShopI18n {
      *        confirm/visit/cancel) for the single-click fast-buy dialog
      * - v21: browse card grid — shop.browse.stock_count / stock_unlimited
      *        for the always-visible stock label below each browse card
+     * - v22: shop.directory.disabled — admin kill-switch error message
+     *        when features.directory is set to false in the server config
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 21;
+    private static final int CURRENT_LOCALIZATION_VERSION = 22;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();
