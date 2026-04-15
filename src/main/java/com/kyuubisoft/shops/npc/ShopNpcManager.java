@@ -441,7 +441,7 @@ public class ShopNpcManager {
 
             applySkinIfAvailable(shop, entityRef, world, store);
             applyNameTag(shop, entityRef, store);
-            cacheRotationTarget(shopId, entityRef, store, position);
+            cacheRotationTarget(shopId, entityRef, store, position, world);
 
             LOGGER.info("Standalone shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", position.x, position.y, position.z)
@@ -565,7 +565,7 @@ public class ShopNpcManager {
             applyNameTag(shop, entityRef, store);
 
             // Cache NetworkId + position for the look-at-player rotation tick.
-            cacheRotationTarget(shopId, entityRef, store, npcPosition);
+            cacheRotationTarget(shopId, entityRef, store, npcPosition, world);
 
             LOGGER.info("Shop NPC spawned: '" + shop.getName() + "' at ["
                 + String.format("%.1f, %.1f, %.1f", npcPosition.x, npcPosition.y, npcPosition.z)
@@ -596,24 +596,51 @@ public class ShopNpcManager {
     }
 
     /**
-     * Reads the spawned NPC's NetworkId from the ECS store and hands it to the
-     * rotation manager along with the spawn position. No-op when the config
-     * flag {@code npc.lookAtPlayer} is disabled. Must be called inside
-     * {@code world.execute()} (same context as spawn), since it reads an ECS
-     * component right after the entity was added to the store.
+     * Reads the spawned NPC's NetworkId from the ECS store and hands it to
+     * the rotation manager along with the spawn position. No-op when the
+     * config flag {@code npc.lookAtPlayer} is disabled.
+     *
+     * The NetworkId component is typically not attached to a freshly
+     * spawned entity in the same tick the spawn runs - it's committed at
+     * the end of the tick. Reading it immediately returns null and the
+     * shop would then never be added to the rotation tracker. We defer
+     * the read by one tick via a nested {@code world.execute(...)} so
+     * the NetworkId is guaranteed to be committed when we look it up.
+     *
+     * Must be called from inside {@code world.execute()} (same context
+     * as spawn) so that the nested deferral happens on the world thread.
      */
     private void cacheRotationTarget(UUID shopId, Ref<EntityStore> entityRef,
-                                      Store<EntityStore> store, Vector3d position) {
+                                      Store<EntityStore> store, Vector3d position,
+                                      World world) {
         if (!config.getData().npc.lookAtPlayer) return;
-        if (entityRef == null || !entityRef.isValid()) return;
-        try {
-            NetworkId nid = store.getComponent(entityRef, NetworkId.getComponentType());
-            if (nid != null) {
-                rotationManager.trackNpc(shopId, nid.getId(), position);
+        if (world == null) return;
+        final UUID trackedUuid = entityUuids.get(shopId);
+        world.execute(() -> {
+            try {
+                Ref<EntityStore> freshRef = (trackedUuid != null)
+                    ? world.getEntityRef(trackedUuid)
+                    : entityRef;
+                if (freshRef == null || !freshRef.isValid()) {
+                    LOGGER.fine("cacheRotationTarget: ref invalid for shop " + shopId);
+                    return;
+                }
+                var freshStore = world.getEntityStore().getStore();
+                NetworkId nid = freshStore.getComponent(
+                    freshRef, NetworkId.getComponentType());
+                if (nid != null) {
+                    rotationManager.trackNpc(shopId, nid.getId(), position);
+                    LOGGER.info("[Rotation] tracked shop NPC " + shopId
+                        + " netId=" + nid.getId());
+                } else {
+                    LOGGER.warning("[Rotation] NetworkId still null one tick after "
+                        + "spawn for shop " + shopId + " - NPC will not rotate.");
+                }
+            } catch (Exception e) {
+                LOGGER.warning("[Rotation] cacheRotationTarget failed for "
+                    + shopId + ": " + e.getMessage());
             }
-        } catch (Exception e) {
-            LOGGER.fine("cacheRotationTarget: failed for " + shopId + ": " + e.getMessage());
-        }
+        });
     }
 
     /**

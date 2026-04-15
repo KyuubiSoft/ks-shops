@@ -14,6 +14,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 
 /**
  * Rotates shop NPCs so each nearby player sees the NPC facing them.
@@ -29,12 +31,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ShopNpcRotationManager {
 
+    private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
+
     private static final double MAX_ROTATION_DISTANCE = 25.0;
     private static final double MAX_ROTATION_DISTANCE_SQ = MAX_ROTATION_DISTANCE * MAX_ROTATION_DISTANCE;
     private static final float YAW_THRESHOLD = 0.015f;
     private static final float PITCH_THRESHOLD = 0.015f;
 
     private final Map<UUID, TrackedNpc> trackedNpcs = new ConcurrentHashMap<>();
+
+    /** One-shot diagnostics so the user can see the pipeline fire end-to-end. */
+    private final AtomicBoolean firstTickLogged = new AtomicBoolean(false);
+    private final AtomicBoolean firstInRangeLogged = new AtomicBoolean(false);
+    private final AtomicBoolean firstPacketLogged = new AtomicBoolean(false);
 
     public void trackNpc(UUID shopId, int networkId, Vector3d position) {
         if (shopId == null || networkId <= 0 || position == null) return;
@@ -48,6 +57,9 @@ public final class ShopNpcRotationManager {
 
     public void clearAll() {
         trackedNpcs.clear();
+        firstTickLogged.set(false);
+        firstInRangeLogged.set(false);
+        firstPacketLogged.set(false);
     }
 
     public int getTrackedCount() {
@@ -65,6 +77,11 @@ public final class ShopNpcRotationManager {
     public void tick(Collection<? extends Player> onlinePlayers) {
         if (trackedNpcs.isEmpty() || onlinePlayers == null || onlinePlayers.isEmpty()) return;
 
+        if (firstTickLogged.compareAndSet(false, true)) {
+            LOGGER.info("[Rotation] first tick: tracked=" + trackedNpcs.size()
+                + " onlinePlayers=" + onlinePlayers.size());
+        }
+
         for (Map.Entry<UUID, TrackedNpc> entry : trackedNpcs.entrySet()) {
             TrackedNpc npc = entry.getValue();
             if (npc == null) continue;
@@ -79,6 +96,13 @@ public final class ShopNpcRotationManager {
                     double dz = playerPos.z - npc.z;
                     double distSq = dx * dx + dz * dz;
                     if (distSq > MAX_ROTATION_DISTANCE_SQ) continue;
+
+                    if (firstInRangeLogged.compareAndSet(false, true)) {
+                        LOGGER.info("[Rotation] first in-range check OK: shop="
+                            + entry.getKey() + " netId=" + npc.networkId
+                            + " player=" + playerRef.getUsername()
+                            + " distSq=" + String.format("%.1f", distSq));
+                    }
 
                     float yaw = (float) (Math.atan2(dx, dz) + Math.PI);
 
@@ -109,8 +133,17 @@ public final class ShopNpcRotationManager {
 
                     playerRef.getPacketHandler().write(packet);
                     npc.lastDirections.put(playerId, lookDirection);
-                } catch (Exception ignored) {
-                    // Best-effort; retry next tick.
+
+                    if (firstPacketLogged.compareAndSet(false, true)) {
+                        LOGGER.info("[Rotation] first rotation packet sent: shop="
+                            + entry.getKey() + " netId=" + npc.networkId
+                            + " player=" + playerRef.getUsername()
+                            + " yaw=" + String.format("%.3f", yaw)
+                            + " pitch=" + String.format("%.3f", pitch));
+                    }
+                } catch (Exception e) {
+                    LOGGER.fine("[Rotation] tick error for shop "
+                        + entry.getKey() + ": " + e.getMessage());
                 }
             }
         }
