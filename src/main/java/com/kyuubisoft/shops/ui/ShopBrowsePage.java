@@ -609,26 +609,37 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                     slot = new ItemGridSlot();
                 }
 
-                // Tooltip header: item name with price inline so buyers see
-                // the cost the moment they hover over a slot. Plain text -
-                // Hytale's slot tooltip renderer does not parse Minecraft
-                // §-color codes, they render literally.
-                slot.setName(formatItemName(itemId)
-                    + "  -  " + unitPrice + " " + currencyName);
+                // Tooltip header: item name + price with <color> markup.
+                // Hytale's native text pipeline parses
+                // <color is="#RRGGBB">...</color> tags for per-segment
+                // coloring - same format DynamicTooltipsLib, item-control
+                // tooltip providers, weapon-mastery, and ClaimCommand use.
+                slot.setName("<color is=\"#ffffff\">" + formatItemName(itemId)
+                    + "</color>  <color is=\"#ffb74d\">" + unitPrice + " "
+                    + currencyName + "</color>");
 
-                // Tooltip description: stock + mode-aware click hint.
+                // Tooltip description: stock (dynamic color) +
+                // mode-aware click hint.
                 StringBuilder desc = new StringBuilder();
                 if (item.isUnlimitedStock()) {
-                    desc.append("Stock: Unlimited");
+                    desc.append("<color is=\"#26c6da\">Stock: Unlimited</color>");
                 } else {
-                    desc.append("Stock: ").append(item.getStock());
+                    int s = item.getStock();
+                    String stockColor;
+                    if (s <= 2) stockColor = "#ff5252";
+                    else if (s <= 10) stockColor = "#ffb74d";
+                    else stockColor = "#66bb6a";
+                    desc.append("<color is=\"").append(stockColor)
+                        .append("\">Stock: ").append(s).append("</color>");
                 }
                 desc.append('\n');
+                desc.append("<color is=\"#888888\">");
                 if (mode == Mode.SELL) {
                     desc.append("Click to sell");
                 } else {
                     desc.append("Click to buy");
                 }
+                desc.append("</color>");
                 slot.setDescription(desc.toString());
             } else {
                 slot = new ItemGridSlot();

@@ -1004,32 +1004,46 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 // tooltip (enchantments, custom stats, DTT extras) is still
                 // rendered by the client; only the name/description lines
                 // are overridden by the slot-level setName/setDescription
-                // calls below. Plain text only - Hytale's slot tooltip
-                // renderer does not parse Minecraft §-color codes, they
-                // render literally.
-                slot.setName(ShopBrowsePage.formatItemName(itemId));
+                // calls below.
+                //
+                // Uses Hytale's <color is="#RRGGBB">...</color> markup for
+                // per-line coloring. Verified format from DynamicTooltipsLib,
+                // weapon-mastery/MasteryTooltipBuilder, item-control
+                // SoulboundTooltipProvider, and mods/claims map rendering.
+                slot.setName("<color is=\"#ffffff\">"
+                    + ShopBrowsePage.formatItemName(itemId) + "</color>");
 
                 StringBuilder desc = new StringBuilder();
                 String shopName = shop.getName() != null ? shop.getName() : "Shop";
-                desc.append("Shop: ").append(shopName).append('\n');
+                desc.append("<color is=\"#4fc3f7\">Shop: ")
+                    .append(shopName).append("</color>\n");
 
                 if (shop.isAdminShop()) {
-                    desc.append("Admin Shop");
+                    desc.append("<color is=\"#ce93d8\">Admin Shop</color>");
                 } else if (shop.getOwnerName() != null) {
-                    desc.append("by ").append(shop.getOwnerName());
+                    desc.append("<color is=\"#9fa8da\">by ")
+                        .append(shop.getOwnerName()).append("</color>");
                 }
                 desc.append('\n');
 
-                desc.append("Price: ").append(item.getBuyPrice()).append(" Gold")
-                    .append('\n');
+                desc.append("<color is=\"#ffd700\">Price: ")
+                    .append(item.getBuyPrice()).append(" Gold</color>\n");
 
                 if (item.isUnlimitedStock()) {
-                    desc.append("Stock: Unlimited");
+                    desc.append("<color is=\"#26c6da\">Stock: Unlimited</color>");
                 } else {
-                    desc.append("Stock: ").append(item.getStock());
+                    int s = item.getStock();
+                    String stockColor;
+                    if (s <= 2) stockColor = "#ff5252";
+                    else if (s <= 5) stockColor = "#ffb74d";
+                    else stockColor = "#66bb6a";
+                    desc.append("<color is=\"").append(stockColor)
+                        .append("\">Stock: ").append(s).append("</color>");
                 }
                 desc.append('\n');
-                desc.append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"));
+                desc.append("<color is=\"#888888\">")
+                    .append(i18n.get(playerRef, "shop.directory.tooltip.click_hint"))
+                    .append("</color>");
 
                 slot.setDescription(desc.toString());
             } else {
