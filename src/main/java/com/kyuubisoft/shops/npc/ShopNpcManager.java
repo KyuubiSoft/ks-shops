@@ -650,13 +650,17 @@ public class ShopNpcManager {
             }
         }
 
-        if (skinUsername == null || skinUsername.isEmpty()) return;
+        if (skinUsername == null || skinUsername.isEmpty()) {
+            LOGGER.info("[Skin] No username resolved for shop '" + shop.getName()
+                + "' - NPC will keep default appearance");
+            return;
+        }
 
         // Standalone: use our own ShopSkinManager (PlayerDB + CosmeticsModule).
         // No Core dependency needed.
         com.kyuubisoft.shops.skin.ShopSkinManager skinManager = plugin.getSkinManager();
         if (skinManager == null) {
-            LOGGER.fine("ShopSkinManager not initialized - skipping skin apply for " + shop.getName());
+            LOGGER.warning("[Skin] ShopSkinManager not initialized - skipping skin apply for " + shop.getName());
             return;
         }
 
@@ -668,29 +672,36 @@ public class ShopNpcManager {
         // a committed entity.
         final String resolvedUsername = skinUsername;
         final UUID shopId = shop.getId();
+        LOGGER.info("[Skin] Fetching skin '" + resolvedUsername + "' for shop '"
+            + shop.getName() + "'");
         skinManager.fetchSkin(resolvedUsername).thenAcceptAsync(skin -> {
-            if (skin == null) return;
+            if (skin == null) {
+                LOGGER.warning("[Skin] fetchSkin returned null for '" + resolvedUsername
+                    + "' (shop '" + shop.getName() + "') - NPC keeps default");
+                return;
+            }
             try {
                 UUID npcUuid = entityUuids.get(shopId);
                 if (npcUuid == null) {
-                    LOGGER.fine("applySkinIfAvailable: shop " + shop.getName()
-                        + " has no tracked NPC UUID - skipping");
+                    LOGGER.warning("[Skin] shop '" + shop.getName()
+                        + "' has no tracked NPC UUID at apply time - skipping");
                     return;
                 }
                 Ref<EntityStore> freshRef = world.getEntityRef(npcUuid);
                 if (freshRef == null || !freshRef.isValid()) {
-                    LOGGER.fine("applySkinIfAvailable: fresh ref invalid for "
-                        + shop.getName() + " - NPC may have been removed");
+                    LOGGER.warning("[Skin] fresh ref invalid for '" + shop.getName()
+                        + "' - NPC may have been removed before skin apply");
                     return;
                 }
                 skinManager.applySkin(freshRef, skin, 1.0f);
-                LOGGER.fine("Applied skin '" + resolvedUsername + "' to shop NPC: " + shop.getName());
+                LOGGER.info("[Skin] Applied '" + resolvedUsername + "' to shop NPC: "
+                    + shop.getName());
             } catch (Exception e) {
-                LOGGER.warning("Skin apply failed for shop '" + shop.getName()
+                LOGGER.warning("[Skin] apply failed for shop '" + shop.getName()
                     + "' (username=" + resolvedUsername + "): " + e.getMessage());
             }
         }, world::execute).exceptionally(ex -> {
-            LOGGER.warning("Skin fetch failed for shop '" + shop.getName()
+            LOGGER.warning("[Skin] fetch failed for shop '" + shop.getName()
                 + "' (username=" + resolvedUsername + "): " + ex.getMessage());
             return null;
         });
