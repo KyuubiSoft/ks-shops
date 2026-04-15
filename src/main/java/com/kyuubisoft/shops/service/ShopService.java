@@ -660,6 +660,65 @@ public class ShopService {
         return CreateShopResult.success(shopData);
     }
 
+    /**
+     * Creates a new admin shop at the given position. Admin shops have no
+     * owner, no creation cost, and no max-shops limit - any op with
+     * {@code ks.shop.admin} may call this via {@code /kssa createadmin}.
+     *
+     * @param name the display name + implicit UUID seed (name must be unique
+     *             across all shops; see the uniqueness check inside)
+     * @return a {@link CreateShopResult} — never null
+     */
+    public CreateShopResult createAdminShop(String name, String category,
+                                             String description, String worldName,
+                                             double x, double y, double z) {
+        if (name == null || name.isBlank()) {
+            return CreateShopResult.error("shop.create.name_too_short");
+        }
+
+        ShopConfig.ConfigData cfg = config.getData();
+        if (!cfg.features.adminShops) {
+            return CreateShopResult.error("shop.create.disabled");
+        }
+
+        String trimmedName = name.trim();
+        if (trimmedName.length() < cfg.playerShops.nameMinLength) {
+            return CreateShopResult.error("shop.create.name_too_short");
+        }
+        if (trimmedName.length() > cfg.playerShops.nameMaxLength) {
+            return CreateShopResult.error("shop.create.name_too_long");
+        }
+
+        // Uniqueness check - shares the same namespace as player shops.
+        for (ShopData existing : shopManager.getAllShops()) {
+            if (existing.getName().equalsIgnoreCase(trimmedName)) {
+                return CreateShopResult.error("shop.create.name_taken");
+            }
+        }
+
+        ShopData shopData = new ShopData(
+            trimmedName,
+            description != null ? description : "",
+            ShopType.ADMIN,
+            null,   // no owner
+            null,   // no owner name
+            worldName,
+            x, y, z,
+            0.0f
+        );
+        shopData.setCategory(category != null ? category : "");
+
+        shopManager.createShop(shopData);
+
+        ShopEventBus.getInstance().fire(new ShopCreateEvent(
+            shopData.getId(), ShopType.ADMIN, null, trimmedName
+        ));
+
+        LOGGER.info("Admin shop created: '" + trimmedName + "' at "
+            + worldName + " [" + (int) x + ", " + (int) y + ", " + (int) z + "]");
+        return CreateShopResult.success(shopData);
+    }
+
     // ==================== SHOP DELETION ====================
 
     /**

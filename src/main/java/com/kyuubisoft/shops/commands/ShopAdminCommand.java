@@ -48,6 +48,7 @@ public class ShopAdminCommand extends AbstractCommandCollection {
 
         addSubCommand(new AdminPanelCmd());
         addSubCommand(new CreateAdminCmd());
+        addSubCommand(new EditAdminCmd());
         addSubCommand(new DeleteAdminCmd());
         addSubCommand(new DeletePlayerCmd());
         addSubCommand(new ClosePlayerCmd());
@@ -80,21 +81,153 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         }
     }
 
-    private class CreateAdminCmd extends CommandBase {
+    private class CreateAdminCmd extends AbstractPlayerCommand {
         @Override protected boolean canGeneratePermission() { return false; }
         CreateAdminCmd() {
-            super("createadmin", "Create an admin shop");
+            super("createadmin", "Create an admin shop at your position");
             requirePermission("ks.shop.admin");
-            withRequiredArg("id", "Shop ID", ArgTypes.STRING);
             withRequiredArg("title", "Shop title", ArgTypes.GREEDY_STRING);
         }
 
-        protected void executeSync(CommandContext ctx) {
-            String[] parts = ctx.getInputString().split("\\s+", 4);
-            String id = parts.length > 2 ? parts[2] : "";
-            String title = parts.length > 3 ? parts[3] : "";
-            // TODO: Create admin shop at sender location
-            ctx.sender().sendMessage(Message.raw(plugin.getI18n().get("shop.admin.create.success", title)).color("#44FF44"));
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+
+            // Parse greedy title (everything after the subcommand token).
+            String[] parts = ctx.getInputString().split("\\s+", 3);
+            String title = parts.length > 2 ? parts[2] : "";
+            if (title.isBlank()) {
+                player.sendMessage(Message.raw(
+                    "Usage: /kssa createadmin <title>"
+                ).color("#FF5555"));
+                return;
+            }
+
+            // Resolve spawn position from the player's transform.
+            TransformComponent tc = player.getTransformComponent();
+            if (tc == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.create.failed")
+                ).color("#FF5555"));
+                return;
+            }
+            Vector3d pos = tc.getPosition();
+            float rotY = 0.0f;
+            try {
+                var rotation = tc.getRotation();
+                if (rotation != null) rotY = rotation.y;
+            } catch (Throwable ignored) {}
+            String worldName = world.getName();
+
+            var result = plugin.getShopService().createAdminShop(
+                title, "", "", worldName, pos.x, pos.y, pos.z
+            );
+            if (!result.isSuccess()) {
+                String errorKey = result.getErrorKey() != null
+                    ? result.getErrorKey()
+                    : "shop.create.failed";
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, errorKey)
+                ).color("#FF5555"));
+                return;
+            }
+
+            ShopData newShop = result.getShop();
+            newShop.setNpcRotY(rotY);
+            plugin.getNpcManager().registerShopInWorld(newShop);
+            final float finalRotY = rotY;
+            world.execute(() ->
+                plugin.getNpcManager().spawnNpcAtPosition(newShop, world, pos, finalRotY));
+
+            player.sendMessage(Message.raw(
+                plugin.getI18n().get("shop.admin.create.success", title)
+            ).color("#44FF44"));
+            player.sendMessage(Message.raw(
+                "Use /kssa editadmin to add items to this shop."
+            ).color("#96a9be"));
+        }
+    }
+
+    /**
+     * Opens the drag-and-drop editor on the nearest admin shop. Same
+     * mechanism as /ksshop edit but drops the owner-check so the admin
+     * can populate shops they do not personally own.
+     */
+    private class EditAdminCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        EditAdminCmd() {
+            super("editadmin", "Edit the nearest admin shop");
+            requirePermission("ks.shop.admin");
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+
+            TransformComponent tc = player.getTransformComponent();
+            double px = 0, py = 0, pz = 0;
+            if (tc != null) {
+                Vector3d pos = tc.getPosition();
+                px = pos.x;
+                py = pos.y;
+                pz = pos.z;
+            }
+
+            ShopData nearest = null;
+            double nearestDistSq = Double.MAX_VALUE;
+            for (ShopData shop : plugin.getShopManager().getAllShops()) {
+                if (!shop.isAdminShop()) continue;
+                if (!world.getName().equals(shop.getWorldName())) continue;
+                double dx = shop.getPosX() - px;
+                double dy = shop.getPosY() - py;
+                double dz = shop.getPosZ() - pz;
+                double distSq = dx * dx + dy * dy + dz * dz;
+                if (distSq < nearestDistSq) {
+                    nearestDistSq = distSq;
+                    nearest = shop;
+                }
+            }
+            if (nearest == null) {
+                player.sendMessage(Message.raw(
+                    "No admin shop in this world. Use /kssa createadmin <title> first."
+                ).color("#FF5555"));
+                return;
+            }
+
+            if (!plugin.getSessionManager().lockEditor(nearest.getId(), playerRef.getUuid())) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.editor_locked")
+                ).color("#FF5555"));
+                return;
+            }
+
+            final ShopData targetShop = nearest;
+            final UUID shopUuid = targetShop.getId();
+            final UUID playerUuid = playerRef.getUuid();
+            try {
+                com.kyuubisoft.shops.ui.ShopEditPage editPage =
+                    new com.kyuubisoft.shops.ui.ShopEditPage(playerRef, player, plugin, targetShop);
+                com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow window =
+                    new com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow(
+                        editPage.getStagingContainer());
+                window.registerCloseEvent(event -> {
+                    editPage.onWindowClose();
+                    plugin.getSessionManager().unlockEditor(shopUuid, playerUuid);
+                });
+                player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
+                player.sendMessage(Message.raw(
+                    "Editing admin shop: " + targetShop.getName()
+                ).color("#55FF55"));
+            } catch (Exception e) {
+                plugin.getSessionManager().unlockEditor(shopUuid, playerUuid);
+                player.sendMessage(Message.raw(
+                    "Failed to open admin shop editor: " + e.getMessage()
+                ).color("#FF5555"));
+            }
         }
     }
 
