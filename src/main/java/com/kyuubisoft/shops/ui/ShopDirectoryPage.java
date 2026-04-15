@@ -734,49 +734,60 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         // Item icon
         ui.set("#DirConfirmIcon.ItemId", item.getItemId());
 
-        // Item name (white) + shop (cyan) + owner (lavender). Owner + shop
-        // colors are driven by the .ui styles; only the Text is pushed here.
-        ui.set("#DirConfirmItemName.Text", ShopBrowsePage.formatItemName(item.getItemId()));
+        // Every coloured line below uses Hytale's <color is="#RRGGBB">...
+        // </color> markup because Label.Style.TextColor cannot be set
+        // dynamically from Java (verified pitfall). Same markup format
+        // DynamicTooltipsLib / weapon-mastery / item-control providers use.
+        ui.set("#DirConfirmItemName.Text",
+            "<color is=\"#ffffff\">"
+                + ShopBrowsePage.formatItemName(item.getItemId())
+                + "</color>");
         ui.set("#DirConfirmShop.Text",
-            i18n.get(playerRef, "shop.directory.tooltip.shop",
-                shop.getName() != null ? shop.getName() : "Shop"));
+            "<color is=\"#4fc3f7\">"
+                + i18n.get(playerRef, "shop.directory.tooltip.shop",
+                    shop.getName() != null ? shop.getName() : "Shop")
+                + "</color>");
         if (shop.isAdminShop()) {
-            ui.set("#DirConfirmOwner.Text", i18n.get(playerRef, "shop.directory.admin_shop"));
-            // Admin shops get a distinctive magenta accent on the owner line.
-            ui.set("#DirConfirmOwner.Style.TextColor", "#ce93d8");
+            ui.set("#DirConfirmOwner.Text",
+                "<color is=\"#ce93d8\">"
+                    + i18n.get(playerRef, "shop.directory.admin_shop")
+                    + "</color>");
         } else if (shop.getOwnerName() != null) {
             ui.set("#DirConfirmOwner.Text",
-                i18n.get(playerRef, "shop.directory.tooltip.owner", shop.getOwnerName()));
-            ui.set("#DirConfirmOwner.Style.TextColor", "#9fa8da");
+                "<color is=\"#9fa8da\">"
+                    + i18n.get(playerRef, "shop.directory.tooltip.owner",
+                        shop.getOwnerName())
+                    + "</color>");
         } else {
             ui.set("#DirConfirmOwner.Text", "");
         }
 
-        // Price per unit (warm orange so it stands apart from the gold total
-        // at the bottom of the dialog — same info in two places but visually
-        // distinct so the eye doesn't confuse "per unit" with "grand total").
+        // Price per unit (warm amber so it stands apart from the gold total
+        // at the bottom of the dialog).
         ui.set("#DirConfirmPrice.Text",
-            i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice));
-        ui.set("#DirConfirmPrice.Style.TextColor", "#ffb74d");
+            "<color is=\"#ffb74d\">"
+                + i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice)
+                + "</color>");
 
         // Stock: dynamic color based on remaining quantity.
         //   unlimited -> cyan  (#26c6da)
         //   > 10      -> green (#66bb6a)
         //   3-10      -> amber (#ffb74d)
         //   1-2       -> red   (#ff5252)
+        String stockText;
+        String stockColor;
         if (item.isUnlimitedStock()) {
-            ui.set("#DirConfirmStock.Text", i18n.get(playerRef, "shop.directory.buy.stock_unlimited"));
-            ui.set("#DirConfirmStock.Style.TextColor", "#26c6da");
+            stockText = i18n.get(playerRef, "shop.directory.buy.stock_unlimited");
+            stockColor = "#26c6da";
         } else {
             int stock = item.getStock();
-            ui.set("#DirConfirmStock.Text",
-                i18n.get(playerRef, "shop.directory.buy.stock", stock));
-            String stockColor;
+            stockText = i18n.get(playerRef, "shop.directory.buy.stock", stock);
             if (stock <= 2) stockColor = "#ff5252";
             else if (stock <= 10) stockColor = "#ffb74d";
             else stockColor = "#66bb6a";
-            ui.set("#DirConfirmStock.Style.TextColor", stockColor);
         }
+        ui.set("#DirConfirmStock.Text",
+            "<color is=\"" + stockColor + "\">" + stockText + "</color>");
 
         // Quantity slider + big label (replaces the old +/- buttons). Slider
         // Min/Max are 1..64 static; Java clamps the real purchase to current
@@ -786,7 +797,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
 
         // Total (gold)
         ui.set("#DirConfirmTotal.Text",
-            i18n.get(playerRef, "shop.directory.buy.total", grandTotal));
+            "<color is=\"#ffd700\">"
+                + i18n.get(playerRef, "shop.directory.buy.total", grandTotal)
+                + "</color>");
 
         // Button labels
         ui.set("#DirConfirmBuy.Text", i18n.get(playerRef, "shop.directory.buy.confirm"));
@@ -795,36 +808,19 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     }
 
     private void buildModeHighlights(UICommandBuilder ui) {
-        String activeColor = "#bfcdd5";
-        String inactiveColor = "#778899";
-
+        // Text color swap is not possible at runtime (Style.TextColor is
+        // not dynamically settable). The indicator bar below each label
+        // communicates the active state visually.
         boolean shopsActive = !"items".equals(searchMode);
         boolean itemsActive = "items".equals(searchMode);
-
-        ui.set("#ModeBar #ModeShopsLabel.Style.TextColor",
-            shopsActive ? activeColor : inactiveColor);
-        ui.set("#ModeBar #ModeItemsLabel.Style.TextColor",
-            itemsActive ? activeColor : inactiveColor);
-
         ui.set("#ModeBar #ModeShopsInd.Visible", shopsActive);
         ui.set("#ModeBar #ModeItemsInd.Visible", itemsActive);
     }
 
     private void buildTabHighlights(UICommandBuilder ui) {
-        // Active tab gets highlighted label color, inactive gets dim
-        String activeColor = "#bfcdd5";
-        String inactiveColor = "#778899";
-
-        ui.set("#TabBar #TabAllLabel.Style.TextColor",
-            "all".equals(currentTab) ? activeColor : inactiveColor);
-        ui.set("#TabBar #TabAdminLabel.Style.TextColor",
-            "admin".equals(currentTab) ? activeColor : inactiveColor);
-        ui.set("#TabBar #TabPlayerLabel.Style.TextColor",
-            "player".equals(currentTab) ? activeColor : inactiveColor);
-        ui.set("#TabBar #TabFeaturedLabel.Style.TextColor",
-            "featured".equals(currentTab) ? activeColor : inactiveColor);
-
-        // Tab highlight: use Visible indicator bars instead of Style swap (Style is not dynamically settable)
+        // Text color swap is not possible at runtime (Style.TextColor is
+        // not dynamically settable). The indicator bar under each tab
+        // communicates the active state visually.
         ui.set("#TabBar #TabAllInd.Visible", "all".equals(currentTab));
         ui.set("#TabBar #TabAdminInd.Visible", "admin".equals(currentTab));
         ui.set("#TabBar #TabPlayerInd.Visible", "player".equals(currentTab));
@@ -918,17 +914,24 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 double distance = Math.sqrt(dx * dx + dz * dz);
                 ui.set("#DDistance" + i + ".Text", formatDistance(distance));
 
-                // Status badge
+                // Status badge — dynamic color via <color> markup because
+                // Label.Style.TextColor is not runtime-settable.
+                String statusKey;
+                String statusColor;
                 if (shop.isFeatured() && shop.getFeaturedUntil() > System.currentTimeMillis()) {
-                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.featured"));
-                    ui.set("#DStatus" + i + ".Style.TextColor", "#ffd700");
+                    statusKey = "shop.directory.status.featured";
+                    statusColor = "#ffd700";
                 } else if (shop.isOpen()) {
-                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.open"));
-                    ui.set("#DStatus" + i + ".Style.TextColor", "#4caf50");
+                    statusKey = "shop.directory.status.open";
+                    statusColor = "#4caf50";
                 } else {
-                    ui.set("#DStatus" + i + ".Text", i18n.get(playerRef, "shop.directory.status.closed"));
-                    ui.set("#DStatus" + i + ".Style.TextColor", "#cc4444");
+                    statusKey = "shop.directory.status.closed";
+                    statusColor = "#cc4444";
                 }
+                ui.set("#DStatus" + i + ".Text",
+                    "<color is=\"" + statusColor + "\">"
+                        + i18n.get(playerRef, statusKey)
+                        + "</color>");
 
                 // Category
                 if (shop.getCategory() != null && !shop.getCategory().isEmpty()) {

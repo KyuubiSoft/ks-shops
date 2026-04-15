@@ -698,11 +698,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                 + i18n.get(playerRef, "shop.browse.confirm.price", unitPrice)
                 + "</color>");
 
-        // Stock line — only #ConfirmStock is used now; the multi-label
-        // visibility-toggle pattern was replaced with <color> markup, which
-        // DynamicTooltipsLib / MasteryTooltipBuilder / ClaimCommand all use
-        // successfully for per-segment text coloring. The three extra
-        // labels from the previous commit are left hidden (and empty).
+        // Stock line — single label, coloured via <color> markup embedded
+        // in the Text string. cyan unlimited / green 11+ / amber 3-10 /
+        // red 1-2.
         String stockText;
         String stockColor;
         if (item.isUnlimitedStock()) {
@@ -715,12 +713,8 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             else if (stock <= 10) stockColor = "#ffb74d";
             else stockColor = "#66bb6a";
         }
-        ui.set("#ConfirmStockGood.Visible", true);
-        ui.set("#ConfirmStockGood.Text",
+        ui.set("#ConfirmStock.Text",
             "<color is=\"" + stockColor + "\">" + stockText + "</color>");
-        ui.set("#ConfirmStockLow.Visible", false);
-        ui.set("#ConfirmStockCrit.Visible", false);
-        ui.set("#ConfirmStockUnlim.Visible", false);
 
         // Quantity slider + big label (replaces the old +/- buttons).
         // SliderNumberField.Min/Max are static in the .ui (1..64); Java
