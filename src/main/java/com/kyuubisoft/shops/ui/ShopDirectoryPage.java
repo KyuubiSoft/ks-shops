@@ -734,60 +734,54 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         // Item icon
         ui.set("#DirConfirmIcon.ItemId", item.getItemId());
 
-        // Every coloured line below uses Hytale's <color is="#RRGGBB">...
-        // </color> markup because Label.Style.TextColor cannot be set
-        // dynamically from Java (verified pitfall). Same markup format
-        // DynamicTooltipsLib / weapon-mastery / item-control providers use.
+        // Plain text pushed to the pre-styled Labels. Label.Text does NOT
+        // parse <color> markup - the .ui Style.TextColor is the source of
+        // truth for per-label color. Dynamic coloring (admin vs player
+        // owner, stock severity) uses the visibility-toggle pattern.
         ui.set("#DirConfirmItemName.Text",
-            "<color is=\"#ffffff\">"
-                + ShopBrowsePage.formatItemName(item.getItemId())
-                + "</color>");
+            ShopBrowsePage.formatItemName(item.getItemId()));
         ui.set("#DirConfirmShop.Text",
-            "<color is=\"#4fc3f7\">"
-                + i18n.get(playerRef, "shop.directory.tooltip.shop",
-                    shop.getName() != null ? shop.getName() : "Shop")
-                + "</color>");
-        if (shop.isAdminShop()) {
-            ui.set("#DirConfirmOwner.Text",
-                "<color is=\"#ce93d8\">"
-                    + i18n.get(playerRef, "shop.directory.admin_shop")
-                    + "</color>");
+            i18n.get(playerRef, "shop.directory.tooltip.shop",
+                shop.getName() != null ? shop.getName() : "Shop"));
+
+        // Owner line: two pre-coloured labels (#DirConfirmOwnerPlayer /
+        // #DirConfirmOwnerAdmin) with visibility toggled for the dynamic
+        // magenta-vs-lavender distinction.
+        boolean isAdmin = shop.isAdminShop();
+        ui.set("#DirConfirmOwnerPlayer.Visible", !isAdmin && shop.getOwnerName() != null);
+        ui.set("#DirConfirmOwnerAdmin.Visible", isAdmin);
+        if (isAdmin) {
+            ui.set("#DirConfirmOwnerAdmin.Text",
+                i18n.get(playerRef, "shop.directory.admin_shop"));
         } else if (shop.getOwnerName() != null) {
-            ui.set("#DirConfirmOwner.Text",
-                "<color is=\"#9fa8da\">"
-                    + i18n.get(playerRef, "shop.directory.tooltip.owner",
-                        shop.getOwnerName())
-                    + "</color>");
-        } else {
-            ui.set("#DirConfirmOwner.Text", "");
+            ui.set("#DirConfirmOwnerPlayer.Text",
+                i18n.get(playerRef, "shop.directory.tooltip.owner", shop.getOwnerName()));
         }
 
-        // Price per unit (warm amber so it stands apart from the gold total
-        // at the bottom of the dialog).
+        // Price per unit (static amber color in .ui)
         ui.set("#DirConfirmPrice.Text",
-            "<color is=\"#ffb74d\">"
-                + i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice)
-                + "</color>");
+            i18n.get(playerRef, "shop.directory.buy.price_each", unitPrice));
 
-        // Stock: dynamic color based on remaining quantity.
-        //   unlimited -> cyan  (#26c6da)
-        //   > 10      -> green (#66bb6a)
-        //   3-10      -> amber (#ffb74d)
-        //   1-2       -> red   (#ff5252)
+        // Stock: visibility-toggle pattern with 4 pre-coloured labels
+        // (#DirConfirmStockGood/Low/Crit/Unlim). Only the matching one is
+        // Visible. Same pattern as ShopBrowsePage confirm overlay.
         String stockText;
-        String stockColor;
+        String activeStock;
         if (item.isUnlimitedStock()) {
             stockText = i18n.get(playerRef, "shop.directory.buy.stock_unlimited");
-            stockColor = "#26c6da";
+            activeStock = "Unlim";
         } else {
             int stock = item.getStock();
             stockText = i18n.get(playerRef, "shop.directory.buy.stock", stock);
-            if (stock <= 2) stockColor = "#ff5252";
-            else if (stock <= 10) stockColor = "#ffb74d";
-            else stockColor = "#66bb6a";
+            if (stock <= 2) activeStock = "Crit";
+            else if (stock <= 10) activeStock = "Low";
+            else activeStock = "Good";
         }
-        ui.set("#DirConfirmStock.Text",
-            "<color is=\"" + stockColor + "\">" + stockText + "</color>");
+        for (String key : new String[]{"Good", "Low", "Crit", "Unlim"}) {
+            boolean active = key.equals(activeStock);
+            ui.set("#DirConfirmStock" + key + ".Visible", active);
+            ui.set("#DirConfirmStock" + key + ".Text", active ? stockText : "");
+        }
 
         // Quantity slider + big label (replaces the old +/- buttons). Slider
         // Min/Max are 1..64 static; Java clamps the real purchase to current
@@ -795,11 +789,9 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         ui.set("#DirConfirmQtySlider.Value", buyConfirmQuantity);
         ui.set("#DirConfirmQty.Text", String.valueOf(buyConfirmQuantity));
 
-        // Total (gold)
+        // Total (static gold color in .ui)
         ui.set("#DirConfirmTotal.Text",
-            "<color is=\"#ffd700\">"
-                + i18n.get(playerRef, "shop.directory.buy.total", grandTotal)
-                + "</color>");
+            i18n.get(playerRef, "shop.directory.buy.total", grandTotal));
 
         // Button labels
         ui.set("#DirConfirmBuy.Text", i18n.get(playerRef, "shop.directory.buy.confirm"));

@@ -376,13 +376,34 @@ $C.@PageOverlay {
           Group { FlexWeight: 1; }
         }
 
-        // Stock line — single label, coloured dynamically via <color>
-        // markup embedded in the Text string pushed from Java. Replaces
-        // the previous 4-label visibility-toggle pattern.
-        Label #ConfirmStock {
+        // Stock line — four pre-coloured labels with visibility toggled
+        // from Java. Label.Text does NOT parse <color> markup (only
+        // ItemGridSlot tooltips do), so dynamic colors can only be
+        // achieved by flipping Visible on one of several pre-styled
+        // labels. Pitfall: Style.TextColor is also not dynamically
+        // settable at runtime.
+        Label #ConfirmStockGood {
           Anchor: (Height: 16);
-          Style: (FontSize: 11, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Style: (FontSize: 11, TextColor: #66bb6a, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
           Text: "";
+        }
+        Label #ConfirmStockLow {
+          Anchor: (Height: 16);
+          Style: (FontSize: 11, TextColor: #ffb74d, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Visible: false;
+        }
+        Label #ConfirmStockCrit {
+          Anchor: (Height: 16);
+          Style: (FontSize: 11, TextColor: #ff5252, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Visible: false;
+        }
+        Label #ConfirmStockUnlim {
+          Anchor: (Height: 16);
+          Style: (FontSize: 11, TextColor: #26c6da, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          Text: "";
+          Visible: false;
         }
 
         Group { Anchor: (Height: 6); }

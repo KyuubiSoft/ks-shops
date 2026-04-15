@@ -684,37 +684,35 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             : i18n.get(playerRef, "shop.browse.confirm.buy");
         ui.set("#ConfirmTitle.Text", confirmTitle);
 
-        // Item info — uses Hytale's native <color> markup so the text
-        // renders with the intended colors without depending on the .ui
-        // Style.TextColor, which is not dynamically settable and whose
-        // static form was unreliable here. Markup format verified from
-        // DynamicTooltipsLib, mods/claims/ClaimCommand map rendering,
-        // and mods/weapon-mastery/MasteryTooltipBuilder.
+        // Item info — plain text. Label.Text does NOT parse <color> markup
+        // (Hytale's slot tooltip renderer does, but the custom UI Label
+        // widget uses a different renderer that treats the tags literally).
+        // Static colors are baked into ShopBrowse.ui via Style.TextColor.
         ui.set("#ConfirmIcon.ItemId", item.getItemId());
-        ui.set("#ConfirmItemName.Text",
-            "<color is=\"#ffffff\">" + itemName + "</color>");
+        ui.set("#ConfirmItemName.Text", itemName);
         ui.set("#ConfirmPrice.Text",
-            "<color is=\"#ffb74d\">"
-                + i18n.get(playerRef, "shop.browse.confirm.price", unitPrice)
-                + "</color>");
+            i18n.get(playerRef, "shop.browse.confirm.price", unitPrice));
 
-        // Stock line — single label, coloured via <color> markup embedded
-        // in the Text string. cyan unlimited / green 11+ / amber 3-10 /
-        // red 1-2.
+        // Stock line — visibility-toggle pattern with 4 pre-colored Labels
+        // (green/amber/red/cyan) in the .ui. Only the one matching the
+        // current stock level is Visible.
         String stockText;
-        String stockColor;
+        String activeLabel;
         if (item.isUnlimitedStock()) {
             stockText = i18n.get(playerRef, "shop.browse.stock_unlimited");
-            stockColor = "#26c6da";
+            activeLabel = "Unlim";
         } else {
             int stock = item.getStock();
             stockText = i18n.get(playerRef, "shop.browse.stock_count", stock);
-            if (stock <= 2) stockColor = "#ff5252";
-            else if (stock <= 10) stockColor = "#ffb74d";
-            else stockColor = "#66bb6a";
+            if (stock <= 2) activeLabel = "Crit";
+            else if (stock <= 10) activeLabel = "Low";
+            else activeLabel = "Good";
         }
-        ui.set("#ConfirmStock.Text",
-            "<color is=\"" + stockColor + "\">" + stockText + "</color>");
+        for (String key : new String[]{"Good", "Low", "Crit", "Unlim"}) {
+            boolean active = key.equals(activeLabel);
+            ui.set("#ConfirmStock" + key + ".Visible", active);
+            ui.set("#ConfirmStock" + key + ".Text", active ? stockText : "");
+        }
 
         // Quantity slider + big label (replaces the old +/- buttons).
         // SliderNumberField.Min/Max are static in the .ui (1..64); Java
@@ -722,12 +720,10 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#ConfirmQtySlider.Value", confirmQuantity);
         ui.set("#ConfirmQty.Text", String.valueOf(confirmQuantity));
 
-        // Total (no tax — grandTotal == subtotal). <color> markup for
-        // reliable coloring (same pattern as the other confirm labels).
+        // Total (no tax — grandTotal == subtotal). Plain text; color is
+        // baked into ShopBrowse.ui via #ConfirmTotal Style.TextColor.
         ui.set("#ConfirmTotal.Text",
-            "<color is=\"#ffd700\">"
-                + i18n.get(playerRef, "shop.browse.confirm.total", grandTotal)
-                + "</color>");
+            i18n.get(playerRef, "shop.browse.confirm.total", grandTotal));
 
         // Buttons
         ui.set("#ConfirmYes.Text", i18n.get(playerRef, "shop.browse.confirm.yes"));
