@@ -251,168 +251,21 @@ $C.@PageOverlay {
           }
         }
 
-        // Custom 5x3 card grid (15 items per page, click to buy).
-        // Each card shows icon, item name, price, and stock visibly - no
-        // hover needed. Replaces the previous native ItemGrid, which had no
-        // per-slot label widgets for the price.
+        // Native ItemGrid (9 cols x 5 rows = 45 slots, click to buy).
+        // Price + stock are surfaced via ItemGridSlot.setName / setDescription
+        // so the native tooltip shows them instantly on hover, no clicking
+        // required. See populateBrowseGrid().
         Group #CardContainer {
           FlexWeight: 1;
           LayoutMode: CenterMiddle;
           Padding: (Left: 10, Right: 10, Top: 6);
 
-          Group #BrowseGrid {
-            Anchor: (Width: 680, Height: 370);
-            LayoutMode: LeftCenterWrap;
-
-            Group #BrowseCard0 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn0 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon0 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName0 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice0 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock0 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard1 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn1 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon1 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName1 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice1 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock1 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard2 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn2 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon2 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName2 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice2 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock2 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard3 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn3 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon3 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName3 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice3 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock3 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard4 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn4 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon4 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName4 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice4 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock4 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard5 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn5 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon5 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName5 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice5 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock5 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard6 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn6 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon6 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName6 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice6 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock6 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard7 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn7 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon7 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName7 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice7 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock7 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard8 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn8 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon8 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName8 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice8 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock8 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard9 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn9 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon9 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName9 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice9 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock9 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard10 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn10 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon10 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName10 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice10 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock10 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard11 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn11 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon11 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName11 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice11 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock11 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard12 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn12 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon12 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName12 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice12 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock12 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard13 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn13 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon13 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName13 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice13 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock13 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
-
-            Group #BrowseCard14 { Visible: false; Anchor: (Width: 130, Height: 120); Padding: (Full: 4);
-              Button #BrowseBtn14 { Anchor: (Full: 0); LayoutMode: Full; Padding: (Full: 3); Style: @BrowseCardStyle; TooltipText: "";
-                Group { Anchor: (Full: 0); LayoutMode: Top; Padding: (Full: 4);
-                  Group { Anchor: (Height: 58); LayoutMode: CenterMiddle;
-                    Group { Anchor: (Width: 54, Height: 54); Background: (Color: #1a2530); Padding: (Full: 2); LayoutMode: CenterMiddle;
-                      ItemIcon #BrowseIcon14 { Anchor: (Width: 50, Height: 50); ItemId: "Ingredient_Bar_Gold"; } } }
-                  Label #BrowseName14 { Anchor: (Left: 0, Right: 0, Height: 14); Style: (FontSize: 11, TextColor: #bfcdd5, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowsePrice14 { Anchor: (Left: 0, Right: 0, Height: 16); Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; }
-                  Label #BrowseStock14 { Anchor: (Left: 0, Right: 0, Height: 12); Style: (FontSize: 9, TextColor: #66bb6a, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ""; } } } }
+          ItemGrid #BrowseGrid {
+            Anchor: (Width: 488, Height: 260);
+            SlotsPerRow: 9;
+            Style: @BrowseSlotStyle;
+            Background: #1a2332(0);
+            Padding: 0;
           }
         }
 

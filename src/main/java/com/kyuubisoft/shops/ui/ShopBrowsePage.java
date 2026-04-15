@@ -55,9 +55,10 @@ import java.util.stream.Collectors;
 public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopBrowseData> {
 
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
-    // Custom card grid: 5 columns x 3 rows = 15 cards per page so each
-    // card has room for icon + name + price + stock visibly.
-    static final int ITEMS_PER_PAGE = 15;
+    // Native ItemGrid is 9 cols x 5 rows = 45 slots per page. Prices and
+    // stock are surfaced via ItemGridSlot.setName / setDescription so the
+    // native tooltip shows them instantly on hover.
+    static final int ITEMS_PER_PAGE = 45;
 
     public enum Mode { BUY, SELL }
 
@@ -106,6 +107,14 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
 
         ui.append("Pages/Shop/ShopBrowse.ui");
 
+        // Configure native ItemGrid (display-only, click-to-buy).
+        // No ContainerWindow is backing this grid -- it is pure display
+        // driven by ui.set("#BrowseGrid.Slots", ...). DisplayItemQuantity
+        // is off because the native quantity badge would overlap the stack
+        // count in the tooltip; stock is shown via setDescription instead.
+        ui.set("#BrowseGrid.AreItemsDraggable", false);
+        ui.set("#BrowseGrid.DisplayItemQuantity", false);
+
         bindAllEvents(events);
         buildUI(ui);
     }
@@ -134,9 +143,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             return;
         }
 
-        // Card click (BUY or SELL depending on mode)
-        if (data.browseCard != null) {
-            handleBrowseCardClick(data.browseCard);
+        // Native ItemGrid slot click (BUY or SELL depending on mode)
+        if ("browse_click".equals(data.action)) {
+            handleBrowseSlotClick(data.slotIndex);
             return;
         }
 
@@ -234,28 +243,23 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         refreshUI();
     }
 
-    // ==================== BROWSE CARD CLICK ====================
+    // ==================== BROWSE GRID CLICK ====================
 
     /**
-     * Handles a click on one of the 15 browse cards. Pre-fills the
-     * confirmation dialog with the clicked ShopItem so that the existing
-     * #ConfirmYes / slider wiring can drive the transaction.
+     * Handles a click on a native ItemGrid slot in BUY or SELL mode.
+     * Pre-fills the confirmation dialog with the clicked ShopItem so that
+     * the existing #ConfirmYes / slider wiring can drive the transaction.
      */
-    private void handleBrowseCardClick(String cardIndexStr) {
-        try {
-            int cardIndex = Integer.parseInt(cardIndexStr);
-            if (cardIndex < 0 || cardIndex >= ITEMS_PER_PAGE) {
-                this.sendUpdate(new UICommandBuilder(), false);
-                return;
-            }
-            int actualIndex = currentPage * ITEMS_PER_PAGE + cardIndex;
-            if (mode == Mode.BUY) {
-                handleBuyClick(actualIndex);
-            } else {
-                handleSellClick(actualIndex);
-            }
-        } catch (NumberFormatException e) {
+    private void handleBrowseSlotClick(Integer slotIndex) {
+        if (slotIndex == null || slotIndex < 0 || slotIndex >= ITEMS_PER_PAGE) {
             this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+        int actualIndex = currentPage * ITEMS_PER_PAGE + slotIndex;
+        if (mode == Mode.BUY) {
+            handleBuyClick(actualIndex);
+        } else {
+            handleSellClick(actualIndex);
         }
     }
 
@@ -400,12 +404,11 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         events.addEventBinding(CustomUIEventBindingType.Activating, "#NextButton",
             EventData.of("Button", "next_page"), false);
 
-        // Custom card grid clicks (15 inline cards with unique IDs per card).
-        for (int i = 0; i < ITEMS_PER_PAGE; i++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating,
-                "#BrowseBtn" + i,
-                EventData.of("BrowseCard", String.valueOf(i)), false);
-        }
+        // Native ItemGrid slot clicks -- buy (BUY mode) or sell (SELL mode).
+        // SlotIndex is auto-populated by Hytale on SlotClicking events via
+        // the "SlotIndex" KeyedCodec field in ShopBrowseData.
+        events.addEventBinding(CustomUIEventBindingType.SlotClicking, "#BrowseGrid",
+            EventData.of("Action", "browse_click"), false);
 
         // Tab buttons
         boolean hasSellItems = shopData.getItems().stream().anyMatch(ShopItem::isSellEnabled);
@@ -501,7 +504,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ui.set("#CardContainer.Visible", !isEmpty);
 
         // ---- Browse grid ----
-        buildBrowseCards(ui);
+        populateBrowseGrid(ui);
 
         // ---- Confirmation overlay ----
         buildConfirmOverlay(ui, i18n, balance);
@@ -547,12 +550,20 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     }
 
     /**
-     * Populates the 15 browse cards (#BrowseCard0..#BrowseCard14) with the
-     * current page of the active buy/sell item list. Each card's icon, item
-     * name, price, and stock are set as visible Label text - no hover needed.
-     * Cards outside the item list are hidden.
+     * Builds the native ItemGrid slot list from the active buy/sell item
+     * list and pushes it to the client via ui.set("#BrowseGrid.Slots", ...).
+     *
+     * Each slot overrides {@link ItemGridSlot#setName(String)} and
+     * {@link ItemGridSlot#setDescription(String)} so the hover tooltip
+     * shows the price and stock instantly for every item - no clicking
+     * required. Uses Minecraft-style §-codes for per-line coloring, same
+     * pattern as ShopDirectoryPage.populateItemSearchGrid().
+     *
+     * PITFALL #121: openCustomPage() never auto-populates ItemGrid -- slots
+     * MUST be set manually. Each slot is marked activatable so SlotClicking
+     * events fire even though AreItemsDraggable is false.
      */
-    private void buildBrowseCards(UICommandBuilder ui) {
+    private void populateBrowseGrid(UICommandBuilder ui) {
         ShopI18n i18n = plugin.getI18n();
         List<ShopItem> activeItems = (mode == Mode.BUY) ? buyItems : sellItems;
         int totalItems = (activeItems != null) ? activeItems.size() : 0;
@@ -565,47 +576,62 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         int startIndex = currentPage * ITEMS_PER_PAGE;
         String currencyName = plugin.getEconomyBridge().getCurrencyName();
 
+        List<ItemGridSlot> slots = new ArrayList<>(ITEMS_PER_PAGE);
         for (int i = 0; i < ITEMS_PER_PAGE; i++) {
             int actualIndex = startIndex + i;
-            if (activeItems == null || actualIndex >= activeItems.size()) {
-                ui.set("#BrowseCard" + i + ".Visible", false);
-                continue;
-            }
-            ShopItem item = activeItems.get(actualIndex);
-            ui.set("#BrowseCard" + i + ".Visible", true);
+            ItemGridSlot slot;
 
-            // Icon — flat 1-level selector on the uniquely-named ItemIcon.
-            ui.set("#BrowseIcon" + i + ".ItemId", item.getItemId());
+            if (activeItems != null && actualIndex < activeItems.size()) {
+                ShopItem item = activeItems.get(actualIndex);
+                String itemId = item.getItemId();
+                int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
 
-            // Item name
-            ui.set("#BrowseName" + i + ".Text", formatItemName(item.getItemId()));
+                try {
+                    BsonDocument meta = BsonMetadataCodec.decode(item.getItemMetadata());
+                    ItemStack stack = (meta != null)
+                        ? new ItemStack(itemId, 1, meta)
+                        : new ItemStack(itemId, 1);
+                    slot = new ItemGridSlot(stack);
+                } catch (Exception e) {
+                    LOGGER.warning("[ShopBrowse] Failed to build slot for item " + itemId
+                        + ": " + e.getMessage());
+                    slot = new ItemGridSlot();
+                }
 
-            // Price — unit price + currency name, always visible in gold.
-            int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
-            ui.set("#BrowsePrice" + i + ".Text", unitPrice + " " + currencyName);
+                // Tooltip header: item name with price inline so buyers see
+                // the cost the moment they hover over a slot. No need to
+                // click each item anymore.
+                slot.setName("\u00a7f" + formatItemName(itemId)
+                    + "  \u00a76" + unitPrice + " " + currencyName);
 
-            // Stock — color-coded by remaining quantity (unlimited/green/
-            // amber/red), so buyers see scarcity at a glance without hover.
-            if (item.isUnlimitedStock()) {
-                ui.set("#BrowseStock" + i + ".Text",
-                    i18n.get(playerRef, "shop.browse.stock_unlimited"));
-                ui.set("#BrowseStock" + i + ".Style.TextColor", "#26c6da");
+                // Tooltip description: stock (color-coded by remaining
+                // quantity) + a mode-aware click hint.
+                StringBuilder desc = new StringBuilder();
+                if (item.isUnlimitedStock()) {
+                    desc.append("\u00a7bStock: \u00a7fUnlimited");
+                } else {
+                    int s = item.getStock();
+                    String stockColor = s <= 2 ? "\u00a7c" : (s <= 10 ? "\u00a7e" : "\u00a7a");
+                    desc.append("\u00a7aStock: ").append(stockColor).append(s);
+                }
+                desc.append('\n');
+                if (mode == Mode.SELL) {
+                    desc.append("\u00a78Click to sell");
+                } else {
+                    desc.append("\u00a78Click to buy");
+                }
+                slot.setDescription(desc.toString());
             } else {
-                int stock = item.getStock();
-                ui.set("#BrowseStock" + i + ".Text",
-                    i18n.get(playerRef, "shop.browse.stock_count", stock));
-                String stockColor;
-                if (stock <= 2) stockColor = "#ff5252";
-                else if (stock <= 10) stockColor = "#ffb74d";
-                else stockColor = "#66bb6a";
-                ui.set("#BrowseStock" + i + ".Style.TextColor", stockColor);
+                slot = new ItemGridSlot();
             }
 
-            // Tooltip — backup info for hover (same native tooltip flow as
-            // the directory item search grid).
-            ui.set("#BrowseBtn" + i + ".TooltipText",
-                formatItemName(item.getItemId()) + " - " + unitPrice + " " + currencyName);
+            // PFLICHT: setActivatable(true) so SlotClicking fires on click
+            // even when AreItemsDraggable = false.
+            slot.setActivatable(true);
+            slots.add(slot);
         }
+
+        ui.set("#BrowseGrid.Slots", slots);
 
         // Pagination
         ui.set("#Footer #PageInfo.Text",
@@ -799,10 +825,13 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             .addField(new KeyedCodec<>("Rate", Codec.STRING),
                 (data, value) -> data.rate = value,
                 data -> data.rate)
-            // Card grid click (card index as string, 0..ITEMS_PER_PAGE-1)
-            .addField(new KeyedCodec<>("BrowseCard", Codec.STRING),
-                (data, value) -> data.browseCard = value,
-                data -> data.browseCard)
+            // Native ItemGrid interaction fields
+            .addField(new KeyedCodec<>("Action", Codec.STRING),
+                (data, value) -> data.action = value,
+                data -> data.action)
+            .addField(new KeyedCodec<>("SlotIndex", Codec.INTEGER),
+                (data, value) -> data.slotIndex = value,
+                data -> data.slotIndex)
             .addField(new KeyedCodec<>("@ConfirmQty", Codec.INTEGER),
                 (data, value) -> data.confirmQty = value,
                 data -> data.confirmQty)
@@ -812,8 +841,9 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         private String tab;
         private String confirm;
         private String rate;
-        // Card grid click
-        private String browseCard;
+        // Grid interaction fields
+        private String action;
+        private Integer slotIndex;
         // Slider-driven quantity (replaces the old +/- buttons)
         private Integer confirmQty;
 
