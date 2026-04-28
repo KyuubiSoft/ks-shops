@@ -27,6 +27,8 @@ import com.kyuubisoft.shops.service.ShopManager;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -161,16 +163,18 @@ public class ShopNpcManager {
             return;
         }
 
+        int delaySeconds = Math.max(0, config.getData().npc.spawnDelaySecondsOnJoin);
         LOGGER.info("First player in world '" + worldName + "' — spawning "
-            + shopsInWorld.size() + " shop NPC(s)");
+            + shopsInWorld.size() + " shop NPC(s)"
+            + (delaySeconds > 0 ? " in " + delaySeconds + "s" : ""));
 
         // PITFALL: Entity operations MUST run inside world.execute()
-        world.execute(() -> {
-            // First: sweep any persisted shop NPCs left over from a previous
-            // server run. Hytale's PersistentModel keeps the NPC entity alive
-            // across restarts in the chunk data, but the PlayerSkinComponent is
-            // not persisted - so these "naked" duplicates would stack on top
-            // of the freshly spawned (skinned) NPCs we create below.
+        // The spawn burst is deferred by spawnDelaySecondsOnJoin so the
+        // joining client has time to finish its connection handshake and
+        // cosmetics init before we push a skin burst at it. Otherwise the
+        // PlayerSkinComponent apply can race the client and leave NPCs in
+        // the default unskinned appearance.
+        Runnable spawnTask = () -> world.execute(() -> {
             int removed = sweepStalePersistentNpcs(world);
             if (removed > 0) {
                 LOGGER.info("onPlayerAddedToWorld: removed " + removed
@@ -180,7 +184,11 @@ public class ShopNpcManager {
             for (UUID shopId : shopsInWorld) {
                 ShopData shop = shopManager.getShop(shopId);
                 if (shop == null) continue;
-                if (!shop.isOpen()) continue; // Don't spawn NPCs for closed shops
+                // NOTE: we no longer skip closed shops. The NPC stays visible
+                // at the shop's location, the nameplate shows a [CLOSED] suffix,
+                // and ShopBlockInteraction shows a "closed" message instead of
+                // the browse UI when a non-owner F-keys it. This keeps the
+                // owner's spot marked and tells visitors the state at a glance.
                 if (shop.isPacked()) continue; // Packed shops stay despawned
 
                 try {
@@ -190,6 +198,16 @@ public class ShopNpcManager {
                 }
             }
         });
+
+        if (delaySeconds > 0) {
+            ScheduledExecutorService scheduler = plugin.getScheduler();
+            if (scheduler != null && !scheduler.isShutdown()) {
+                scheduler.schedule(spawnTask, delaySeconds, TimeUnit.SECONDS);
+                return;
+            }
+            // Scheduler unavailable - fall through to immediate spawn.
+        }
+        spawnTask.run();
     }
 
     /**
@@ -478,10 +496,15 @@ public class ShopNpcManager {
                 return;
             }
 
-            // Calculate NPC position: offset behind the shop block
-            // npcRotY is the facing direction of the NPC (radians).
-            // The NPC stands behind the block, facing toward the player.
-            Vector3d npcPosition = calculateNpcPosition(shop);
+            // Standalone-NPC era: the shop's stored pos IS the NPC pos. No
+            // legacy "1.2 block behind the shop block" offset - that only
+            // made sense back when shops were anchored to a Shop_Block
+            // entity. Applying it here on lazy world-load made the NPC
+            // re-spawn ~1 block to the back-left of where it was placed
+            // by /kssa createrental / rentSlot / forceexpirerental (which
+            // all go through spawnNpcAtPosition with the raw coords).
+            Vector3d npcPosition = new Vector3d(
+                shop.getPosX(), shop.getPosY(), shop.getPosZ());
             Vector3f npcRotation = new Vector3f(0.0f, shop.getNpcRotY(), 0.0f);
 
             // Resolve role — prefer interactable role for F-key interaction
@@ -671,12 +694,38 @@ public class ShopNpcManager {
         // the entity UUID inside the world.execute callback so we always touch
         // a committed entity.
         final String resolvedUsername = skinUsername;
-        final UUID shopId = shop.getId();
         LOGGER.info("[Skin] Fetching skin '" + resolvedUsername + "' for shop '"
             + shop.getName() + "'");
-        skinManager.fetchSkin(resolvedUsername).thenAcceptAsync(skin -> {
+        fetchAndApplySkin(shop, world, resolvedUsername, /*attempt=*/1);
+    }
+
+    /**
+     * Fires the async PlayerDB fetch for {@code username} and applies the
+     * returned skin to the NPC tracked for {@code shop}. On a null fetch
+     * result (PlayerDB outage, transient network failure) this re-schedules
+     * itself once after {@code npc.skinRetryDelaySeconds} so a momentary
+     * hiccup does not leave the NPC unskinned for the whole session.
+     */
+    private void fetchAndApplySkin(ShopData shop, World world, String username, int attempt) {
+        com.kyuubisoft.shops.skin.ShopSkinManager skinManager = plugin.getSkinManager();
+        if (skinManager == null) return;
+
+        final UUID shopId = shop.getId();
+        skinManager.fetchSkin(username).thenAcceptAsync(skin -> {
             if (skin == null) {
-                LOGGER.warning("[Skin] fetchSkin returned null for '" + resolvedUsername
+                int retryDelay = Math.max(0, config.getData().npc.skinRetryDelaySeconds);
+                if (attempt == 1 && retryDelay > 0) {
+                    LOGGER.warning("[Skin] fetchSkin returned null for '" + username
+                        + "' (shop '" + shop.getName() + "') - retrying in "
+                        + retryDelay + "s");
+                    ScheduledExecutorService sched = plugin.getScheduler();
+                    if (sched != null && !sched.isShutdown()) {
+                        sched.schedule(() -> fetchAndApplySkin(shop, world, username, 2),
+                            retryDelay, TimeUnit.SECONDS);
+                        return;
+                    }
+                }
+                LOGGER.warning("[Skin] fetchSkin returned null for '" + username
                     + "' (shop '" + shop.getName() + "') - NPC keeps default");
                 return;
             }
@@ -694,15 +743,15 @@ public class ShopNpcManager {
                     return;
                 }
                 skinManager.applySkin(freshRef, skin, 1.0f);
-                LOGGER.info("[Skin] Applied '" + resolvedUsername + "' to shop NPC: "
-                    + shop.getName());
+                LOGGER.info("[Skin] Applied '" + username + "' to shop NPC: "
+                    + shop.getName() + (attempt > 1 ? " (attempt " + attempt + ")" : ""));
             } catch (Exception e) {
                 LOGGER.warning("[Skin] apply failed for shop '" + shop.getName()
-                    + "' (username=" + resolvedUsername + "): " + e.getMessage());
+                    + "' (username=" + username + "): " + e.getMessage());
             }
         }, world::execute).exceptionally(ex -> {
             LOGGER.warning("[Skin] fetch failed for shop '" + shop.getName()
-                + "' (username=" + resolvedUsername + "): " + ex.getMessage());
+                + "' (username=" + username + "): " + ex.getMessage());
             return null;
         });
     }
@@ -720,7 +769,43 @@ public class ShopNpcManager {
             Nameplate nameplate = (Nameplate) store.ensureAndGetComponent(
                 entityRef, Nameplate.getComponentType());
             if (shop.isShowNameTag() && shop.getName() != null && !shop.getName().isEmpty()) {
-                nameplate.setText(shop.getName());
+                String label = shop.getName();
+                // Rental-backed PLAYER shop: surface remaining rental time.
+                // Helps the renter see what they own and lets visitors gauge
+                // when the slot will free up. Vacant rental shells (ADMIN type)
+                // already encode their state in the display name itself
+                // ("[100g/day]" / "[AUCTION 500g]") via buildVacantName.
+                //
+                // Source-of-truth is RentalSlotData.rentedUntil in
+                // shop_rental_slots, NOT shop.rentalExpiresAt - the latter is
+                // a denormalised mirror that can drift if the slot row is
+                // edited directly. Reading from the slot keeps the UI honest.
+                if (shop.isRentalBacked() && shop.isPlayerShop()) {
+                    long expiresAt = 0L;
+                    com.kyuubisoft.shops.rental.RentalService rs =
+                        plugin.getRentalService();
+                    if (rs != null) {
+                        com.kyuubisoft.shops.rental.RentalSlotData slot =
+                            rs.getSlot(shop.getRentalSlotId());
+                        if (slot != null) expiresAt = slot.getRentedUntil();
+                    }
+                    if (expiresAt <= 0) expiresAt = shop.getRentalExpiresAt();
+                    long ms = expiresAt - System.currentTimeMillis();
+                    if (ms > 0) {
+                        long days = ms / 86_400_000L;
+                        long hours = (ms % 86_400_000L) / 3_600_000L;
+                        label = label + (days > 0
+                            ? " (" + days + "d " + hours + "h left)"
+                            : " (" + hours + "h left)");
+                    }
+                } else if (!shop.isOpen() && shop.getRentalSlotId() == null) {
+                    // Append [CLOSED] when the shop is temporarily unavailable.
+                    // Keeps the NPC visible as a place marker + owner's claim
+                    // on the spot, while making the state obvious to passers-by
+                    // without a F-key.
+                    label = label + " [CLOSED]";
+                }
+                nameplate.setText(label);
             } else {
                 nameplate.setText("");
             }

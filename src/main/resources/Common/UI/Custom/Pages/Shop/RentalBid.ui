@@ -1,0 +1,313 @@
+// RentalBid UI -- Auction bidding page with live countdown + bid history (560x620)
+$C = "../../Common.ui";
+
+$C.@PageOverlay {
+    Group #BidLayout {
+        LayoutMode: CenterMiddle;
+
+        $C.@DecoratedContainer #BidPanel {
+            Anchor: (Width: 560, Height: 620);
+
+            #Title {
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 42);
+
+                    Group { FlexWeight: 1; }
+
+                    Label #TitleText {
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+                        Text: "AUCTION BID";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+
+            #Content {
+                LayoutMode: Top;
+                Padding: (Left: 17, Right: 17, Top: 8, Bottom: 12);
+
+                // ---- Slot name row ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 26);
+                    LayoutMode: Left;
+
+                    Label #SlotName {
+                        Style: (FontSize: 14, RenderBold: true, TextColor: #ffffff, VerticalAlignment: Center);
+                        Text: "Slot";
+                        FlexWeight: 1;
+                    }
+
+                    Label #ModeBadge {
+                        Anchor: (Width: 72, Height: 22);
+                        Style: (FontSize: 10, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center);
+                        Text: "AUCTION";
+                    }
+                }
+
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 8); }
+
+                // ---- Countdown + high bid row ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Time Remaining";
+                    }
+                    Label #CountdownValue {
+                        Style: (FontSize: 14, TextColor: #ff9966, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Current High Bid";
+                    }
+                    Label #HighBidValue {
+                        Style: (FontSize: 14, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "High Bidder";
+                    }
+                    Label #HighBidderValue {
+                        Style: (FontSize: 12, TextColor: #7caacc, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Your Status";
+                    }
+                    Label #StatusValue {
+                        Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Rental Period";
+                    }
+                    Label #RentalPeriodValue {
+                        Style: (FontSize: 12, TextColor: #88dd88, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 6); }
+
+                // ---- Bid history ----
+                Label {
+                    Anchor: (Height: 16);
+                    Style: (FontSize: 10, TextColor: #96a9be, RenderBold: true, RenderUppercase: true);
+                    Text: "BID HISTORY";
+                }
+                Group { Anchor: (Height: 4); }
+
+                Label #EmptyHistory {
+                    Anchor: (Height: 18);
+                    Style: (FontSize: 11, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+                    Text: "No bids yet. Be the first!";
+                    Visible: false;
+                }
+
+                Group #BidHistoryRow0 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+                Group #BidHistoryRow1 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+                Group #BidHistoryRow2 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+                Group #BidHistoryRow3 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+                Group #BidHistoryRow4 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+                Group #BidHistoryRow5 {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+                    Visible: false;
+
+                    Label #BidderCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #AmountCell { FlexWeight: 1; Style: (FontSize: 11, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #TimeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #5a6a7a, VerticalAlignment: Center, HorizontalAlignment: End); Text: ""; }
+                }
+
+                Group { Anchor: (Height: 10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 6); }
+
+                // ---- Place bid ----
+                Label {
+                    Anchor: (Height: 16);
+                    Style: (FontSize: 10, TextColor: #96a9be, RenderBold: true, RenderUppercase: true);
+                    Text: "PLACE A BID";
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Minimum Bid";
+                    }
+                    Label #MinBidValue {
+                        Style: (FontSize: 12, TextColor: #bfcdd5, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 140, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Your Balance";
+                    }
+                    Label #BalanceValue {
+                        Style: (FontSize: 12, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 6); }
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 34);
+                    Padding: (Left: 10, Right: 10, Top: 4);
+
+                    Label {
+                        Anchor: (Width: 40, Height: 18);
+                        Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center);
+                        Text: "Bid";
+                    }
+                    Group {
+                        FlexWeight: 1;
+                        LayoutMode: CenterMiddle;
+                        SliderNumberField #BidSlider {
+                            Anchor: (Width: 280, Height: 5);
+                            SliderStyle: $C.@DefaultSliderStyle;
+                            NumberFieldStyle: $C.@DefaultInputFieldStyle;
+                            Min: 1;
+                            Max: 1000000;
+                        }
+                    }
+                    Label #BidValueLabel {
+                        Anchor: (Width: 100, Height: 18);
+                        Style: (FontSize: 13, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: Center);
+                        Text: "";
+                    }
+                }
+
+                Group { FlexWeight: 1; }
+
+                // ---- Buttons ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 40);
+                    LayoutMode: Left;
+                    Padding: (Left: 20, Right: 20);
+
+                    Group { FlexWeight: 1; }
+
+                    $C.@TextButton #PlaceBidBtn {
+                        @Anchor = (Width: 160, Height: 34);
+                        @Text = "PLACE BID";
+                    }
+
+                    Group { Anchor: (Width: 12); }
+
+                    $C.@CancelTextButton #CloseBtn {
+                        @Anchor = (Width: 140, Height: 34);
+                        @Text = "CLOSE";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,201 @@
+// RentalStation UI -- Multi-slot browse with tabs and per-row actions (860x620)
+$C = "../../Common.ui";
+
+$C.@PageOverlay {
+    Group #StationLayout {
+        LayoutMode: CenterMiddle;
+
+        $C.@DecoratedContainer #StationPanel {
+            Anchor: (Width: 860, Height: 620);
+
+            #Title {
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 42);
+
+                    Group { FlexWeight: 1; }
+                    Label #TitleText {
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+                        Text: "RENTAL STATION";
+                    }
+                    Group { FlexWeight: 1; }
+                }
+            }
+
+            #Content {
+                LayoutMode: Top;
+                Padding: (Left: 17, Right: 17, Top: 8, Bottom: 12);
+
+                // ---- Tabs ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 32);
+                    LayoutMode: Left;
+                    Padding: (Left: 10);
+
+                    $C.@SmallSecondaryTextButton #TabAll { @Anchor = (Width: 100, Height: 26); @Text = "ALL"; }
+                    Group { Anchor: (Width: 6); }
+                    $C.@SmallSecondaryTextButton #TabVacant { @Anchor = (Width: 110, Height: 26); @Text = "VACANT"; }
+                    Group { Anchor: (Width: 6); }
+                    $C.@SmallSecondaryTextButton #TabAuction { @Anchor = (Width: 120, Height: 26); @Text = "AUCTION"; }
+                    Group { Anchor: (Width: 6); }
+                    $C.@SmallSecondaryTextButton #TabRented { @Anchor = (Width: 110, Height: 26); @Text = "RENTED"; }
+
+                    Group { FlexWeight: 1; }
+                }
+
+                Group { Anchor: (Height: 8); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 6); }
+
+                // ---- Column header ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label { FlexWeight: 3; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Slot"; }
+                    Label { FlexWeight: 1; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Mode"; }
+                    Label { FlexWeight: 3; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "State"; }
+                    Label { Anchor: (Width: 140); Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center); Text: "Action"; }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Label #EmptyLabel {
+                    Anchor: (Height: 18);
+                    Style: (FontSize: 11, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+                    Text: "";
+                    Visible: false;
+                }
+
+                Group #StationRow0 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #StationRow1 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #StationRow2 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #StationRow3 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #StationRow4 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #StationRow5 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ModeCell { FlexWeight: 1; Style: (FontSize: 10, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #StateCell { FlexWeight: 3; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 140);
+                        LayoutMode: CenterMiddle;
+                        $C.@SmallSecondaryTextButton #ActionBtn { @Anchor = (Width: 120, Height: 28); @Text = "RENT"; }
+                    }
+                }
+
+                Group { FlexWeight: 1; }
+
+                // ---- Pagination + close ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 40);
+                    LayoutMode: Left;
+                    Padding: (Left: 10, Right: 10);
+
+                    $C.@SmallSecondaryTextButton #PrevBtn { @Anchor = (Width: 100, Height: 30); @Text = "PREV"; }
+                    Group { Anchor: (Width: 8); }
+                    Label #PageLabel {
+                        Anchor: (Width: 140, Height: 30);
+                        Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center, HorizontalAlignment: Center);
+                        Text: "Page 1 / 1";
+                    }
+                    Group { Anchor: (Width: 8); }
+                    $C.@SmallSecondaryTextButton #NextBtn { @Anchor = (Width: 100, Height: 30); @Text = "NEXT"; }
+
+                    Group { FlexWeight: 1; }
+
+                    $C.@CancelTextButton #CloseBtn { @Anchor = (Width: 140, Height: 34); @Text = "CLOSE"; }
+                }
+            }
+        }
+    }
+}

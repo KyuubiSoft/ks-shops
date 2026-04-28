@@ -1,0 +1,888 @@
+Tip: For description use || or Tab: Title || Description
+
+Start a line with #: # Category name
+
+# 0. Vorbereitung (einmalig vor allen Tests)
+0.1 Terminal im Projekt-Root oeffnen || Windows Explorer, zu D:\Development\KyuubiSoft_Hytale_Setup. Im Adressfeld "cmd" + Enter.
+0.2 Server vollstaendig stoppen || Falls Server laeuft: "stop" in Server-Konsole, warten auf "Server stopped".
+0.3 Gradle Build ausfuehren || Im Terminal: ./gradlew :mods:shops:build. Warten auf "BUILD SUCCESSFUL".
+0.4 Gradle Deploy ausfuehren || Im Terminal: ./gradlew :mods:shops:deployToServer. JAR liegt jetzt im Server mods-Ordner.
+0.5 Server-Pfad notieren || Wo liegt deine Hytale-Server-Installation? In dieser Anleitung genannt <SERVER>.
+0.6 Config-Pfad identifizieren || <SERVER>/data/shops/config.json - dort liegen alle Shop-Einstellungen.
+0.7 Server-Log-Pfad identifizieren || <SERVER>/logs/latest.log - hier landet alles was in der Konsole steht.
+0.8 Test-Notizblock anlegen || Datei test_results.txt irgendwo anlegen. Du notierst pro Sektion "OK" oder Abweichung.
+0.9 Zwei Accounts bereit || Account A mit op/ks.shop.admin. Account B als normaler Spieler (ohne op). Fuer Transfer-Tests + Customer-Flow.
+0.10 Gold fuer beide Accounts || Stelle sicher dass beide Accounts 10000+ Gold haben. Falls Economy-Plugin: /eco give <Name> 10000.
+0.11 Server-Konsole parallel offen || Du musst die Konsole sehen koennen waehrend du im Spiel bist. Alt+Tab bereit oder 2. Monitor.
+
+# 1. Baseline - Test-Shops anlegen (einmalig)
+1.1 Server starten || Starten, auf "Shops plugin loaded" warten.
+1.2 Account A einloggen || Ingame mit Admin-Char.
+1.3 Freie Testzone finden || Offene Flaeche, ~15x15 Bloecke, wo du 6-8 NPCs platzieren kannst.
+1.4 Test-Admin-Shop erstellen || /kssa createadmin TestAdmin1. Chat: "Admin shop created". NPC vor dir.
+1.5 3 Bloecke seitlich || Rechts gehen.
+1.6 Test-Player-Shop erstellen || /ksshop create TestPlayer1. NPC mit deinem Skin.
+1.7 3 Bloecke seitlich || Rechts.
+1.8 Test-Rental-FIXED erstellen || /kssa createrental TestRentFixed1 100 7. NPC mit Nameplate "TestRentFixed1 [100g/day]".
+1.9 3 Bloecke seitlich || Rechts.
+1.10 Test-Rental-AUCTION erstellen || /kssa createrentalauction TestRentAuc1 500 10 60 7. NPC Nameplate "TestRentAuc1 [AUCTION 500g]".
+1.11 Alle NPCs sichtbar verifizieren || 10 Bloecke zurueck, alle 4 NPCs stehen, haben Nameplate.
+1.12 Slot-IDs sichern || /kssa listrentals. Output zeigt UUIDs - in Notizblock kopieren. Die brauchst du fuer Phase 30+32.
+1.13 Server stoppen || "stop" in Konsole.
+
+# 2. Config-Baseline pruefen
+2.1 config.json oeffnen || <SERVER>/data/shops/config.json in Notepad++/VS Code.
+2.2 Abschnitt "features" pruefen || Must: playerShops=true, adminShops=true, directory=true, ratings=true, notifications=true.
+2.3 Abschnitt "playerShops" pruefen || maxShopsPerPlayer=3, maxItemsPerShop=45, creationCost=500, listingEnabled=true.
+2.4 Abschnitt "npc" Felder komplett || defaultSkinUsername, lookAtPlayer, spawnDelaySecondsOnJoin, skinRetryDelaySeconds MUESSEN drin sein.
+2.5 Abschnitt "rentalStations" pruefen || enabled=true, defaultPricePerDay=100, defaultMaxDays=7, defaultMinBid=500, usw.
+2.6 Abschnitt "tax" pruefen || enabled=false, buyTaxPercent=5.0, sellTaxPercent=5.0.
+2.7 Abschnitt "featured" pruefen || enabled=false, cost=1000, durationDays=7.
+2.8 Abschnitt "database" pruefen || type=sqlite, sqlitePath=shops.db (oder mysql falls du das konfiguriert hast).
+2.9 Falls Felder fehlen: Config loeschen || Config-Datei loeschen, Server kurz starten+stoppen, Config wird neu erzeugt.
+2.10 Config schliessen ohne Aenderung || Editor zu.
+
+# 3. Test A - Neuer Feature: Spawn-Delay Default 3s
+3.1 Server starten || Starten.
+3.2 Plugin-Load abwarten || "Shops plugin loaded" im Log.
+3.3 Stoppuhr bereit || Handy oder stopwatch.online.
+3.4 Hytale-Client starten || Account A einloggen.
+3.5 World betreten + Stoppuhr START || Beim Klick "World betreten" gleichzeitig Stopuhr.
+3.6 3s Leere beobachten || Fuer ~3s NULL Shop-NPCs sichtbar.
+3.7 NPCs erscheinen gemeinsam || Nach 3s poppen alle 4 NPCs auf einmal auf.
+3.8 Stoppuhr stoppen || Wert notieren. Erwartung ~3s.
+3.9 Log-Eintrag Spawn-Trigger || Konsole: "First player in world 'world' - spawning 4 shop NPC(s) in 3s".
+3.10 Log-Eintrag Fetch 4x || "[Skin] Fetching skin ..." muss 4x auftauchen.
+3.11 Log-Eintrag Apply 4x || "[Skin] Applied ..." muss 4x kommen (fuer jeden NPC einmal).
+3.12 Alle NPCs haben Skin || Jeder der 4 NPCs hat einen erkennbaren Skin (nicht default grau).
+3.13 Ergebnis notieren || "Test 3 Default Delay: OK".
+3.14 Ausloggen + Server stop || /logout oder Escape-Verlassen, dann "stop".
+
+# 4. Test B - Spawn-Delay auf 0 (altes Verhalten)
+4.1 config.json oeffnen || Editor.
+4.2 spawnDelaySecondsOnJoin auf 0 || Wert auf 0. Speichern.
+4.3 Server starten || Starten.
+4.4 World betreten + Stoppuhr || Join.
+4.5 Sofort-Spawn || NPCs sind in unter 1s da.
+4.6 Log-Suffix pruefen || "First player in world" MUSS OHNE "in Xs"-Suffix kommen.
+4.7 Ergebnis notieren || "Test 4 0s Delay: OK".
+4.8 Ausloggen, Server stop || Standard.
+
+# 5. Test C - Spawn-Delay auf 10s
+5.1 config.json oeffnen || Editor.
+5.2 Wert auf 10 || Speichern.
+5.3 Server starten || Starten.
+5.4 World betreten + Stoppuhr || Join.
+5.5 Genau 10s Wartezeit || NPCs erscheinen nach 10s, nicht frueher.
+5.6 Log "in 10s" verifizieren || Konsole "... spawning 4 shop NPC(s) in 10s".
+5.7 Ergebnis notieren || "Test 5 10s Delay: OK".
+5.8 Ausloggen, Server stop || Standard.
+
+# 6. Test D - Clamp Ober- und Untergrenze
+6.1 Wert auf 999 setzen || config.json: 999. Speichern.
+6.2 Server start + stop || Starten, "Shops plugin loaded" abwarten, stop.
+6.3 Config erneut oeffnen || config.json.
+6.4 Wert ist 60 || Muss auf 60 geclampt sein.
+6.5 Wert auf -5 setzen || -5. Speichern.
+6.6 Server start + stop || Standard.
+6.7 Wert ist 0 || Muss auf 0 geclampt sein.
+6.8 skinRetryDelaySeconds Obergrenze || Wert 999, start+stop, pruefen: 60.
+6.9 skinRetryDelaySeconds Untergrenze || Wert -5, start+stop, pruefen: 0.
+6.10 Beide auf Default zurueck || spawnDelaySecondsOnJoin=3, skinRetryDelaySeconds=5. Speichern.
+6.11 Ergebnis notieren || "Test 6 Clamps: OK".
+
+# 7. Test E - Zweiter Spieler joint (kein zweiter Delay)
+7.1 Server starten || 3s-Delay aktiv.
+7.2 Account A joint, 3s warten || NPCs da.
+7.3 Log einmal "First player" || Log: genau EIN Vorkommen.
+7.4 Account B parallel joinen || Zweiter Client, anderes Konto.
+7.5 Kein Wartezeit bei B || B sieht NPCs sofort.
+7.6 Log immer noch 1x || "First player" kommt nicht nochmal.
+7.7 Ergebnis notieren || "Test 7 Second Player: OK".
+7.8 Beide ausloggen, Server stop || Standard.
+
+# 8. Skin Retry G1 - Fake-User
+8.1 Server aus || Stop.
+8.2 config.json oeffnen || Editor.
+8.3 defaultSkinUsername="AsdfNonExistent12345XYZ" || Fake-User. Speichern.
+8.4 skinRetryDelaySeconds=5 || Default. Speichern.
+8.5 Server starten || Start.
+8.6 Account A joinen, 3s warten || Initial burst.
+8.7 Neue freie Position || 5 Bloecke weg.
+8.8 Admin-Shop erstellen || /kssa createadmin RetryTest.
+8.9 Log Fetch-Start || "[Skin] Fetching skin 'AsdfNonExistent...'".
+8.10 Log 1. Null + Retry || "[Skin] fetchSkin returned null ... - retrying in 5s".
+8.11 5s warten || Echt abwarten.
+8.12 Log 2. Null ohne Retry || "[Skin] fetchSkin returned null ... - NPC keeps default".
+8.13 Kein 3. Retry || Weitere 10s warten. Keine neue "retrying"-Zeile.
+8.14 Ergebnis notieren || "Test 8 Retry Fake User: OK".
+8.15 Shop loeschen || /kssa deleteadmin <ID aus Chat>. Cleanup.
+8.16 Ausloggen, Server stop || Standard.
+
+# 9. Skin Retry G2 - Retry deaktiviert
+9.1 config.json oeffnen || Editor.
+9.2 skinRetryDelaySeconds=0 || Speichern.
+9.3 defaultSkinUsername bleibt Fake || Unveraendert "AsdfNonExistent12345XYZ".
+9.4 Server starten || Start.
+9.5 A joinen, 3s warten || Standard.
+9.6 Admin-Shop erstellen || /kssa createadmin RetryTest2.
+9.7 Log direktes "NPC keeps default" || Nach 1. Null direkt "NPC keeps default". KEIN "retrying in" dazwischen.
+9.8 Ergebnis notieren || "Test 9 Retry disabled: OK".
+9.9 Config zuruecksetzen || defaultSkinUsername="Notch" (oder echter Hytale-User). skinRetryDelaySeconds=5. Speichern.
+9.10 Shop loeschen || /kssa deleteadmin <ID>. Cleanup.
+9.11 Ausloggen, Server stop || Standard.
+
+# 10. Skin Retry G3 - Network-Fail (optional)
+10.1 Windows Firewall oeffnen || "Windows Defender Firewall mit erweiterter Sicherheit".
+10.2 Neue ausgehende Regel || Rechtsklick "Ausgehende Regeln" -> "Neue Regel".
+10.3 Regel fuer java.exe blockieren || Regel-Typ Programm. Java-Binary (vom Server-JDK). Aktion: Blockieren. Name "Block PlayerDB Test".
+10.4 Regel aktivieren || Speichern, Regel erscheint.
+10.5 Server starten || Start.
+10.6 A joinen, 3s warten || Burst.
+10.7 Admin-Shop mit echtem User || /kssa createadmin G3Test.
+10.8 Log Null + Retry || "retrying in 5s".
+10.9 Regel SOFORT deaktivieren || Rechtsklick "Deaktivieren" innerhalb der 5s.
+10.10 Log Attempt 2 Success || Nach 5s "[Skin] Applied 'Notch' ... (attempt 2)".
+10.11 Regel LOESCHEN || Rechtsklick -> Loeschen.
+10.12 Ergebnis notieren || "Test 10 Network Recovery: OK/SKIPPED".
+10.13 Cleanup-Shop || /kssa deleteadmin <ID>.
+10.14 Ausloggen, Server stop || Standard.
+
+# 11. Player Shop - Create Flow
+11.1 Server starten, A joinen, 3s warten || Normaler Start.
+11.2 An freier Position || 5 Bloecke weg von Test-Shops.
+11.3 /ksshop create || /ksshop create MeinLaden1.
+11.4 Chat-Bestaetigung || Chat: "Shop created: MeinLaden1" o.ae.
+11.5 NPC sofort sichtbar || NPC steht vor dir.
+11.6 Skin = eigener Name || NPC-Skin sieht deinem Char aehnlich.
+11.7 Creation-Cost abgezogen || Wenn creationCost=500: Gold-Balance muss um 500 gesunken sein. Pruefen ueber Economy-Command.
+11.8 /ksshop myshops || Erwartung: MeinLaden1 erscheint.
+11.9 Ergebnis notieren || "Test 11 Create Player Shop: OK".
+
+# 12. Player Shop - Create-Limits pruefen
+12.1 2x weitere Shops erstellen || /ksshop create Shop2, /ksshop create Shop3 (jeweils Position aendern).
+12.2 4. Versuch muss scheitern || /ksshop create Shop4. Chat-Fehler "Max shops reached".
+12.3 Limits-Config pruefen || maxShopsPerPlayer=3 in Config.
+12.4 Shop4 nicht im myshops || /ksshop myshops zeigt nur 3.
+12.5 Ergebnis notieren || "Test 12 Shop-Limits: OK".
+
+# 13. Player Shop - Rename
+13.1 /ksshop rename || /ksshop rename <shopId> NeuerName. shopId aus /ksshop myshops.
+13.2 Chat-Bestaetigung || "Shop renamed".
+13.3 Nameplate aktualisiert || Am NPC steht der neue Name.
+13.4 /ksshop myshops zeigt neu || Liste aktualisiert.
+13.5 Ergebnis notieren || "Test 13 Rename: OK".
+
+# 14. Player Shop - Open / Close
+14.1 /ksshop close <shopId> || Chat: "Shop closed".
+14.2 NPC visuell || NPC bleibt sichtbar, aber F-Key zeigt "closed"-Hinweis fuer Customer.
+14.3 /ksshop open <shopId> || Chat: "Shop opened". NPC wieder voll nutzbar.
+14.4 Ergebnis notieren || "Test 14 Open/Close: OK".
+
+# 15. Shop-Editor - Item hinzufuegen
+15.1 NPC approachen, /ksshop edit || Naechstliegender eigener Shop. Editor-UI oeffnet sich.
+15.2 Staging-Container pruefen || Oben links: dein Inventar. Unten rechts: Shop-Slot-Grid.
+15.3 Item aus Inventar in Slot ziehen || Drag+Drop: Stein-Block in ersten Shop-Slot.
+15.4 Buy-Price setzen || Klick auf Slot, Buy-Price-Feld auf "10".
+15.5 Sell-Price setzen || Sell-Price auf "5".
+15.6 Stock auf 64 setzen || Stock-Feld: 64.
+15.7 Daily-Limit leer lassen || 0 = kein Limit.
+15.8 Save-Button || Klick SAVE. Editor schliesst sich.
+15.9 Chat-Bestaetigung || "Shop saved" o.ae.
+15.10 NPC F-Key || Browse-UI oeffnet sich, Stein im Slot 1.
+15.11 Ergebnis notieren || "Test 15 Editor Add Item: OK".
+
+# 16. Shop-Editor - Item entfernen
+16.1 /ksshop edit wieder || Editor auf.
+16.2 Stein aus Slot in Inventar zuruecksuck || Drag+Drop zurueck.
+16.3 Save || SAVE.
+16.4 Chat-Bestaetigung || "Shop saved".
+16.5 NPC F-Key || Slot 1 ist leer.
+16.6 Ergebnis notieren || "Test 16 Editor Remove Item: OK".
+
+# 17. Customer Buy-Flow
+17.1 Shop wieder befuellen || /ksshop edit, Stein rein, Buy=10, Stock=64, Sell=0. Save.
+17.2 Account B einloggen || Zweiter Account, im Spiel.
+17.3 Zum NPC laufen || B approached den Shop.
+17.4 F druecken || Browse-UI oeffnet sich bei B.
+17.5 Stein-Slot klicken || Kaufen-Dialog mit Slider.
+17.6 Menge auswaehlen || Slider auf 10, "BUY" klicken.
+17.7 Chat-Bestaetigung || B: "Bought 10 stone for 100 gold".
+17.8 Gold von B abgezogen || B Gold-Balance: -100.
+17.9 Stock im Shop sank || 64 -> 54.
+17.10 Item in B Inventar || 10 Stein.
+17.11 Ergebnis notieren || "Test 17 Buy Flow: OK".
+
+# 18. Customer Sell-Flow
+18.1 /ksshop edit (A) || Editor auf.
+18.2 Sell-Price auf 5 || Stein-Slot bearbeiten. Save.
+18.3 B approached wieder || Mit Stein im Inventar.
+18.4 F + Sell-Tab || In Browse-UI den Sell-Button.
+18.5 Stein verkaufen || Menge 10, SELL klicken.
+18.6 Chat-Bestaetigung || B: "Sold 10 stone for 50 gold".
+18.7 Gold gutgeschrieben || B Gold: +50.
+18.8 Stock im Shop hoch || 54 -> 64.
+18.9 Ergebnis notieren || "Test 18 Sell Flow: OK".
+
+# 19. Stock depletion - Shop wird leer
+19.1 Stock-Test || /ksshop edit, Stock auf 5, Save.
+19.2 B kauft 10 || F, Stein, Buy 10.
+19.3 Fehlermeldung || "Not enough stock" oder Abbruch bei 5 Stueck.
+19.4 B kauft nur 5 || Transaktion erfolgreich fuer 5.
+19.5 Stock jetzt 0 || /ksshop edit bei A zeigt Stock=0.
+19.6 B kann nicht mehr kaufen || F + Buy-Versuch: "Out of stock".
+19.7 Ergebnis notieren || "Test 19 Stock Depletion: OK".
+
+# 20. Collect / Deposit - Shop-Balance
+20.1 Shop-Balance anzeigen || /ksshop stats. Shop-Balance zeigt 100+50 aus vorigen Tests.
+20.2 /ksshop collect || Naechstliegender Shop. Gold auf dein Char-Konto.
+20.3 Chat-Bestaetigung || "Collected 150 gold from shop".
+20.4 Char Balance hoeher || Dein Gold +150.
+20.5 Shop Balance jetzt 0 || /ksshop stats.
+20.6 /ksshop deposit 100 || 100 Gold ins Shop einzahlen (fuer Sell-Shop-Liquiditaet).
+20.7 Char -100, Shop +100 || Stats pruefen.
+20.8 Ergebnis notieren || "Test 20 Collect/Deposit: OK".
+
+# 21. Directory / Browse
+21.1 /ksshop browse || UI oeffnet sich, Grid mit allen gelisteten Shops.
+21.2 Shops aus Baseline sichtbar || TestAdmin1, TestPlayer1 usw.
+21.3 Pagination funktioniert || Wenn >9 Shops: Next-Button.
+21.4 Filter-Tab "Category" || Dropdown oder Tabs fuer Kategorien.
+21.5 Auf einen Shop klicken || Detail-Dialog oder Teleport.
+21.6 Ergebnis notieren || "Test 21 Browse: OK".
+
+# 22. Search
+22.1 /ksshop search Stein || Query, Ergebnisse.
+22.2 Matchende Shops auflisten || Shops mit Stein-Item.
+22.3 /ksshop search TestAdmin || By Shop-Namen finden.
+22.4 Leere Query Fehler || /ksshop search. Chat: "empty query".
+22.5 Ergebnis notieren || "Test 22 Search: OK".
+
+# 23. Visit
+23.1 /ksshop visit <shopId> || Oeffnet Browse-UI des Shops direkt, ohne zum NPC laufen zu muessen.
+23.2 Oder Teleport || Je nach Implementation - pruefen was passiert.
+23.3 Ergebnis notieren || "Test 23 Visit: OK".
+
+# 24. Rating
+24.1 B ratet Shop || B online: /ksshop rate <shopId> 5. Chat-Bestaetigung.
+24.2 Shop stats zeigt Rating || /ksshop stats am Shop. 5 Sterne avg.
+24.3 A kann eigenen Shop nicht raten || A: /ksshop rate <eigenerId> 5. Error "cannot rate own shop".
+24.4 Ungueltige Sterne || /ksshop rate <id> 10. Error "1-5 only".
+24.5 Ergebnis notieren || "Test 24 Rating: OK".
+
+# 25. Notifications
+25.1 /ksshop notifications || Liste deiner gespeicherten Notifications (Shop-Events).
+25.2 Wenn leer: Empty-State || "No notifications".
+25.3 Transaktion triggert Notification || Nach Kauf/Verkauf muss Notification fuer Shop-Owner entstehen.
+25.4 Ergebnis notieren || "Test 25 Notifications: OK".
+
+# 26. History
+26.1 /ksshop history || Transaction-Log fuer deine Shops.
+26.2 Buy + Sell aus Tests 17+18 sichtbar || Eintraege Stein 10x Buy, 10x Sell.
+26.3 Timestamps korrekt || Aktuelles Datum.
+26.4 Ergebnis notieren || "Test 26 History: OK".
+
+# 27. Transfer
+27.1 A erstellt Shop TransferTest || /ksshop create TransferTest.
+27.2 A transferiert an B || /ksshop transfer <shopId> <B-Name>. Chat: "Transfer request sent to B".
+27.3 B accepted || B online, Chat-Hinweis oder /ksshop transfer accept. Je nach Implementation.
+27.4 Shop-Owner jetzt B || /ksshop myshops bei B zeigt TransferTest.
+27.5 A sieht TransferTest nicht mehr || /ksshop myshops bei A.
+27.6 Ergebnis notieren || "Test 27 Transfer: OK".
+
+# 28. Listing (Directory-Fee)
+28.1 config listingEnabled=true || Pruefen.
+28.2 Neuer Shop ohne Listing || /ksshop create UnlistedShop. Default sollte freie Tage bekommen (listingFreeDaysOnCreate=7).
+28.3 /ksshop list <shopId> 5 || Listing fuer 5 Tage kaufen. Gold -500 (listingPricePerDay=100).
+28.4 Shop im /ksshop browse sichtbar || Directory zeigt den Shop.
+28.5 Min-Days-Error || /ksshop list <id> 0. Error.
+28.6 Max-Days-Error || /ksshop list <id> 999. Error "max 30".
+28.7 Ergebnis notieren || "Test 28 Listing: OK".
+
+# 29. Tax-System
+29.1 config tax.enabled=true setzen || Server stop, config bearbeiten, buyTaxPercent=10, sellTaxPercent=10, Server start.
+29.2 B kauft fuer 100 Gold || 10% Tax. B zahlt 110 oder A kriegt nur 90 (je nach Implementation).
+29.3 Tax-Recipient pruefen || config taxRecipient="server" - Gold verschwindet, "<name>" - geht an Admin.
+29.4 /ksshop history zeigt Tax || Tax-Betrag aufgelistet.
+29.5 Tax zurueck ausschalten || Server stop, enabled=false, Start.
+29.6 Ergebnis notieren || "Test 29 Tax: OK".
+
+# 30. Featured Shops
+30.1 config featured.enabled=true setzen || Server stop, config, Start.
+30.2 /kssa feature <shopId> 7 || Admin featured einen Shop fuer 7 Tage.
+30.3 Shop im Browse oben || "Featured"-Badge oder Sticky-Position.
+30.4 Nach 7 Tagen (manual) || Kann via DB-Manipulation oder config max-slots getestet werden.
+30.5 Featured wieder aus || config featured.enabled=false, Restart.
+30.6 Ergebnis notieren || "Test 30 Featured: OK".
+
+# 31. My Shops
+31.1 /ksshop myshops || Deine Shops als Liste/UI.
+31.2 Counts + Stats || Pro Shop: Balance, Items, Rating.
+31.3 Einträge klickbar || Klick oeffnet Edit/Stats-Seite.
+31.4 Ergebnis notieren || "Test 31 MyShops: OK".
+
+# 32. Rental Fixed-Price - Rent-Flow
+32.1 B approached TestRentFixed1 || Vacant-NPC aus Baseline.
+32.2 Nameplate "TestRentFixed1 [100g/day]" || Check.
+32.3 F druecken || Rent-Confirm-Dialog oeffnet.
+32.4 Day-Slider 1-7 || Slider da.
+32.5 Tage auf 3 || Slider bewegen.
+32.6 Total aktualisiert live || 300g Total.
+32.7 Your active rentals: 0/1 || Permission-Check aus config.
+32.8 RENT klicken || Bestaetigung.
+32.9 Chat "You rented TestRentFixed1" || Positive Meldung.
+32.10 NPC wechselt zu B-Skin || Vacant-NPC verschwindet, B-Skin-NPC erscheint.
+32.11 Nameplate zeigt Shop-Name + Expiry || "Shop by B - expires in 3d".
+32.12 B Gold -300 || Balance-Check.
+32.13 Ergebnis notieren || "Test 32 Fixed Rent: OK".
+
+# 33. Rental - Renter befuellt den Shop
+33.1 B /ksshop edit || Am gemieteten Shop.
+33.2 Items reinpacken || B fuegt Holzstaebe hinzu, Buy=20, Stock=32, Save.
+33.3 A (anderer Spieler) kauft || A F-Keyed, kauft 5 Stueck fuer 100g.
+33.4 B bekommt 100g Shop-Balance || /ksshop stats bei B am Shop.
+33.5 Ergebnis notieren || "Test 33 Renter Fills Shop: OK".
+
+# 34. Rental - My Rentals Page
+34.1 B /ksshop myrentals || Page oeffnet.
+34.2 TestRentFixed1 drin || Mit "Expires in 2d 23h" oder aehnlich.
+34.3 Revenue = 100g || Aus Test 33.
+34.4 Items count = 1 || Holzstaebe.
+34.5 EXTEND-Button klicken || Rent-Dialog auf, Extend-Mode.
+34.6 +2 Tage waehlen, EXTEND || Kostet 200g, neue Expiry 5d.
+34.7 B Gold -200, rentedUntil +2d || Checks.
+34.8 Ergebnis notieren || "Test 34 MyRentals Extend: OK".
+
+# 35. Rental - Release Early
+35.1 B /ksshop myrentals || Page.
+35.2 RELEASE EARLY-Button || Confirm-Dialog.
+35.3 Bestaetigen || Rental beendet vorzeitig.
+35.4 Items per Mail an B || Mailbox-Check: 32x Holzstaebe.
+35.5 Shop-Balance per Mail || 100g Money-Mail.
+35.6 NPC wieder Vacant-Shell || "TestRentFixed1 [100g/day]".
+35.7 Gold-Refund? || config.releaseEarlyGoldRefundFraction=0 -> kein Gold zurueck.
+35.8 Ergebnis notieren || "Test 35 Release Early: OK".
+
+# 36. Rental - Force Expiry durch Admin
+36.1 B mietet TestRentFixed1 wieder || Fresh rent 1 Tag, 100g.
+36.2 B fuellt Shop || Ein paar Items rein.
+36.3 A als Admin || /kssa forceexpirerental <slotId>.
+36.4 Chat bei A "Force-expired" || Bestaetigung.
+36.5 B bekommt Mail || Items + Balance in Mailbox.
+36.6 Slot wieder Vacant || Nameplate.
+36.7 Ergebnis notieren || "Test 36 Force Expire: OK".
+
+# 37. Rental - Natural Expiry (scheduler tick)
+37.1 B mietet fuer 1 Tag || /kssa createrental Test37Slot 100 1 waere einfacher. Rent fuer 1 Tag.
+37.2 In DB rentedUntil manipulieren || SQLite-CLI: UPDATE shop_rental_slots SET rented_until=<now-1000>. Komplex - alternative: config den 60s-tick abwarten und testen.
+37.3 Warten auf Scheduler-Tick || RentalExpiryTask laeuft alle 60s.
+37.4 Nach spaetestens 60s Expiry || Log: "Rental expired for <slot>".
+37.5 Mailbox bei B mit Items+Gold || Checks.
+37.6 NPC wieder Vacant || Check.
+37.7 Ergebnis notieren || "Test 37 Natural Expiry: OK".
+
+# 38. Auction - Bid-Flow
+38.1 TestRentAuc1 existiert || Aus Baseline.
+38.2 B approached || Zum Auction-NPC.
+38.3 F druecken || RentalBidPage oeffnet.
+38.4 Timer laeuft (60min) || Countdown tickt runter.
+38.5 Current high bid: 500g || minBid.
+38.6 Kein Bidder bisher || "No bids yet".
+38.7 Minimum bid: 510g || current + bidIncrement (10).
+38.8 B bietet 600g || Slider auf 600, PLACE BID.
+38.9 Chat "Bid placed 600g" || Bestaetigung.
+38.10 B Gold NICHT abgezogen || Wichtig: Gold bleibt bei B bis Finalize.
+38.11 High-Bidder-Anzeige B || UI zeigt B als high.
+38.12 Ergebnis notieren || "Test 38 Auction Bid: OK".
+
+# 39. Auction - Outbid Notification
+39.1 A approached TestRentAuc1 || Als zweiter Bidder.
+39.2 F, Bid 650 || A bietet.
+39.3 B bekommt Chat || "You've been outbid on TestRentAuc1".
+39.4 UI bei A zeigt A als high || 650g.
+39.5 Kein Gold von A abgezogen || Check Balance.
+39.6 Ergebnis notieren || "Test 39 Outbid Notify: OK".
+
+# 40. Auction - Anti-Sniping
+40.1 Config auctionAntiSnipingSeconds=30 || Default.
+40.2 Auction-Timer in letzte 30s bringen || Entweder warten (komplex) oder via DB auctionEndsAt manipulieren.
+40.3 Im letzten 30s Fenster bieten || B bietet wieder 700g.
+40.4 Auction wird verlaengert um 30s || Log: "Auction extended".
+40.5 Timer zeigt +30s || UI-Countdown.
+40.6 Chat an alle Beobachter || "Auction extended ... new end".
+40.7 Ergebnis notieren || "Test 40 Anti-Sniping: OK".
+
+# 41. Auction - Ending-Soon Broadcast
+41.1 Config auctionEndingSoonSeconds=60 || Default.
+41.2 Timer auf unter 60s bringen || Via DB oder Warten.
+41.3 World-Broadcast einmalig || Chat an ALLE: "Auction <slot> ends in 60s! Current bid 700g".
+41.4 Zweite Broadcast passiert nicht || Nur einmal pro Auction.
+41.5 Ergebnis notieren || "Test 41 Ending-Soon: OK".
+
+# 42. Auction - Finalize + Winner kauft
+42.1 Auction-Timer auf Ende bringen || auctionEndsAt ablaufen lassen.
+42.2 Scheduler-Tick < 60s spaeter || RentalExpiryTask scannt Auktionen.
+42.3 Winner wird berechnet || High-Bidder ist A mit 700g.
+42.4 A Gold -700 bei Finalize || Balance -700.
+42.5 A wird zum Renter || NPC-Skin zu A.
+42.6 Chat an A "You won TestRentAuc1!" || Meldung.
+42.7 rentedUntil = now + maxDays*86400000 || 7 Tage.
+42.8 Ergebnis notieren || "Test 42 Auction Finalize: OK".
+
+# 43. Auction - Leere Auction Restart
+43.1 Config onEmptyAuction="RESTART" || Default.
+43.2 Neuer Auction-Slot || /kssa createrentalauction EmptyTest 500 10 60 7.
+43.3 60min ohne Bids warten || Oder via DB auctionEndsAt manipulieren.
+43.4 Scheduler scan || Auction wird auto-restarted.
+43.5 Log "Auction restarted" || Meldung.
+43.6 Neuer Timer 60min || Wieder von vorn.
+43.7 Ergebnis notieren || "Test 43 Auto-Restart: OK".
+
+# 44. Rental Stations Page (Multi-Slot browse)
+44.1 /ksshop rentalstations || Page oeffnet.
+44.2 Alle Slots im World || TestRentFixed1 + TestRentAuc1 + weitere.
+44.3 Tabs ALL / VACANT / AUCTION / RENTED || Filter-Tabs.
+44.4 Slot-Cards mit Status || Jede Karte: Name, Mode, State, Action-Button.
+44.5 Klick auf VACANT Fixed || Rent-Dialog.
+44.6 Klick auf AUCTION || Bid-Page.
+44.7 Klick auf RENTED || "OCCUPIED" Button disabled, oder oeffnet Browse-UI als Kunde.
+44.8 Ergebnis notieren || "Test 44 Stations Page: OK".
+
+# 45. Admin Rentals Panel
+45.1 /kssa admin || Admin-UI.
+45.2 Sidebar "Rentals"-Tab || Klicken.
+45.3 Tabelle mit allen Slots || Sicht aller Rentals Server-weit.
+45.4 Filter-Buttons || ALL, VACANT, AUCTION, RENTED - klicken, Liste filtert.
+45.5 Search-Feld || Name eingeben, filtert Liste.
+45.6 Pagination || Wenn viele Rentals: Next/Prev.
+45.7 FORCE EXPIRE an einem Slot || Klick, Slot expired sofort, Mailbox-Mail geht raus.
+45.8 DELETE SLOT Button || Loescht komplett (inkl refund falls aktiv).
+45.9 Ergebnis notieren || "Test 45 Admin Panel Rentals: OK".
+
+# 46. Admin Stats
+46.1 /kssa stats || Globale Shop-Statistiken.
+46.2 Total shops, Transactions, Revenue || Werte sinnvoll.
+46.3 Ergebnis notieren || "Test 46 Admin Stats: OK".
+
+# 47. Admin Log
+47.1 /kssa log || Audit-Log der letzten Aktionen.
+47.2 Create/Delete/Transfer-Eintraege || Chronologisch.
+47.3 Ergebnis notieren || "Test 47 Admin Log: OK".
+
+# 48. Admin Blacklist
+48.1 /kssa blacklist add stone || Item auf Blacklist.
+48.2 Chat "stone blacklisted" || OK.
+48.3 Spieler probiert Stein in Shop zu packen || Editor-Fehler "Item blacklisted".
+48.4 /kssa blacklist remove stone || Entfernen.
+48.5 Funktioniert wieder || Editor akzeptiert Stein.
+48.6 Ergebnis notieren || "Test 48 Blacklist: OK".
+
+# 49. Admin Settax
+49.1 /kssa settax 15 || Setzt Tax auf 15%.
+49.2 Config pruefen || buyTaxPercent=15, sellTaxPercent=15.
+49.3 Tax kommt in neuen Transaktionen || 15% abgezogen.
+49.4 /kssa settax 0 || Zurueck.
+49.5 Ergebnis notieren || "Test 49 Settax: OK".
+
+# 50. Admin Feature
+50.1 /kssa feature <shopId> 3 || Shop featured fuer 3 Tage.
+50.2 Chat-Bestaetigung || "Featured".
+50.3 Shop in Browse "Featured" || Badge.
+50.4 Ergebnis notieren || "Test 50 Feature Cmd: OK".
+
+# 51. Admin Close/Open Player Shops
+51.1 /kssa closeplayer <shopId> || Shop eines anderen Spielers schliessen.
+51.2 Shop geschlossen || Owner sieht "closed", kann nicht edit.
+51.3 /kssa openplayer <shopId> || Wieder offen.
+51.4 Ergebnis notieren || "Test 51 Admin Open/Close Player: OK".
+
+# 52. Admin deleteadmin / deleteplayer
+52.1 /kssa deleteadmin <shopId> || Admin-Shop loeschen. NPC despawnt.
+52.2 /kssa deleteplayer <shopId> || Player-Shop loeschen. Owner kriegt Mail. NPC despawnt.
+52.3 Ergebnis notieren || "Test 52 Admin Delete: OK".
+
+# 53. Admin Reload
+53.1 /kssa reload || Config + i18n neu laden.
+53.2 Chat "Config reloaded" || OK.
+53.3 Config-Aenderungen wirksam || Ohne Server-Restart (z.B. Tax-Change).
+53.4 Ergebnis notieren || "Test 53 Reload: OK".
+
+# 54. Admin RespawnNpcs
+54.1 /kssa respawnnpcs || Alle Shop-NPCs in World werden neu gespawnt.
+54.2 Sichtbarer Flicker || NPCs blinken kurz weg + zurueck.
+54.3 Skins nach Respawn || Alle mit Skin.
+54.4 Kein Spawn-Delay bei Respawn || Unmittelbar, kein 3s-Delay.
+54.5 Ergebnis notieren || "Test 54 RespawnNpcs: OK".
+
+# 55. Admin DeleteNearest
+55.1 Zum NPC stellen || Vor Test-NPC.
+55.2 /kssa deletenearest || Naechstliegender NPC + Shop weg.
+55.3 Chat-Bestaetigung || "Deleted <shopName>".
+55.4 NPC weg || Kein NPC mehr.
+55.5 Ergebnis notieren || "Test 55 DeleteNearest: OK".
+
+# 56. Shop Editor Edge-Cases
+56.1 Max Items Test || /ksshop edit, 45 Slots fuellen, 46. scheitert.
+56.2 Ungueltige Price (0) || Buy=0, Save. Error oder Treat als "not for sale".
+56.3 Negative Price || Buy=-5. Error.
+56.4 Sehr grosser Price || Buy=10000000. Clamp auf config.economy.maxPrice.
+56.5 Price unter minPrice || Buy=0 wenn minPrice=1. Error.
+56.6 Ergebnis notieren || "Test 56 Editor Edge Cases: OK".
+
+# 57. Orphan NPC Sweep
+57.1 Server running, NPCs da || Standard.
+57.2 Server hart crashen || Task-Manager kill server.exe (NICHT "stop").
+57.3 Server neu starten || Start.
+57.4 Nach 30s Scheduler-Tick || Orphan-Sweep laeuft.
+57.5 Log "Periodic orphan sweep: removed X" || Cleanup-Meldung.
+57.6 Keine Ghost-NPCs || Im Spiel nur die richtigen NPCs.
+57.7 Ergebnis notieren || "Test 57 Orphan Sweep: OK".
+
+# 58. Chunk Reload NPCs bleiben
+58.1 Zum Test-NPC stehen || Angesichtig.
+58.2 Weit wegteleportieren || 500 Bloecke, NPC unloaded chunk.
+58.3 Zurueck || NPC wieder da.
+58.4 KEIN Duplicate || Nur ein NPC pro Shop.
+58.5 Ergebnis notieren || "Test 58 Chunk Reload: OK".
+
+# 59. Nameplate Toggle
+59.1 Shop hat Nameplate on default || Ja.
+59.2 Edit -> "Show Nameplate" off || In Editor-Checkbox.
+59.3 Nameplate weg || NPC ohne Text.
+59.4 Wieder on || Zurueck.
+59.5 Ergebnis notieren || "Test 59 Nameplate Toggle: OK".
+
+# 60. NPC Look-At-Player Rotation
+60.1 config npc.lookAtPlayer=true || Default.
+60.2 Vor NPC bewegen || Links, rechts, NPC dreht Kopf/Koerper dir nach.
+60.3 Weiter weg als 5 Bloecke || NPC faellt in default-Rotation zurueck.
+60.4 Ergebnis notieren || "Test 60 LookAt: OK".
+
+# 61. Mailbox Integration
+61.1 Rental expires || Items+Money sollten in Mailbox landen.
+61.2 /mailbox oder entsprechender Command || Oeffnet Mailbox-UI.
+61.3 Items claim || Sollten wieder im Inventar sein.
+61.4 Money claim || Gold gutgeschrieben.
+61.5 BSON-Metadata preserved || Falls Items Custom-Metadata hatten, bleiben erhalten.
+61.6 Ergebnis notieren || "Test 61 Mailbox: OK".
+
+# 62. Persistence - Server Restart
+62.1 Server laufen + 3 Shops || Standard.
+62.2 Server "stop" || Clean shutdown.
+62.3 Log "Saved N shops to database" || Bei Shutdown.
+62.4 Server neu starten || Start.
+62.5 Alle Shops wieder da || Positionen, Items, Balances identisch.
+62.6 Rentals wieder da || Slots, Renter, Expiry-Dates.
+62.7 Ergebnis notieren || "Test 62 Persistence: OK".
+
+# 63. Persistence - SQLite
+63.1 config database.type=sqlite || Default.
+63.2 <SERVER>/data/shops/shops.db existiert || SQLite-Datei.
+63.3 Mit DB Browser for SQLite oeffnen || Schema: shop_shops, shop_items, shop_rental_slots, shop_rental_bids, shop_transactions, shop_ratings.
+63.4 Daten im shops-Table || Zeilen fuer alle gelistete Shops.
+63.5 Ergebnis notieren || "Test 63 SQLite: OK".
+
+# 64. Persistence - MySQL (optional)
+64.1 config database.type=mysql || Aendern.
+64.2 MySQL-Host + Credentials || config.database.mysql.host/user/pass.
+64.3 Server start || Connect-Test im Log "MySQL connected".
+64.4 Shops neu erstellen || Sie landen in MySQL.
+64.5 DB-Client (MySQL Workbench) || Tabellen pruefen.
+64.6 Zurueck zu SQLite || database.type=sqlite, restart.
+64.7 Ergebnis notieren || "Test 64 MySQL: OK/SKIPPED".
+
+# 65. Permission - Max Shops
+65.1 Account C ohne op || Normaler Spieler.
+65.2 C Permission ks.shop.user.create=true || Default.
+65.3 C Permission ks.shop.limit.shops.2 || Per permission-plugin zuweisen.
+65.4 C erstellt 2 Shops || OK.
+65.5 3. Shop scheitert || Chat Error "max shops reached".
+65.6 Permission hochstufen ks.shop.limit.shops.5 || 5 erlaubt.
+65.7 3., 4., 5. Shop OK || 6. scheitert.
+65.8 Ergebnis notieren || "Test 65 Perm Max Shops: OK".
+
+# 66. Permission - Max Rentals
+66.1 C Permission ks.rental.rent=true || Default.
+66.2 Default max=1 || Config maxConcurrentRentalsDefault=1.
+66.3 C mietet 1 Slot || OK.
+66.4 C mietet 2. Slot || Error "Max rentals reached".
+66.5 C Perm ks.rental.limit.3 || Upgrade auf 3.
+66.6 2. + 3. Rental gehen || OK.
+66.7 4. Rental scheitert || Limit greift.
+66.8 Ergebnis notieren || "Test 66 Perm Max Rentals: OK".
+
+# 67. Permission - Admin-only
+67.1 C ohne ks.shop.admin || /kssa createadmin Test. Error "No permission".
+67.2 C mit ks.shop.admin || /kssa createadmin Test OK.
+67.3 Ergebnis notieren || "Test 67 Perm Admin: OK".
+
+# 68. Edge Case - Shop-Owner offline
+68.1 A Shop erstellen || /ksshop create OfflineTest.
+68.2 A ausloggen || /logout.
+68.3 B kauft || B am Shop kauft. Gold wird A Shop-Balance gutgeschrieben.
+68.4 A wieder einloggen || Re-login.
+68.5 A /ksshop stats || Sales sichtbar.
+68.6 Notification bei A || "N items sold while offline".
+68.7 Ergebnis notieren || "Test 68 Owner Offline: OK".
+
+# 69. Edge Case - Schneller Re-Connect
+69.1 A joinen, 3s warten || Burst done.
+69.2 A sofort ausloggen + wieder einloggen || Mehrmals schnell hintereinander.
+69.3 NPCs bleiben konsistent || Kein Duplicate, kein Verschwinden.
+69.4 Ergebnis notieren || "Test 69 Fast Reconnect: OK".
+
+# 70. Edge Case - Server-Crash waehrend Transaktion
+70.1 B mid-buy || B drueckt F, ist im Buy-Dialog.
+70.2 Server crashen || Task Manager kill.
+70.3 Server restart || Start.
+70.4 Check Consistency || B Gold + Shop Stock in letztem konsistenten Zustand.
+70.5 Keine doppelten Items || Kein Item-Duplication.
+70.6 Ergebnis notieren || "Test 70 Crash Recovery: OK".
+
+# 71. Edge Case - Shutdown Mid-Delay
+71.1 config spawnDelaySecondsOnJoin=30 || Lang.
+71.2 Server start || Start.
+71.3 A joint || World.
+71.4 Innerhalb 30s "stop" || Konsole.
+71.5 Clean shutdown || Keine Exceptions.
+71.6 Ergebnis notieren || "Test 71 Shutdown Mid-Delay: OK".
+
+# 72. Edge Case - Auction Winner insolvent
+72.1 Auction mit B als high bidder || B bietet 700g.
+72.2 B gibt Gold aus (auf 100g) || Vor Auction-Ende leeren.
+72.3 Auction Finalize || Scheduler.
+72.4 Withdraw fails || B kann nicht 700g zahlen.
+72.5 Auction restart || Config, keinem anderen Bidder gegeben.
+72.6 Chat an B || "Auction forfeit - insufficient funds".
+72.7 Ergebnis notieren || "Test 72 Insolvent Winner: OK".
+
+# 73. Edge Case - Rental-Slot in Nicht-existierender World
+73.1 DB-Manipulation || UPDATE shop_rental_slots SET world_name='GhostWorld' WHERE id='<id>'.
+73.2 Server restart || Start.
+73.3 Log-Warnung || "Could not resolve world 'GhostWorld'".
+73.4 Slot wird uebersprungen || Kein Crash.
+73.5 Ergebnis notieren || "Test 73 Ghost World: OK".
+
+# 74. I18n - Sprache umstellen (falls KsLang)
+74.1 /kslang setze de-DE || Falls KsLang vorhanden.
+74.2 Chat-Meldungen auf Deutsch || "Shop erstellt" statt "Shop created".
+74.3 Zurueck zu en-US || /kslang en-US.
+74.4 Ergebnis notieren || "Test 74 i18n: OK/SKIPPED".
+
+# 75. Showcase Write Guard (falls aktiv)
+75.1 Core showcase-Mode on || Server in Showcase-Modus.
+75.2 /ksshop create Test || Block mit Message.
+75.3 Normal-Modus wieder || Create funktioniert.
+75.4 Ergebnis notieren || "Test 75 Showcase Guard: OK/SKIPPED".
+
+# 76. Skin Disk Cache
+76.1 <SERVER>/data/shops/skin-cache.json || Nach erstem Server-Run vorhanden.
+76.2 Oeffnen || JSON mit Skin-Objekten keyed by username.
+76.3 Server stoppen + loeschen || Cache-Datei weg.
+76.4 Server starten || Fetch laeuft erneut (kein Cache).
+76.5 skin-cache.json regeneriert || Nach 1. Skin-Apply.
+76.6 Ergebnis notieren || "Test 76 Skin Cache: OK".
+
+# 77. Skin Cache TTL
+77.1 Cache-TTL = 30min (hardcoded) || Default.
+77.2 Warten 31min || Optional.
+77.3 Cache-Eintrag invalidiert || Fetch erneut.
+77.4 Ergebnis notieren || "Test 77 Cache TTL: OK/SKIPPED".
+
+# 78. Directory Filter & Sort
+78.1 /ksshop browse || Directory-UI.
+78.2 Sort by Rating || Button/Tab.
+78.3 Sort by Sales || Button/Tab.
+78.4 Sort by Recent || Button/Tab.
+78.5 Filter Category || Dropdown.
+78.6 Filter "My Shops only" || Wenn vorhanden.
+78.7 Ergebnis notieren || "Test 78 Directory Filters: OK".
+
+# 79. Rental - Nameplate-Reactivity
+79.1 Vacant-NPC TestRentFixed1 || Nameplate "TestRentFixed1 [100g/day]".
+79.2 B rentet || Nameplate wechselt live zu "<ShopName> by B".
+79.3 Expiry Countdown live || "expires in ..." updated.
+79.4 Ergebnis notieren || "Test 79 Nameplate Reactive: OK".
+
+# 80. Bid-Page Live Refresh
+80.1 B auf BidPage offen || F-Key TestRentAuc1.
+80.2 A bietet 700g || Mit 2. Client.
+80.3 Innerhalb 2s B sieht Update || High bid + Bidder name aktualisiert ohne Page-Neu-Oeffnen.
+80.4 Countdown tickt bei beiden || Sync.
+80.5 Ergebnis notieren || "Test 80 BidPage Refresh: OK".
+
+# 81. MyRentalsPage Live Countdown
+81.1 /ksshop myrentals offen || Liste.
+81.2 Expiry-Time tickt || "2d 23h 59m" -> "2d 23h 58m".
+81.3 Jede 2s Update || Refresh.
+81.4 Ergebnis notieren || "Test 81 MyRentals Tick: OK".
+
+# 82. Buy when not enough Gold
+82.1 B Gold runter auf 5g || Economy /eco set B 5.
+82.2 B tries buy Stein fuer 10g || Error "Insufficient funds".
+82.3 Shop Stock unveraendert || Kein Abzug.
+82.4 Ergebnis notieren || "Test 82 Insufficient Funds: OK".
+
+# 83. Buy-Disabled Item
+83.1 Editor: BuyEnabled=false || Item kann nicht gekauft werden.
+83.2 B versucht Buy || Button disabled oder Error.
+83.3 Ergebnis notieren || "Test 83 Buy Disabled: OK".
+
+# 84. Sell-Disabled Item
+84.1 Editor: SellEnabled=false || Kein Sell.
+84.2 B versucht Sell || Error.
+84.3 Ergebnis notieren || "Test 84 Sell Disabled: OK".
+
+# 85. Daily Buy Limit
+85.1 Editor: DailyBuyLimit=5 || 5 pro Tag.
+85.2 B kauft 5 || OK.
+85.3 B kauft 6. || Error "Daily limit reached".
+85.4 24h warten (oder Date-Manipulation) || Reset.
+85.5 B kauft wieder || OK.
+85.6 Ergebnis notieren || "Test 85 Daily Limit: OK".
+
+# 86. Shop Pickup (Player Shop zurueckholen)
+86.1 Owner an seinem Shop || Naeherung.
+86.2 /ksshop collect oder NPC-Token-Interaction || Shop packen.
+86.3 NPC verschwindet || Despawn.
+86.4 Shop_NPC_Token in Inventar || Item da.
+86.5 Irgendwo wieder platzieren || Neu spawnen.
+86.6 Items + Balance bleiben || Persistence.
+86.7 Ergebnis notieren || "Test 86 Pickup: OK".
+
+# 87. Featured Shop Expiry
+87.1 Shop featured fuer 1 Tag || /kssa feature <id> 1.
+87.2 DB featuredUntil auf now-1 setzen || Via SQLite.
+87.3 Scheduler-Tick || Default-Tick prueft.
+87.4 Shop nicht mehr featured || Badge weg.
+87.5 Ergebnis notieren || "Test 87 Feature Expiry: OK".
+
+# 88. Shop Move (neue Position)
+88.1 Shop picken || Mit Token.
+88.2 An anderer Position platzieren || Neuer Spot.
+88.3 NPC an neuer Position || Spawn korrekt.
+88.4 Items + Balance gleich || Nicht verloren.
+88.5 Ergebnis notieren || "Test 88 Shop Move: OK".
+
+# 89. Two Players Try Same Slot (Race)
+89.1 B + C approach TestRentFixed1 parallel || Beide F.
+89.2 Beide Rent-Dialog auf || Zeitgleich.
+89.3 B confirmt schneller || Millisekunden.
+89.4 C confirmt auch || Race-Check.
+89.5 Nur B bekommt Slot || C bekommt Error "Already rented".
+89.6 C Gold unveraendert || Kein Abzug bei B.
+89.7 Ergebnis notieren || "Test 89 Rent Race: OK".
+
+# 90. Auction Slot Delete mit aktivem Bid
+90.1 Auction mit B als Bieter || 700g.
+90.2 /kssa deleterental <slotId> || Admin loescht.
+90.3 Chat an B || "Slot deleted, bid released".
+90.4 B Gold unveraendert || Kein Abzug (Bid war nicht committed).
+90.5 Slot weg || Nicht mehr in Listen.
+90.6 Ergebnis notieren || "Test 90 Delete Active Auction: OK".
+
+# 91. Rental Slot Delete mit aktivem Rental
+91.1 B rented TestRentFixed1 || Mit Items.
+91.2 /kssa deleterental <slotId> || Admin.
+91.3 B bekommt Mail || Items + Gold-Refund (je nach config).
+91.4 NPC weg || Despawn.
+91.5 Slot gone || /kssa listrentals zeigt ihn nicht.
+91.6 Ergebnis notieren || "Test 91 Delete Active Rental: OK".
+
+# 92. Listing-Free Days on Create
+92.1 config listingFreeDaysOnCreate=7 || Default.
+92.2 Neuer Shop || /ksshop create FreeListingTest.
+92.3 Shop im Browse || Sichtbar ab sofort, kein Kauf noetig.
+92.4 7 Tage spaeter (manipuliert) || Shop unlisted.
+92.5 Ergebnis notieren || "Test 92 Free Listing Days: OK".
+
+# 93. Admin-Shop Unlimited Stock
+93.1 config adminShops.unlimitedStock=true || Default.
+93.2 Admin-Shop mit Item || 5 Stock setzen.
+93.3 B kauft 100 || Stock bleibt auf 5 oder -1 (unlimited).
+93.4 Reality-Check || Shop gibt 100 Stein.
+93.5 Ergebnis notieren || "Test 93 Unlimited Stock: OK".
+
+# 94. Admin-Shop BuyAndSell
+94.1 config adminShops.allowBuyAndSell=true || Default.
+94.2 Admin-Shop kauft + verkauft gleichzeitig || OK.
+94.3 false setzen || Nur Buy oder Sell.
+94.4 Ergebnis notieren || "Test 94 AdminBuyAndSell: OK".
+
+# 95. Shop Description
+95.1 Shop mit Description erstellen || Im Editor description-Feld.
+95.2 Max-Length 100 Chars || Longer abgeschnitten.
+95.3 In Browse sichtbar || Detail-View.
+95.4 Ergebnis notieren || "Test 95 Description: OK".
+
+# 96. Shop Tags
+96.1 Shop-Tags im Editor || "food,tools".
+96.2 Max 5 Tags || 6. verweigert.
+96.3 Browse filtert by tag || /ksshop search tag:food.
+96.4 Ergebnis notieren || "Test 96 Tags: OK".
+
+# 97. Shop Category
+97.1 Categories in config || List von Kategorien.
+97.2 Shop zuweisen || Editor-Dropdown.
+97.3 Browse by Category || Filter.
+97.4 Ergebnis notieren || "Test 97 Category: OK".
+
+# 98. NPC-Skin: Admin-Shop Default-Skin
+98.1 config adminShops.defaultNpcSkin="Notch" || Aendern.
+98.2 /kssa createadmin DefaultSkinTest || NPC mit Notch-Skin.
+98.3 Ergebnis notieren || "Test 98 Admin Default Skin: OK".
+
+# 99. NPC-Skin: Player-Shop allowNpcCustomization
+99.1 config playerShops.allowNpcCustomization=true || Default.
+99.2 /ksshop create CustomSkinTest || Skin=Owner-Name.
+99.3 allowNpcCustomization=false || Skin=config.npc.defaultSkinUsername.
+99.4 Ergebnis notieren || "Test 99 Custom Skin Flag: OK".
+
+# 100. Rent-Collection Feature
+100.1 config features.rentSystem=true, rent.enabled=true || Aktivieren.
+100.2 Shop hat rentAmount gesetzt || pro Spieler.
+100.3 Scheduler-Tick || Gold wird abgezogen pro Tag.
+100.4 Nicht bezahlt -> Shop geschlossen || Auto-close.
+100.5 Config zurueck || features.rentSystem=false.
+100.6 Ergebnis notieren || "Test 100 Rent System: OK/SKIPPED (optional feature)".
+
+# 101. Cleanup - Test-Shops loeschen
+101.1 Alle TestXxx Shops entfernen || /kssa deleteplayer + /kssa deleteadmin nach Bedarf.
+101.2 Rentals weg || /kssa deleterental pro Slot.
+101.3 Shop-DB aufraeumen || SQLite-Dateien ggf manuell check.
+101.4 Firewall-Regeln weg || Block-PlayerDB-Regel aus G3 loeschen.
+101.5 Config auf Default || spawnDelaySecondsOnJoin=3, skinRetryDelaySeconds=5, defaultSkinUsername="Notch" oder "".
+101.6 Ergebnis notieren || "Cleanup Done".
+
+# 102. Log-Filter Referenz
+102.1 "First player in world" || Spawn-Delay-Trigger, 1x pro World pro Server-Lifetime.
+102.2 "[Skin] Fetching" || Fetch start, 1x pro NPC.
+102.3 "[Skin] Applied" || Success.
+102.4 "returned null" || Fetch-Fail.
+102.5 "retrying in" || Retry geplant.
+102.6 "(attempt 2)" || Retry-Success.
+102.7 "NPC keeps default" || Final aufgegeben.
+102.8 "Rental expired" || Expiry-Tick.
+102.9 "Auction extended" || Anti-Sniping.
+102.10 "Auction restarted" || Empty-Auction-Restart.
+102.11 "Cached skin for" || Skin in Cache gelegt.
+102.12 "Orphan sweep" || Ghost-NPC-Cleanup.
+102.13 "Saved N shops" || Auto-Save-Tick.
+
+# 103. Troubleshooting
+103.1 Config-Felder fehlen nach Update || <SERVER>/data/shops/config.json loeschen + Server-Restart.
+103.2 NPCs spawn sofort trotz Config 3 || Build + Deploy erneut: ./gradlew :mods:shops:build :mods:shops:deployToServer. Restart.
+103.3 Kein Skin nach allen Tests || defaultSkinUsername mit echtem Hytale-User (Notch) setzen. Retry-Delay hochstellen.
+103.4 Duplicate NPCs nach Crash || Orphan-Sweep abwarten (30s tick) oder /kssa respawnnpcs.
+103.5 "retrying in 0s" || Config prueft, skinRetryDelaySeconds muss >0 sein.
+103.6 Rental expires nicht || RentalExpiryTask laeuft alle 60s - 60s warten.
+103.7 Skin-Fetch fails dauerhaft || PlayerDB down? Ping playerdb.co testen. Firewall? DNS-Resolution?
+103.8 "First player" fehlt im Log || Plugin nicht geladen. manifest.json pruefen + JAR im mods-Ordner.
+103.9 DB-Errors beim Save || <SERVER>/data/shops/shops.db Lock? Server-Prozess running?
+103.10 Transfer stuck || Server-Log auf Errors. Target-UUID korrekt?
+
+# 104. End - Summary
+104.1 Alle Sektionen durchgegangen || 104 Sektionen, jede mit "OK" markiert.
+104.2 Abweichungen dokumentiert || In test_results.txt pro Fail: Sektion + Log-Auszug + Screenshot.
+104.3 An Claude / Support schicken || Datei hochladen bei Bug-Report.
+104.4 Done || Vollstaendige Regression durchgefuehrt.

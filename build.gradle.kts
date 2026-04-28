@@ -74,5 +74,17 @@ tasks.processResources {
 tasks.register<Copy>("deployToServer") {
     dependsOn(tasks.jar)
     from(tasks.jar.get().archiveFile)
-    into(layout.projectDirectory.dir("../server-files/hytale-server-files/mods"))
+    // Override via `hytaleServerModsDir` in gradle.properties or -P on the command line.
+    // Default points at the local dev-tree mirror; set the absolute path to your live
+    // Hytale server mods folder to make deploy actually copy there.
+    val target = (project.findProperty("hytaleServerModsDir") as String?)
+        ?: "${rootProject.projectDir}/server-files/hytale-server-files/mods"
+    into(target)
+    // Live server mods folder holds other mods' locked files (e.g. Ecotale's
+    // running H2 DB) that Gradle cannot MD5-hash for incremental tracking.
+    // Disabling state tracking makes deploy always run and ignore sibling files.
+    doNotTrackState("Copies into a live server mods folder with other mods' locked files")
+    doFirst {
+        println("deployToServer -> ${target}")
+    }
 }

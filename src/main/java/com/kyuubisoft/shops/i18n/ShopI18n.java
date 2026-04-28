@@ -66,8 +66,14 @@ public class ShopI18n {
      * - v23: directory listing purchase flow — shop.list.* keys for
      *        /ksshop list <days> (usage, no_shop, disabled, not_enough_
      *        funds, success, success_permanent) + shop.error.not_owner
+     * - v24: rental station Phase 1 — shop.rental.* keys for rent confirm
+     *        dialog, expiry / release notifications, /ksshop myrentals,
+     *        plus Phase 2 stubs (auction won/outbid/ending/extended)
+     * - v25: rental station Phase 2/3 — auction bid page errors
+     *        (auction_closed, bid_too_low, own_bid, bid_placed), station
+     *        browse tabs + action labels, admin tab labels
      */
-    private static final int CURRENT_LOCALIZATION_VERSION = 23;
+    private static final int CURRENT_LOCALIZATION_VERSION = 28;
 
     private final Path dataFolder;
     private final Map<String, Map<String, String>> languages = new HashMap<>();

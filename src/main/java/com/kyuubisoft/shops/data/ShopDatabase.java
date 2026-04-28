@@ -8,6 +8,7 @@ import com.kyuubisoft.common.database.SQLiteProvider;
 import com.kyuubisoft.common.database.MySQLProvider;
 import com.kyuubisoft.shops.config.ShopConfig;
 import com.kyuubisoft.shops.mailbox.MailboxEntry;
+import com.kyuubisoft.shops.rental.RentalSlotData;
 
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -80,6 +81,9 @@ public class ShopDatabase {
         String ratingsTable;
         String notificationsTable;
         String mailboxTable;
+        String rentalSlotsTable;
+        String rentalBidsTable;
+        String playerFlagsTable;
 
         if (provider.isMySQL()) {
             shopsTable = "CREATE TABLE IF NOT EXISTS shop_shops (" +
@@ -191,6 +195,52 @@ public class ShopDatabase {
                 "item_metadata TEXT," +
                 "INDEX idx_mailbox_owner (owner_uuid, claimed)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+            rentalSlotsTable = "CREATE TABLE IF NOT EXISTS shop_rental_slots (" +
+                "id VARCHAR(36) PRIMARY KEY," +
+                "world_name VARCHAR(64) NOT NULL," +
+                "pos_x DOUBLE NOT NULL," +
+                "pos_y DOUBLE NOT NULL," +
+                "pos_z DOUBLE NOT NULL," +
+                "npc_rot_y FLOAT DEFAULT 0," +
+                "display_name VARCHAR(64) NOT NULL," +
+                "station_id VARCHAR(64)," +
+                "mode VARCHAR(16) NOT NULL DEFAULT 'FIXED'," +
+                "max_days INT NOT NULL DEFAULT 7," +
+                "price_per_day INT NOT NULL DEFAULT 100," +
+                "min_bid INT NOT NULL DEFAULT 500," +
+                "bid_increment INT NOT NULL DEFAULT 10," +
+                "auction_duration_minutes INT NOT NULL DEFAULT 60," +
+                "created_at BIGINT NOT NULL," +
+                "rented_shop_id VARCHAR(36)," +
+                "rented_by VARCHAR(36)," +
+                "rented_by_name VARCHAR(64)," +
+                "rented_until BIGINT DEFAULT 0," +
+                "auction_ends_at BIGINT DEFAULT 0," +
+                "current_high_bidder VARCHAR(36)," +
+                "current_high_bidder_name VARCHAR(64)," +
+                "current_high_bid INT DEFAULT 0," +
+                "ending_soon_broadcast BOOLEAN DEFAULT FALSE," +
+                "INDEX idx_rental_world (world_name)," +
+                "INDEX idx_rental_expiry (rented_until)," +
+                "INDEX idx_rental_auction (auction_ends_at)," +
+                "INDEX idx_rental_renter (rented_by)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+            rentalBidsTable = "CREATE TABLE IF NOT EXISTS shop_rental_bids (" +
+                "id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                "slot_id VARCHAR(36) NOT NULL," +
+                "bidder_uuid VARCHAR(36) NOT NULL," +
+                "bidder_name VARCHAR(64) NOT NULL," +
+                "amount INT NOT NULL," +
+                "timestamp BIGINT NOT NULL," +
+                "INDEX idx_rental_bids_slot (slot_id, timestamp DESC)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+            playerFlagsTable = "CREATE TABLE IF NOT EXISTS shop_player_flags (" +
+                "player_uuid VARCHAR(36) PRIMARY KEY," +
+                "free_listing_used BOOLEAN DEFAULT FALSE" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         } else {
             // SQLite
             shopsTable = "CREATE TABLE IF NOT EXISTS shop_shops (" +
@@ -295,6 +345,47 @@ public class ShopDatabase {
                 "claimed INTEGER DEFAULT 0," +
                 "item_metadata TEXT" +
                 ")";
+
+            rentalSlotsTable = "CREATE TABLE IF NOT EXISTS shop_rental_slots (" +
+                "id VARCHAR(36) PRIMARY KEY," +
+                "world_name VARCHAR(64) NOT NULL," +
+                "pos_x DOUBLE NOT NULL," +
+                "pos_y DOUBLE NOT NULL," +
+                "pos_z DOUBLE NOT NULL," +
+                "npc_rot_y FLOAT DEFAULT 0," +
+                "display_name VARCHAR(64) NOT NULL," +
+                "station_id VARCHAR(64)," +
+                "mode VARCHAR(16) NOT NULL DEFAULT 'FIXED'," +
+                "max_days INT NOT NULL DEFAULT 7," +
+                "price_per_day INT NOT NULL DEFAULT 100," +
+                "min_bid INT NOT NULL DEFAULT 500," +
+                "bid_increment INT NOT NULL DEFAULT 10," +
+                "auction_duration_minutes INT NOT NULL DEFAULT 60," +
+                "created_at BIGINT NOT NULL," +
+                "rented_shop_id VARCHAR(36)," +
+                "rented_by VARCHAR(36)," +
+                "rented_by_name VARCHAR(64)," +
+                "rented_until BIGINT DEFAULT 0," +
+                "auction_ends_at BIGINT DEFAULT 0," +
+                "current_high_bidder VARCHAR(36)," +
+                "current_high_bidder_name VARCHAR(64)," +
+                "current_high_bid INT DEFAULT 0," +
+                "ending_soon_broadcast BOOLEAN DEFAULT 0" +
+                ")";
+
+            rentalBidsTable = "CREATE TABLE IF NOT EXISTS shop_rental_bids (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "slot_id VARCHAR(36) NOT NULL," +
+                "bidder_uuid VARCHAR(36) NOT NULL," +
+                "bidder_name VARCHAR(64) NOT NULL," +
+                "amount INT NOT NULL," +
+                "timestamp BIGINT NOT NULL" +
+                ")";
+
+            playerFlagsTable = "CREATE TABLE IF NOT EXISTS shop_player_flags (" +
+                "player_uuid VARCHAR(36) PRIMARY KEY," +
+                "free_listing_used BOOLEAN DEFAULT 0" +
+                ")";
         }
 
         provider.executeUpdate(shopsTable);
@@ -303,6 +394,16 @@ public class ShopDatabase {
         provider.executeUpdate(ratingsTable);
         provider.executeUpdate(notificationsTable);
         provider.executeUpdate(mailboxTable);
+        provider.executeUpdate(rentalSlotsTable);
+        provider.executeUpdate(rentalBidsTable);
+        provider.executeUpdate(playerFlagsTable);
+
+        // SQLite needs explicit CREATE INDEX for bid history lookups.
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_rental_bids_slot ON shop_rental_bids(slot_id, timestamp DESC)");
+        } catch (SQLException ignored) {
+        }
 
         // Index for mailbox lookups (SQLite needs explicit CREATE INDEX)
         try {
@@ -310,6 +411,29 @@ public class ShopDatabase {
                 "CREATE INDEX IF NOT EXISTS idx_mailbox_owner ON shop_mailbox(owner_uuid, claimed)");
         } catch (SQLException ignored) {
             // MySQL already declared the index inline; ignore duplicate-key errors
+        }
+
+        // Indexes for rental slot lookups (SQLite needs explicit CREATE INDEX,
+        // MySQL already declared them inline, duplicates are swallowed).
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_rental_world ON shop_rental_slots(world_name)");
+        } catch (SQLException ignored) {
+        }
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_rental_expiry ON shop_rental_slots(rented_until)");
+        } catch (SQLException ignored) {
+        }
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_rental_auction ON shop_rental_slots(auction_ends_at)");
+        } catch (SQLException ignored) {
+        }
+        try {
+            provider.executeUpdate(
+                "CREATE INDEX IF NOT EXISTS idx_rental_renter ON shop_rental_slots(rented_by)");
+        } catch (SQLException ignored) {
         }
 
         // Migration: add shop_balance column if missing (existing databases)
@@ -382,6 +506,25 @@ public class ShopDatabase {
             // Column already exists - expected after first migration
         }
 
+        // Migration: add rental_slot_id / rental_expires_at columns to
+        // shop_shops if missing. Rental-backed shops mirror the live
+        // RentalSlotData row here so buy/sell/directory paths can filter
+        // without joining.
+        try {
+            provider.executeUpdate(
+                "ALTER TABLE shop_shops ADD COLUMN rental_slot_id VARCHAR(36) DEFAULT NULL");
+            LOGGER.info("Migrated: added rental_slot_id column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+        try {
+            provider.executeUpdate(
+                "ALTER TABLE shop_shops ADD COLUMN rental_expires_at BIGINT DEFAULT 0");
+            LOGGER.info("Migrated: added rental_expires_at column to shop_shops");
+        } catch (SQLException ignored) {
+            // Column already exists - expected after first migration
+        }
+
         // Migration: add item_metadata column to shop_mailbox if missing.
         // Required for BSON metadata on ITEM mails so enchanted purchases
         // survive the mailbox round-trip on their way to the buyer.
@@ -425,12 +568,14 @@ public class ShopDatabase {
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, packed, listed_until, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+              "open, show_name_tag, packed, listed_until, rental_slot_id, rental_expires_at, created_at, last_activity) " +
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             : "INSERT OR REPLACE INTO shop_shops (id, name, description, type, owner_uuid, owner_name, " +
               "world_name, pos_x, pos_y, pos_z, npc_rot_y, npc_entity_id, npc_skin_username, icon_item_id, " +
               "category, tags, average_rating, total_ratings, total_revenue, total_tax_paid, " +
               "shop_balance, rent_paid_until, rent_cost_per_cycle, rent_cycle_days, featured, featured_until, " +
-              "open, show_name_tag, packed, listed_until, created_at, last_activity) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+              "open, show_name_tag, packed, listed_until, rental_slot_id, rental_expires_at, created_at, last_activity) " +
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try {
             provider.executeUpdate(sql,
@@ -464,6 +609,8 @@ public class ShopDatabase {
                 shop.isShowNameTag(),
                 shop.isPacked(),
                 shop.getListedUntil(),
+                shop.getRentalSlotId() != null ? shop.getRentalSlotId().toString() : null,
+                shop.getRentalExpiresAt(),
                 shop.getCreatedAt(),
                 shop.getLastActivity()
             );
@@ -789,6 +936,49 @@ public class ShopDatabase {
         // The dirty flag is cleared by the caller after this returns.
     }
 
+    /**
+     * Returns true when the given player has already consumed their one-time
+     * free-listing window (i.e. created at least one shop in the past). The
+     * flag persists across shop deletion + re-creation, so a player cannot
+     * game `listingFreeDaysOnCreate` by deleting their shop and rebuilding.
+     */
+    public boolean hasUsedFreeListing(UUID playerUuid) {
+        if (playerUuid == null) return false;
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT free_listing_used FROM shop_player_flags WHERE player_uuid = ?",
+                playerUuid.toString());
+            try {
+                if (rs.next()) {
+                    return rs.getBoolean("free_listing_used");
+                }
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("hasUsedFreeListing query failed for "
+                + playerUuid + ": " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Marks the given player as having used their free-listing window.
+     * Idempotent - called the first time a player creates a shop.
+     */
+    public void markFreeListingUsed(UUID playerUuid) {
+        if (playerUuid == null) return;
+        try {
+            String sql = provider.isMySQL()
+                ? "REPLACE INTO shop_player_flags (player_uuid, free_listing_used) VALUES (?, TRUE)"
+                : "INSERT OR REPLACE INTO shop_player_flags (player_uuid, free_listing_used) VALUES (?, 1)";
+            provider.executeUpdate(sql, playerUuid.toString());
+        } catch (SQLException e) {
+            LOGGER.warning("markFreeListingUsed failed for "
+                + playerUuid + ": " + e.getMessage());
+        }
+    }
+
     // ==================== RATINGS ====================
 
     public List<ShopRating> loadRatings(UUID shopId) {
@@ -1041,6 +1231,227 @@ public class ShopDatabase {
             itemMetadata, claimed);
     }
 
+    // ==================== RENTAL SLOT CRUD ====================
+
+    public List<RentalSlotData> loadAllRentalSlots() {
+        List<RentalSlotData> slots = new ArrayList<>();
+        try {
+            ResultSet rs = provider.executeQuery("SELECT * FROM shop_rental_slots");
+            try {
+                while (rs.next()) {
+                    RentalSlotData slot = readRentalSlot(rs);
+                    if (slot != null) slots.add(slot);
+                }
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load rental slots: " + e.getMessage());
+        }
+        return slots;
+    }
+
+    public RentalSlotData loadRentalSlot(UUID slotId) {
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT * FROM shop_rental_slots WHERE id = ?", slotId.toString());
+            try {
+                if (rs.next()) return readRentalSlot(rs);
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load rental slot " + slotId + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    public void saveRentalSlot(RentalSlotData slot) {
+        String sql = provider.isMySQL()
+            ? "REPLACE INTO shop_rental_slots (id, world_name, pos_x, pos_y, pos_z, npc_rot_y, " +
+              "display_name, station_id, mode, max_days, price_per_day, min_bid, bid_increment, " +
+              "auction_duration_minutes, created_at, rented_shop_id, rented_by, rented_by_name, " +
+              "rented_until, auction_ends_at, current_high_bidder, current_high_bidder_name, " +
+              "current_high_bid, ending_soon_broadcast) " +
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            : "INSERT OR REPLACE INTO shop_rental_slots (id, world_name, pos_x, pos_y, pos_z, npc_rot_y, " +
+              "display_name, station_id, mode, max_days, price_per_day, min_bid, bid_increment, " +
+              "auction_duration_minutes, created_at, rented_shop_id, rented_by, rented_by_name, " +
+              "rented_until, auction_ends_at, current_high_bidder, current_high_bidder_name, " +
+              "current_high_bid, ending_soon_broadcast) " +
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+
+        try {
+            provider.executeUpdate(sql,
+                slot.getId().toString(),
+                slot.getWorldName(),
+                slot.getPosX(),
+                slot.getPosY(),
+                slot.getPosZ(),
+                slot.getNpcRotY(),
+                slot.getDisplayName(),
+                slot.getStationId(),
+                slot.getMode().name(),
+                slot.getMaxDays(),
+                slot.getPricePerDay(),
+                slot.getMinBid(),
+                slot.getBidIncrement(),
+                slot.getAuctionDurationMinutes(),
+                slot.getCreatedAt(),
+                slot.getRentedShopId() != null ? slot.getRentedShopId().toString() : null,
+                slot.getRentedBy() != null ? slot.getRentedBy().toString() : null,
+                slot.getRentedByName(),
+                slot.getRentedUntil(),
+                slot.getAuctionEndsAt(),
+                slot.getCurrentHighBidder() != null ? slot.getCurrentHighBidder().toString() : null,
+                slot.getCurrentHighBidderName(),
+                slot.getCurrentHighBid(),
+                slot.isEndingSoonBroadcast()
+            );
+            slot.clearDirty();
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to save rental slot " + slot.getId() + ": " + e.getMessage());
+        }
+    }
+
+    public void deleteRentalSlot(UUID slotId) {
+        try {
+            provider.executeUpdate("DELETE FROM shop_rental_slots WHERE id = ?", slotId.toString());
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to delete rental slot " + slotId + ": " + e.getMessage());
+        }
+    }
+
+    private RentalSlotData readRentalSlot(ResultSet rs) {
+        try {
+            UUID id = UUID.fromString(rs.getString("id"));
+            String worldName = rs.getString("world_name");
+            double posX = rs.getDouble("pos_x");
+            double posY = rs.getDouble("pos_y");
+            double posZ = rs.getDouble("pos_z");
+            float npcRotY = rs.getFloat("npc_rot_y");
+            String displayName = rs.getString("display_name");
+            String stationId = rs.getString("station_id");
+
+            RentalSlotData.Mode mode;
+            try { mode = RentalSlotData.Mode.valueOf(rs.getString("mode")); }
+            catch (Exception e) { mode = RentalSlotData.Mode.FIXED; }
+
+            int maxDays = rs.getInt("max_days");
+            int pricePerDay = rs.getInt("price_per_day");
+            int minBid = rs.getInt("min_bid");
+            int bidIncrement = rs.getInt("bid_increment");
+            int auctionDurationMinutes = rs.getInt("auction_duration_minutes");
+            long createdAt = rs.getLong("created_at");
+
+            String rentedShopIdStr = rs.getString("rented_shop_id");
+            UUID rentedShopId = null;
+            if (rentedShopIdStr != null && !rentedShopIdStr.isEmpty()) {
+                try { rentedShopId = UUID.fromString(rentedShopIdStr); }
+                catch (IllegalArgumentException ignored) {}
+            }
+            String rentedByStr = rs.getString("rented_by");
+            UUID rentedBy = null;
+            if (rentedByStr != null && !rentedByStr.isEmpty()) {
+                try { rentedBy = UUID.fromString(rentedByStr); }
+                catch (IllegalArgumentException ignored) {}
+            }
+            String rentedByName = rs.getString("rented_by_name");
+            long rentedUntil = rs.getLong("rented_until");
+            long auctionEndsAt = rs.getLong("auction_ends_at");
+
+            String highBidderStr = rs.getString("current_high_bidder");
+            UUID currentHighBidder = null;
+            if (highBidderStr != null && !highBidderStr.isEmpty()) {
+                try { currentHighBidder = UUID.fromString(highBidderStr); }
+                catch (IllegalArgumentException ignored) {}
+            }
+            String currentHighBidderName = rs.getString("current_high_bidder_name");
+            int currentHighBid = rs.getInt("current_high_bid");
+            boolean endingSoonBroadcast = rs.getBoolean("ending_soon_broadcast");
+
+            return RentalSlotData.fromDatabase(
+                id, worldName, posX, posY, posZ, npcRotY, displayName, stationId,
+                mode, maxDays, pricePerDay, minBid, bidIncrement, auctionDurationMinutes,
+                createdAt, rentedShopId, rentedBy, rentedByName, rentedUntil, auctionEndsAt,
+                currentHighBidder, currentHighBidderName, currentHighBid, endingSoonBroadcast
+            );
+        } catch (Exception e) {
+            LOGGER.warning("Failed to read rental slot row: " + e.getMessage());
+            return null;
+        }
+    }
+
+    // ==================== RENTAL BID HISTORY ====================
+
+    /** Lightweight bid record for the auction UI history list. */
+    public static class RentalBidRecord {
+        public final UUID slotId;
+        public final UUID bidderUuid;
+        public final String bidderName;
+        public final int amount;
+        public final long timestamp;
+
+        public RentalBidRecord(UUID slotId, UUID bidderUuid, String bidderName,
+                               int amount, long timestamp) {
+            this.slotId = slotId;
+            this.bidderUuid = bidderUuid;
+            this.bidderName = bidderName;
+            this.amount = amount;
+            this.timestamp = timestamp;
+        }
+    }
+
+    public void insertRentalBid(UUID slotId, UUID bidderUuid, String bidderName,
+                                 int amount, long timestamp) {
+        try {
+            provider.executeUpdate(
+                "INSERT INTO shop_rental_bids (slot_id, bidder_uuid, bidder_name, amount, timestamp) " +
+                "VALUES (?,?,?,?,?)",
+                slotId.toString(), bidderUuid.toString(), bidderName, amount, timestamp
+            );
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to insert rental bid: " + e.getMessage());
+        }
+    }
+
+    public List<RentalBidRecord> loadRecentBids(UUID slotId, int limit) {
+        List<RentalBidRecord> result = new ArrayList<>();
+        try {
+            ResultSet rs = provider.executeQuery(
+                "SELECT * FROM shop_rental_bids WHERE slot_id = ? ORDER BY timestamp DESC LIMIT ?",
+                slotId.toString(), limit
+            );
+            try {
+                while (rs.next()) {
+                    UUID bidder;
+                    try { bidder = UUID.fromString(rs.getString("bidder_uuid")); }
+                    catch (Exception e) { continue; }
+                    result.add(new RentalBidRecord(
+                        slotId, bidder,
+                        rs.getString("bidder_name"),
+                        rs.getInt("amount"),
+                        rs.getLong("timestamp")
+                    ));
+                }
+            } finally {
+                closeResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to load rental bids for " + slotId + ": " + e.getMessage());
+        }
+        return result;
+    }
+
+    public void deleteBidsForSlot(UUID slotId) {
+        try {
+            provider.executeUpdate(
+                "DELETE FROM shop_rental_bids WHERE slot_id = ?", slotId.toString());
+        } catch (SQLException e) {
+            LOGGER.warning("Failed to clear bids for " + slotId + ": " + e.getMessage());
+        }
+    }
+
     // ==================== INNER CLASSES ====================
 
     /**
@@ -1143,6 +1554,19 @@ public class ShopDatabase {
             long listedUntil = Long.MAX_VALUE;
             try { listedUntil = rs.getLong("listed_until"); } catch (SQLException ignored) {}
 
+            // Read rental_slot_id / rental_expires_at safely. Both columns
+            // are absent on DBs older than the rental feature.
+            UUID rentalSlotId = null;
+            try {
+                String rentalSlotStr = rs.getString("rental_slot_id");
+                if (rentalSlotStr != null && !rentalSlotStr.isEmpty()) {
+                    rentalSlotId = UUID.fromString(rentalSlotStr);
+                }
+            } catch (SQLException ignored) {
+            } catch (IllegalArgumentException ignored) {}
+            long rentalExpiresAt = 0L;
+            try { rentalExpiresAt = rs.getLong("rental_expires_at"); } catch (SQLException ignored) {}
+
             ShopData shop = ShopData.fromDatabase(
                 UUID.fromString(rs.getString("id")),
                 rs.getString("name"),
@@ -1178,6 +1602,8 @@ public class ShopDatabase {
             shop.setShowNameTag(showNameTag);
             shop.setPacked(packed);
             shop.setListedUntil(listedUntil);
+            shop.setRentalSlotId(rentalSlotId);
+            shop.setRentalExpiresAt(rentalExpiresAt);
             shop.clearDirty();  // just loaded from DB, no pending changes
             return shop;
         } catch (Exception e) {

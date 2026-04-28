@@ -263,22 +263,21 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         }
     }
 
-    private void handleBuyClick(int actualIndex) {
+    private void handleBuyClick(int gridSlotIndex) {
         ShopI18n i18n = plugin.getI18n();
 
-        if (buyItems != null && actualIndex >= 0 && actualIndex < buyItems.size()) {
-            ShopItem item = buyItems.get(actualIndex);
-
-            // Validate stock before opening confirmation
+        // Resolve item by its configured slot, not by list index, so click
+        // targets the same item the player is hovering on. Mirrors the
+        // populateBrowseGrid placement.
+        ShopItem item = findItemBySlot(buyItems, gridSlotIndex);
+        if (item != null) {
             if (!item.hasStock()) {
                 player.sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.out_of_stock")).color("#FF5555"));
                 refreshUI();
                 return;
             }
-
-            // Show confirmation dialog (actual purchase happens in handleConfirm("yes"))
             confirmActive = true;
-            confirmSlotIndex = actualIndex;
+            confirmSlotIndex = gridSlotIndex;
             confirmItem = item;
             confirmQuantity = 1;
             refreshUI();
@@ -288,21 +287,27 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         this.sendUpdate(new UICommandBuilder(), false);
     }
 
-    private void handleSellClick(int actualIndex) {
-        if (sellItems != null && actualIndex >= 0 && actualIndex < sellItems.size()) {
-            ShopItem item = sellItems.get(actualIndex);
-            if (item.getSellPrice() > 0) {
-                // Show confirmation dialog
-                confirmActive = true;
-                confirmSlotIndex = actualIndex;
-                confirmItem = item;
-                confirmQuantity = 1;
-                refreshUI();
-                return;
-            }
+    private void handleSellClick(int gridSlotIndex) {
+        ShopItem item = findItemBySlot(sellItems, gridSlotIndex);
+        if (item != null && item.getSellPrice() > 0) {
+            confirmActive = true;
+            confirmSlotIndex = gridSlotIndex;
+            confirmItem = item;
+            confirmQuantity = 1;
+            refreshUI();
+            return;
         }
 
         this.sendUpdate(new UICommandBuilder(), false);
+    }
+
+    /** Linear lookup of the active item whose configured slot equals gridSlotIndex. */
+    private static ShopItem findItemBySlot(List<ShopItem> items, int gridSlotIndex) {
+        if (items == null) return null;
+        for (ShopItem it : items) {
+            if (it.getSlot() == gridSlotIndex) return it;
+        }
+        return null;
     }
 
     private void handleConfirm(String action) {
@@ -316,7 +321,16 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                         boolean success = plugin.getShopService().sellItem(
                             playerRef, shopData.getId(), item.getItemId(), confirmQuantity
                         );
-                        if (!success) {
+                        if (success) {
+                            int totalReceived = item.getSellPrice() * confirmQuantity;
+                            String currencyName = plugin.getEconomyBridge().getCurrencyName();
+                            player.sendMessage(Message.raw(
+                                i18n.get(playerRef, "shop.sell.success",
+                                    confirmQuantity,
+                                    formatItemName(item.getItemId()),
+                                    totalReceived,
+                                    currencyName)).color("#44FF44"));
+                        } else {
                             player.sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.browse.sell_failed")).color("#FF5555"));
                         }
@@ -566,23 +580,43 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
     private void populateBrowseGrid(UICommandBuilder ui) {
         ShopI18n i18n = plugin.getI18n();
         List<ShopItem> activeItems = (mode == Mode.BUY) ? buyItems : sellItems;
-        int totalItems = (activeItems != null) ? activeItems.size() : 0;
-        int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) ITEMS_PER_PAGE));
+
+        // Pagination uses slot ranges, not item-list ranges, so an item in
+        // slot 30 stays in slot 30 visually even if it's the only item.
+        // Highest slot index used = upper bound of the page span.
+        int highestSlot = 0;
+        if (activeItems != null) {
+            for (ShopItem it : activeItems) {
+                if (it.getSlot() > highestSlot) highestSlot = it.getSlot();
+            }
+        }
+        int totalPages = Math.max(1, (highestSlot / ITEMS_PER_PAGE) + 1);
 
         // Clamp current page
         if (currentPage >= totalPages) currentPage = totalPages - 1;
         if (currentPage < 0) currentPage = 0;
 
-        int startIndex = currentPage * ITEMS_PER_PAGE;
+        int startSlot = currentPage * ITEMS_PER_PAGE;
         String currencyName = plugin.getEconomyBridge().getCurrencyName();
 
         List<ItemGridSlot> slots = new ArrayList<>(ITEMS_PER_PAGE);
         for (int i = 0; i < ITEMS_PER_PAGE; i++) {
-            int actualIndex = startIndex + i;
+            int gridSlotIndex = startSlot + i;
             ItemGridSlot slot;
 
-            if (activeItems != null && actualIndex < activeItems.size()) {
-                ShopItem item = activeItems.get(actualIndex);
+            // Find the active item whose configured slot matches this grid
+            // position. O(n*m) linear scan but n,m <= 45 so it's fine.
+            ShopItem item = null;
+            if (activeItems != null) {
+                for (ShopItem candidate : activeItems) {
+                    if (candidate.getSlot() == gridSlotIndex) {
+                        item = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (item != null) {
                 String itemId = item.getItemId();
                 int unitPrice = (mode == Mode.SELL) ? item.getSellPrice() : item.getBuyPrice();
 

@@ -80,6 +80,11 @@ $C.@PageOverlay {
               Group { Anchor: (Width: 9); }
               Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Player Shops"; }
             }
+            Button #SATabRentals { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
+              Group #SATabRentalsInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
+              Group { Anchor: (Width: 9); }
+              Label { Style: LabelStyle(FontSize: 13, TextColor: #8899aa, VerticalAlignment: Center); FlexWeight: 1; Text: "Rentals"; }
+            }
             Button #SATabTransactions { Anchor: (Height: 34, Left: 0, Right: 0); Style: ButtonStyle(Default: (Background: (Color: #00000000)), Hovered: (Background: (Color: #ffffff10)), Pressed: (Background: (Color: #ffffff18))); LayoutMode: Left;
               Group #SATabTransactionsInd { Anchor: (Width: 3, Top: 6, Bottom: 6); Background: (Color: #00000000); }
               Group { Anchor: (Width: 9); }
@@ -602,6 +607,175 @@ $C.@PageOverlay {
                   Label #TPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
                   Group { FlexWeight: 1; }
                   Button #TNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
+                }
+              }
+
+              // ========== RENTALS PANEL ==========
+              Group #SAPanelRentals { Anchor: (Left: 0, Right: 0); LayoutMode: Top; Visible: false;
+                Label { Style: LabelStyle(FontSize: 16, TextColor: #eeddcc, RenderBold: true); Text: "Rental Slots"; }
+                Group { Anchor: (Height: 6); }
+
+                // --- Search row ---
+                Group { Anchor: (Left: 0, Right: 0, Height: 32); LayoutMode: Left;
+                  $C.@TextField #RentSearchField { Anchor: (Height: 28); FlexWeight: 1; MaxLength: 50; }
+                  Group { Anchor: (Width: 6); }
+                  Button #RentSearchBtn {
+                    Anchor: (Width: 60, Height: 28);
+                    Style: ButtonStyle(Default: (Background: (Color: #00bcd420)), Hovered: (Background: (Color: #00bcd440)), Pressed: (Background: (Color: #00bcd460)));
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #00bcd4, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "Search"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+
+                // --- Filter pills ---
+                Group { Anchor: (Left: 0, Right: 0, Height: 26); LayoutMode: Left;
+                  Button #RentFilterAll { Anchor: (Width: 70, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffffff10)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); LayoutMode: Left;
+                    Group #RentFilterAllInd { Anchor: (Width: 3, Top: 4, Bottom: 4); Background: (Color: #00bfff); }
+                    Group { Anchor: (Width: 4); }
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); FlexWeight: 1; Text: "ALL"; }
+                  }
+                  Group { Anchor: (Width: 4); }
+                  Button #RentFilterVacant { Anchor: (Width: 80, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffffff10)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); LayoutMode: Left;
+                    Group #RentFilterVacantInd { Anchor: (Width: 3, Top: 4, Bottom: 4); Background: (Color: #00000000); }
+                    Group { Anchor: (Width: 4); }
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, VerticalAlignment: Center); FlexWeight: 1; Text: "VACANT"; }
+                  }
+                  Group { Anchor: (Width: 4); }
+                  Button #RentFilterAuction { Anchor: (Width: 80, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffffff10)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); LayoutMode: Left;
+                    Group #RentFilterAuctionInd { Anchor: (Width: 3, Top: 4, Bottom: 4); Background: (Color: #00000000); }
+                    Group { Anchor: (Width: 4); }
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); FlexWeight: 1; Text: "AUCTION"; }
+                  }
+                  Group { Anchor: (Width: 4); }
+                  Button #RentFilterRented { Anchor: (Width: 80, Height: 24); Style: ButtonStyle(Default: (Background: (Color: #ffffff10)), Hovered: (Background: (Color: #ffffff20)), Pressed: (Background: (Color: #ffffff30))); LayoutMode: Left;
+                    Group #RentFilterRentedInd { Anchor: (Width: 3, Top: 4, Bottom: 4); Background: (Color: #00000000); }
+                    Group { Anchor: (Width: 4); }
+                    Label { Style: LabelStyle(FontSize: 10, TextColor: #00bcd4, VerticalAlignment: Center); FlexWeight: 1; Text: "RENTED"; }
+                  }
+                }
+                Group { Anchor: (Height: 6); }
+
+                // --- Column header ---
+                Group { Anchor: (Left: 0, Right: 0, Height: 22); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label { Anchor: (Width: 130); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "SLOT"; }
+                  Label { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "MODE"; }
+                  Label { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "STATE"; }
+                  Label { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "PRICE"; }
+                  Label { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "RENTER / ENDS"; }
+                  Label { Anchor: (Width: 90); Style: LabelStyle(FontSize: 10, TextColor: #556677, VerticalAlignment: Center); Text: "ACTIONS"; }
+                }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff10); }
+
+                // --- Rows 0-7 ---
+                Group #RentRow0 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName0 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode0 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState0 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice0 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter0 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn0 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn0 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow1 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName1 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode1 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState1 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice1 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter1 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn1 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn1 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow2 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName2 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode2 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState2 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice2 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter2 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn2 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn2 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow3 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName3 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode3 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState3 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice3 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter3 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn3 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn3 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow4 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName4 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode4 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState4 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice4 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter4 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn4 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn4 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow5 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName5 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode5 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState5 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice5 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter5 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn5 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn5 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow6 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName6 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode6 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState6 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice6 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter6 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn6 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn6 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+                Group #RentRow7 { Visible: false; Anchor: (Left: 0, Right: 0, Height: 30); LayoutMode: Left; Padding: (Left: 8, Right: 8);
+                  Label #RentName7 { Anchor: (Width: 130); Style: LabelStyle(FontSize: 11, TextColor: #ffffff, VerticalAlignment: Center); Text: ""; }
+                  Label #RentMode7 { Anchor: (Width: 60); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentState7 { Anchor: (Width: 70); Style: LabelStyle(FontSize: 10, TextColor: #66bb6a, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                  Label #RentPrice7 { Anchor: (Width: 80); Style: LabelStyle(FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center); Text: ""; }
+                  Label #RentRenter7 { FlexWeight: 1; Style: LabelStyle(FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                  Button #RentExpireBtn7 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ffaa0020)), Hovered: (Background: (Color: #ffaa0040)), Pressed: (Background: (Color: #ffaa0060))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ffaa00, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "EXP"; } }
+                  Group { Anchor: (Width: 3); }
+                  Button #RentDeleteBtn7 { Anchor: (Width: 40, Height: 22); Style: ButtonStyle(Default: (Background: (Color: #ff444420)), Hovered: (Background: (Color: #ff444440)), Pressed: (Background: (Color: #ff444460))); LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 9, TextColor: #ff4444, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "DEL"; } }
+                }
+
+                Label #RentEmpty { Anchor: (Height: 30); Style: LabelStyle(FontSize: 11, TextColor: #556677, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "No rental slots found. Use /kssa createrental or /kssa createrentalauction to create one."; }
+
+                // --- Pagination ---
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 28); LayoutMode: Left;
+                  Button #RentPrevBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
+                    Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "<"; } }
+                  Group { FlexWeight: 1; }
+                  Label #RentPageInfo { Style: LabelStyle(FontSize: 10, TextColor: #96a9be, HorizontalAlignment: Center, VerticalAlignment: Center); Text: "1/1"; }
+                  Group { FlexWeight: 1; }
+                  Button #RentNextBtn { Anchor: (Width: 30, Height: 24); Style: $C.@SecondaryButtonStyle; LayoutMode: CenterMiddle;
                     Label { Style: LabelStyle(FontSize: 12, TextColor: #8899aa, HorizontalAlignment: Center, VerticalAlignment: Center); Text: ">"; } }
                 }
               }

@@ -147,6 +147,7 @@ public class ShopConfig {
         public Npc npc = new Npc();
         public Directory directory = new Directory();
         public Featured featured = new Featured();
+        public RentalStations rentalStations = new RentalStations();
         public Database database = new Database();
         public List<String> itemBlacklist = new ArrayList<>();
         public List<CategoryDef> categories = new ArrayList<>();
@@ -163,6 +164,7 @@ public class ShopConfig {
             if (npc == null) npc = new Npc();
             if (directory == null) directory = new Directory();
             if (featured == null) featured = new Featured();
+            if (rentalStations == null) rentalStations = new RentalStations();
             if (database == null) database = new Database();
             if (itemBlacklist == null) itemBlacklist = new ArrayList<>();
             if (categories == null) categories = new ArrayList<>();
@@ -176,6 +178,26 @@ public class ShopConfig {
             if (ratings.minStars < 1) ratings.minStars = 1;
             if (ratings.maxStars < 1) ratings.maxStars = 5;
             if (ratings.maxStars > 10) ratings.maxStars = 10;
+
+            // NPC clamps
+            if (npc.spawnDelaySecondsOnJoin < 0) npc.spawnDelaySecondsOnJoin = 0;
+            if (npc.spawnDelaySecondsOnJoin > 60) npc.spawnDelaySecondsOnJoin = 60;
+            if (npc.skinRetryDelaySeconds < 0) npc.skinRetryDelaySeconds = 0;
+            if (npc.skinRetryDelaySeconds > 60) npc.skinRetryDelaySeconds = 60;
+
+            // Rental station clamps
+            if (rentalStations.defaultPricePerDay < 0) rentalStations.defaultPricePerDay = 0;
+            if (rentalStations.defaultMaxDays < 1) rentalStations.defaultMaxDays = 1;
+            if (rentalStations.defaultMinBid < 0) rentalStations.defaultMinBid = 0;
+            if (rentalStations.defaultBidIncrement < 1) rentalStations.defaultBidIncrement = 1;
+            if (rentalStations.defaultAuctionDurationMinutes < 1) rentalStations.defaultAuctionDurationMinutes = 1;
+            if (rentalStations.maxConcurrentRentalsDefault < 1) rentalStations.maxConcurrentRentalsDefault = 1;
+            if (rentalStations.auctionAntiSnipingSeconds < 0) rentalStations.auctionAntiSnipingSeconds = 0;
+            if (rentalStations.auctionEndingSoonSeconds < 0) rentalStations.auctionEndingSoonSeconds = 0;
+            if (rentalStations.extendMaxDays < 1) rentalStations.extendMaxDays = 1;
+            if (rentalStations.releaseEarlyGoldRefundFraction < 0) rentalStations.releaseEarlyGoldRefundFraction = 0;
+            if (rentalStations.releaseEarlyGoldRefundFraction > 1) rentalStations.releaseEarlyGoldRefundFraction = 1;
+            if (rentalStations.onEmptyAuction == null) rentalStations.onEmptyAuction = "RESTART";
         }
     }
 
@@ -274,6 +296,24 @@ public class ShopConfig {
         public boolean lookAtPlayer = true;
         public float interactionRange = 5.0f;
         public boolean showNameplate = true;
+
+        /**
+         * Seconds to wait after the first player enters a world before spawning
+         * that world's shop NPCs. Gives the client time to fully establish its
+         * connection and cosmetic-rendering subsystem before we push a burst of
+         * NPC skins at it - otherwise the skin apply can race the client init
+         * and leave NPCs with the default/unskinned appearance. 0 disables.
+         */
+        public int spawnDelaySecondsOnJoin = 3;
+
+        /**
+         * If {@code fetchSkin} returns null (e.g. PlayerDB hiccup, transient
+         * network failure) the NPC would otherwise keep the default appearance
+         * forever. Retry the fetch once after this many seconds so a momentary
+         * outage doesn't leave the shop unskinned for the whole session.
+         * 0 disables retries.
+         */
+        public int skinRetryDelaySeconds = 5;
     }
 
     public static class Directory {
@@ -291,6 +331,45 @@ public class ShopConfig {
         public boolean autoFeatureTopRated = false;
         public double autoFeatureMinRating = 4.5;
         public int autoFeatureMinSales = 50;
+    }
+
+    /**
+     * Rental station system — admins place persistent leasable shop slots
+     * at fixed map positions. Players pay a fixed daily price or bid in a
+     * timed auction for exclusive use of a slot; on expiry, the renter's
+     * items are mailed back and the slot frees up.
+     */
+    public static class RentalStations {
+        public boolean enabled = true;
+        public int defaultPricePerDay = 100;
+        public int defaultMaxDays = 7;
+        public int defaultMinBid = 500;
+        public int defaultBidIncrement = 10;
+        public int defaultAuctionDurationMinutes = 60;
+        public int maxConcurrentRentalsDefault = 1;
+
+        /**
+         * What to do when an auction ends with zero bids:
+         *   "RESTART" - auto-restart the auction with the same duration (default)
+         *   "VACANT"  - mark slot idle, admin must re-arm
+         *   "DELETE"  - remove the slot entirely
+         */
+        public String onEmptyAuction = "RESTART";
+
+        /** Anti-sniping: bids in the last N seconds extend auction by N seconds. 0 disables. */
+        public int auctionAntiSnipingSeconds = 30;
+
+        /** Broadcast "ending soon" chat when auction has N seconds left. 0 disables. */
+        public int auctionEndingSoonSeconds = 60;
+
+        /** Max days per single extend call. */
+        public int extendMaxDays = 7;
+
+        /** Release-early refund fraction (0.0..1.0). 0 = commitment cost. */
+        public double releaseEarlyGoldRefundFraction = 0.0;
+
+        /** Rental-backed shops skip the directory listing fee. */
+        public boolean rentalShopsListFree = true;
     }
 
     public static class Database {

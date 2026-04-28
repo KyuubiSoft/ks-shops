@@ -385,6 +385,69 @@ $C.@PageOverlay {
 
                                 Group { Anchor: (Height: 8); }
 
+                                // ==================== DIRECTORY LISTING ====================
+                                // Buy or extend the shop's directory listing right from the
+                                // settings panel. Avoids the need to remember /ksshop list <days>
+                                // and surfaces the current state at a glance.
+                                Label #ListingHeader {
+                                    Anchor: (Height: 16);
+                                    Style: (FontSize: 9, TextColor: #00bfff, RenderBold: true, RenderUppercase: true);
+                                    Text: "DIRECTORY LISTING";
+                                }
+                                Group { Anchor: (Height: 3); }
+
+                                Label #ListingStatusLbl {
+                                    Anchor: (Left: 0, Right: 0, Height: 14);
+                                    Style: (FontSize: 10, TextColor: #bfcdd5, VerticalAlignment: Center);
+                                    Text: "Status: not listed";
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                Group {
+                                    LayoutMode: Left;
+                                    Anchor: (Left: 0, Right: 0, Height: 22);
+                                    Label {
+                                        Anchor: (Width: 60, Height: 18);
+                                        Style: (FontSize: 10, TextColor: #96a9be, VerticalAlignment: Center);
+                                        Text: "Days";
+                                    }
+                                    Group {
+                                        FlexWeight: 1;
+                                        LayoutMode: CenterMiddle;
+                                        SliderNumberField #ListingDaysSlider {
+                                            Anchor: (Width: 180, Height: 5);
+                                            SliderStyle: $C.@DefaultSliderStyle;
+                                            NumberFieldStyle: $C.@DefaultInputFieldStyle;
+                                            Min: 1;
+                                            Max: 30;
+                                        }
+                                    }
+                                    Label #ListingDaysValue {
+                                        Anchor: (Width: 36, Height: 18);
+                                        Style: (FontSize: 13, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: Center);
+                                        Text: "1";
+                                    }
+                                }
+                                Group { Anchor: (Height: 4); }
+
+                                Label #ListingCostLbl {
+                                    Anchor: (Left: 0, Right: 0, Height: 14);
+                                    Style: (FontSize: 10, TextColor: #ffd700, VerticalAlignment: Center);
+                                    Text: "Cost: 100 Gold";
+                                }
+                                Group { Anchor: (Height: 6); }
+
+                                Button #BuyListingBtn {
+                                    Anchor: (Left: 0, Right: 0, Height: 26);
+                                    Style: ButtonStyle(Default: (Background: (Color: #2a3a4a)), Hovered: (Background: (Color: #3a4a5a)), Pressed: (Background: (Color: #1a2a38)));
+                                    Label #BuyListingLbl {
+                                        Style: (FontSize: 10, TextColor: #44FF44, HorizontalAlignment: Center, VerticalAlignment: Center, RenderBold: true);
+                                        Text: "BUY / EXTEND LISTING";
+                                    }
+                                }
+
+                                Group { Anchor: (Height: 8); }
+
                                 // Pickup Shop button: packs the shop into a token so the
                                 // owner can replant it at a new location. Red-tinted to
                                 // emphasise the disruptive nature of the action.

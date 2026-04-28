@@ -40,27 +40,42 @@ public class ShopEconomyBridge {
 
     /**
      * Detects the available economy backend.
-     * Call once during plugin setup.
+     * Call once during plugin setup. May be called again later via
+     * {@link #retryDetect()} when the first call landed before any provider
+     * had a chance to register itself with VaultUnlocked.
      */
     public void detect() {
         if (initialized) return;
         initialized = true;
+        runDetect();
+    }
 
-        // 1) Try Core's ExternalEconomyBridge
+    /**
+     * Re-runs the backend detection. Returns true when a provider became
+     * available since the last attempt. Used by {@code ShopPlugin} to
+     * cover the case where Vault-based providers (e.g. Ecotale) register
+     * with VaultUnlocked one tick after Shops finishes its own enable
+     * pass - without this we would stay on {@link Backend#NONE} for the
+     * whole session.
+     */
+    public boolean retryDetect() {
+        if (activeBackend != Backend.NONE) return false;
+        return runDetect();
+    }
+
+    private boolean runDetect() {
         if (tryCore()) {
             activeBackend = Backend.CORE;
             LOGGER.info("Economy via Core's ExternalEconomyBridge");
-            return;
+            return true;
         }
-
-        // 2) Try VaultUnlocked directly
         if (tryVaultDirect()) {
             activeBackend = Backend.VAULT_DIRECT;
             LOGGER.info("Economy via VaultUnlocked direct (" + vaultProviderName + ")");
-            return;
+            return true;
         }
-
-        LOGGER.info("No economy provider detected — shop transactions disabled");
+        LOGGER.info("No economy provider detected (yet) - shop transactions disabled");
+        return false;
     }
 
     private boolean tryCore() {

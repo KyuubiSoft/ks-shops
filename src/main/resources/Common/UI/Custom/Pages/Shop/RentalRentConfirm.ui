@@ -1,0 +1,209 @@
+// RentalRentConfirm UI -- Fixed-price rental confirmation dialog (440x420)
+$C = "../../Common.ui";
+
+$C.@PageOverlay {
+    Group #ConfirmLayout {
+        LayoutMode: CenterMiddle;
+
+        $C.@DecoratedContainer #ConfirmPanel {
+            Anchor: (Width: 440, Height: 420);
+
+            #Title {
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 42);
+
+                    Group { FlexWeight: 1; }
+
+                    Label #TitleText {
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+                        Text: "RENT SHOP SLOT";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+
+            #Content {
+                LayoutMode: Top;
+                Padding: (Left: 17, Right: 17, Top: 10, Bottom: 12);
+
+                // ---- Slot name row ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 26);
+                    LayoutMode: Left;
+
+                    Label #SlotName {
+                        Style: (FontSize: 14, RenderBold: true, TextColor: #ffffff, VerticalAlignment: Center);
+                        Text: "Slot";
+                        FlexWeight: 1;
+                    }
+
+                    Label #ModeBadge {
+                        Anchor: (Width: 70, Height: 22);
+                        Style: (FontSize: 10, RenderBold: true, TextColor: #55ff88, HorizontalAlignment: Center, VerticalAlignment: Center);
+                        Text: "FIXED PRICE";
+                    }
+                }
+
+                // ---- Position row ----
+                Group { Anchor: (Height: 6); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 18);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 72, Height: 18);
+                        Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Position";
+                    }
+                    Label #PositionValue {
+                        Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 10); }
+
+                // ---- Price / Max days ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 120, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Price / Day";
+                    }
+                    Label #PriceValue {
+                        Style: (FontSize: 13, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 120, Height: 22);
+                        Style: (FontSize: 11, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Max Duration";
+                    }
+                    Label #MaxDaysValue {
+                        Style: (FontSize: 13, TextColor: #bfcdd5, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 14); }
+
+                // ---- Days slider ----
+                Label {
+                    Anchor: (Height: 16);
+                    Style: (FontSize: 10, TextColor: #96a9be, RenderBold: true, RenderUppercase: true);
+                    Text: "RENTAL DURATION";
+                }
+
+                Group { Anchor: (Height: 4); }
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 34);
+                    Padding: (Left: 10, Right: 10, Top: 4);
+
+                    Label {
+                        Anchor: (Width: 40, Height: 18);
+                        Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center);
+                        Text: "Days";
+                    }
+                    Group {
+                        FlexWeight: 1;
+                        LayoutMode: CenterMiddle;
+                        SliderNumberField #DaysSlider {
+                            Anchor: (Width: 220, Height: 5);
+                            SliderStyle: $C.@DefaultSliderStyle;
+                            NumberFieldStyle: $C.@DefaultInputFieldStyle;
+                            Min: 1;
+                            Max: 30;
+                        }
+                    }
+                    Label #DaysValue {
+                        Anchor: (Width: 40, Height: 18);
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffffff, HorizontalAlignment: End, VerticalAlignment: Center);
+                        Text: "1";
+                    }
+                }
+
+                Group { Anchor: (Height: 10); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 10); }
+
+                // ---- Total ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 26);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 120, Height: 26);
+                        Style: (FontSize: 12, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center);
+                        Text: "Total Cost";
+                    }
+                    Label #TotalValue {
+                        Style: (FontSize: 16, TextColor: #ffd700, RenderBold: true, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { Anchor: (Height: 6); }
+
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 20);
+                    LayoutMode: Left;
+
+                    Label {
+                        Anchor: (Width: 120, Height: 20);
+                        Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, VerticalAlignment: Center);
+                        Text: "Your Rentals";
+                    }
+                    Label #CapValue {
+                        Style: (FontSize: 11, TextColor: #7caacc, VerticalAlignment: Center);
+                        Text: "";
+                        FlexWeight: 1;
+                    }
+                }
+
+                Group { FlexWeight: 1; }
+
+                // ---- Buttons ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 40);
+                    LayoutMode: Left;
+                    Padding: (Left: 20, Right: 20);
+
+                    Group { FlexWeight: 1; }
+
+                    $C.@TextButton #RentBtn {
+                        @Anchor = (Width: 160, Height: 34);
+                        @Text = "RENT NOW";
+                    }
+
+                    Group { Anchor: (Width: 12); }
+
+                    $C.@CancelTextButton #CancelBtn {
+                        @Anchor = (Width: 140, Height: 34);
+                        @Text = "CANCEL";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+        }
+    }
+}

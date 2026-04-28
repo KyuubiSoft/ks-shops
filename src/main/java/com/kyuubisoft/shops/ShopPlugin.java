@@ -26,6 +26,8 @@ import com.kyuubisoft.shops.service.DirectoryService;
 import com.kyuubisoft.shops.npc.ShopNpcManager;
 import com.kyuubisoft.shops.interaction.ShopBlockInteraction;
 import com.kyuubisoft.shops.mailbox.MailboxService;
+import com.kyuubisoft.shops.rental.RentalExpiryTask;
+import com.kyuubisoft.shops.rental.RentalService;
 import com.kyuubisoft.common.kslang.KsLang;
 
 import java.nio.file.Path;
@@ -57,6 +59,7 @@ public class ShopPlugin extends JavaPlugin {
     private DirectoryService directoryService;
     private ShopNpcManager npcManager;
     private MailboxService mailboxService;
+    private RentalService rentalService;
     private com.kyuubisoft.shops.skin.ShopSkinManager skinManager;
 
     private final Map<String, PlayerShopData> playerData = new ConcurrentHashMap<>();
@@ -126,6 +129,12 @@ public class ShopPlugin extends JavaPlugin {
 
             // 6. NPC Manager
             npcManager = new ShopNpcManager(this, config, shopManager);
+
+            // 6b. Rental Service (rental-station system). Loads its slot
+            // cache from DB here so the first scheduler tick has data to
+            // scan for expiry.
+            rentalService = new RentalService(this, config, shopManager, database, mailboxService);
+            rentalService.loadAll();
 
             // 7. Events
             getEventRegistry().register(PlayerConnectEvent.class, this::onPlayerConnect);
@@ -246,6 +255,24 @@ public class ShopPlugin extends JavaPlugin {
             });
             scheduler.scheduleAtFixedRate(this::autoSave, 60, 60, TimeUnit.SECONDS);
 
+            // 11a. Economy retry-detection. The first detect() call in step 4
+            // can land before Vault-based providers (Ecotale, VaultUnlocked
+            // bridges) register with VaultUnlocked - in which case the bridge
+            // stays on NONE for the whole session, with no clear feedback to
+            // the admin. We retry a few times during early boot so a slow
+            // provider still gets picked up. Logs only on success.
+            for (int delaySec : new int[] { 2, 5, 10, 20 }) {
+                scheduler.schedule(() -> {
+                    try {
+                        if (economyBridge != null && economyBridge.retryDetect()) {
+                            LOGGER.info("Economy provider attached on retry");
+                        }
+                    } catch (Exception e) {
+                        LOGGER.fine("Economy retry failed: " + e.getMessage());
+                    }
+                }, delaySec, TimeUnit.SECONDS);
+            }
+
             // 11b. Periodic orphan sweep: removes any shop NPCs that Hytale
             // restored from chunk persistence but are not tracked by us.
             //
@@ -298,6 +325,29 @@ public class ShopPlugin extends JavaPlugin {
                 scheduler.scheduleAtFixedRate(
                     () -> shopService.collectRent(),
                     300, 3600, TimeUnit.SECONDS // First after 5min, then every hour
+                );
+            }
+
+            // 12b. Rental-station expiry tick (if enabled). Scans every 60s
+            // for expired rentals and mails items back to the renter.
+            if (config.getData().rentalStations.enabled) {
+                RentalExpiryTask rentalExpiryTask = new RentalExpiryTask(rentalService);
+                scheduler.scheduleAtFixedRate(
+                    rentalExpiryTask::tick,
+                    60, 60, TimeUnit.SECONDS
+                );
+
+                // 12c. Live countdown tick for open RentalBidPage / MyRentalsPage
+                // instances. Fires every 2s off the same scheduler so watchers
+                // see time-remaining + high-bid updates without polling.
+                scheduler.scheduleAtFixedRate(
+                    () -> {
+                        try { rentalService.tickOpenPages(); }
+                        catch (Exception e) {
+                            LOGGER.fine("rental tickOpenPages failed: " + e.getMessage());
+                        }
+                    },
+                    2, 2, TimeUnit.SECONDS
                 );
             }
 
@@ -357,6 +407,11 @@ public class ShopPlugin extends JavaPlugin {
         // 4. Save all dirty shop data
         if (shopManager != null) {
             shopManager.saveAll();
+        }
+
+        // 4b. Save all dirty rental slots
+        if (rentalService != null) {
+            rentalService.saveDirty();
         }
 
         // 5. Save all player data
@@ -454,6 +509,11 @@ public class ShopPlugin extends JavaPlugin {
             shopManager.saveDirty();
         }
 
+        // Save dirty rental-slot data
+        if (rentalService != null) {
+            rentalService.saveDirty();
+        }
+
         // Save dirty player data
         for (PlayerShopData data : playerData.values()) {
             if (data != null && data.isDirty()) {
@@ -541,6 +601,12 @@ public class ShopPlugin extends JavaPlugin {
     public DirectoryService getDirectoryService() { return directoryService; }
     public ShopNpcManager getNpcManager() { return npcManager; }
     public MailboxService getMailboxService() { return mailboxService; }
+    public RentalService getRentalService() { return rentalService; }
+    public ScheduledExecutorService getScheduler() { return scheduler; }
+
+    /** Returns the tracked {@link Player} for the given UUID, or null if offline. */
+    public Player getOnlinePlayer(UUID uuid) { return onlinePlayers.get(uuid); }
+    public Map<UUID, Player> getOnlinePlayers() { return onlinePlayers; }
     public com.kyuubisoft.shops.skin.ShopSkinManager getSkinManager() { return skinManager; }
     public Map<String, PlayerShopData> getPlayerDataMap() { return playerData; }
 

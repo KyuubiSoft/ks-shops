@@ -134,6 +134,8 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
     private String editedIconItemId;
     private String editedNpcSkin;
     private String pendingDepositAmount = "";
+    /** Currently-selected number of listing days (slider value). */
+    private int listingDaysToBuy = 1;
 
     // FIX 1: Snapshot of original shop items at open time (multiset by itemId).
     // Used by getStagingOnlyItems() to determine which items are NEW in the staging
@@ -317,6 +319,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "histNext" -> handleHistNext();
                 case "apply_skin" -> handleApplySkin();
                 case "pickup_shop" -> handlePickupShop();
+                case "buyListing" -> handleBuyListing();
                 // Drag & drop completed: refresh grids to reflect container changes
                 case "shopDrop", "invDrop", "hotbarDrop" -> refreshUI();
                 default -> this.sendUpdate(new UICommandBuilder(), false);
@@ -363,6 +366,13 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
                 case "depositAmount" -> {
                     if (data.depositAmountVal != null) {
                         pendingDepositAmount = data.depositAmountVal.trim();
+                    }
+                }
+                case "listingDays" -> {
+                    if (data.listingDaysVal != null) {
+                        listingDaysToBuy = Math.max(1, Math.min(30, data.listingDaysVal));
+                        refreshUI();
+                        return;
                     }
                 }
             }
@@ -559,6 +569,46 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
      * return staged items to the player's inventory (that would duplicate
      * refunds, since pickupShop already returned everything).
      */
+    /**
+     * Buys (or extends) the directory listing for this shop using the
+     * currently-selected slider value. Routes through the same
+     * {@link com.kyuubisoft.shops.service.ShopService#purchaseListing}
+     * service path as `/ksshop list` so the cost / permission rules are
+     * identical between chat and UI flows.
+     */
+    private void handleBuyListing() {
+        ShopI18n i18n = plugin.getI18n();
+        int days = Math.max(1, Math.min(30, listingDaysToBuy));
+
+        com.kyuubisoft.shops.service.ShopService.ListingResult result =
+            plugin.getShopService().purchaseListing(player, playerRef, shopData.getId(), days);
+
+        if (!result.isSuccess()) {
+            String key = result.getErrorKey() != null
+                ? result.getErrorKey()
+                : "shop.list.failed";
+            player.sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
+            this.sendUpdate(new UICommandBuilder(), false);
+            return;
+        }
+
+        long until = result.getNewListedUntil();
+        int cost = result.getCostCharged();
+        if (until == Long.MAX_VALUE) {
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.list.success_permanent", shopData.getName())
+            ).color("#55FF55"));
+        } else {
+            long daysLeft = Math.max(0,
+                (until - System.currentTimeMillis()) / 86_400_000L);
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.list.success",
+                    shopData.getName(), daysLeft, cost)
+            ).color("#55FF55"));
+        }
+        refreshUI();
+    }
+
     private void handlePickupShop() {
         ShopI18n i18n = plugin.getI18n();
 
@@ -1165,6 +1215,15 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PickupShopBtn",
             EventData.of("Button", "pickup_shop"), false);
 
+        // Directory-listing slider: live-sync the selected days into listingDaysToBuy
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ListingDaysSlider",
+            EventData.of("Field", "listingDays")
+                .append("@ListingDays", "#ListingDaysSlider.Value"));
+
+        // Buy/extend listing button: spends the cost via ShopService.purchaseListing
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#BuyListingBtn",
+            EventData.of("Button", "buyListing"), false);
+
         // Deposit amount field: live-sync typed value into pendingDepositAmount
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#DepositField",
             EventData.of("Field", "depositAmount")
@@ -1386,6 +1445,55 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Pickup shop button label (localised).
         ui.set("#PickupShopLbl.Text",
             i18n.get(playerRef, "shop.edit.pickup_button"));
+
+        // ---- Directory listing block (settings panel) ----
+        var lcfg = plugin.getShopConfig().getData().playerShops;
+        long listedUntil = shopData.getListedUntil();
+        long now = System.currentTimeMillis();
+        String statusText;
+        // Rental-backed shop: surface the rental window itself - that's the
+        // primary "how long do I own this" answer the user wants. Whether
+        // the shop is listed in the directory rides on the rental too
+        // (rentalShopsListFree config), so showing the listing window is
+        // redundant and confusing for renters.
+        //
+        // Read the expiry from the RentalSlotData (source of truth) and only
+        // fall back to ShopData.rentalExpiresAt when no slot is resolvable -
+        // the shop_shops mirror can drift if the slot row was hand-edited.
+        long rentalExpiresAt = 0L;
+        if (shopData.isRentalBacked()) {
+            com.kyuubisoft.shops.rental.RentalService rs = plugin.getRentalService();
+            if (rs != null) {
+                com.kyuubisoft.shops.rental.RentalSlotData slot =
+                    rs.getSlot(shopData.getRentalSlotId());
+                if (slot != null) rentalExpiresAt = slot.getRentedUntil();
+            }
+            if (rentalExpiresAt <= 0) rentalExpiresAt = shopData.getRentalExpiresAt();
+        }
+        if (shopData.isRentalBacked() && rentalExpiresAt > now) {
+            long ms = rentalExpiresAt - now;
+            long days = ms / 86_400_000L;
+            long hours = (ms % 86_400_000L) / 3_600_000L;
+            long minutes = (ms % 3_600_000L) / 60_000L;
+            statusText = "Rental: " + days + "d " + hours + "h " + minutes + "m remaining";
+        } else if (listedUntil == Long.MAX_VALUE) {
+            statusText = "Status: listed permanently";
+        } else if (listedUntil > now) {
+            long ms = listedUntil - now;
+            long days = ms / 86_400_000L;
+            long hours = (ms % 86_400_000L) / 3_600_000L;
+            statusText = "Status: listed for " + days + "d " + hours + "h";
+        } else {
+            statusText = "Status: not listed";
+        }
+        ui.set("#ListingStatusLbl.Text", statusText);
+        ui.set("#ListingDaysValue.Text", String.valueOf(listingDaysToBuy));
+        ui.set("#ListingDaysSlider.Value", listingDaysToBuy);
+        int total = lcfg.listingPricePerDay * listingDaysToBuy;
+        String currency = plugin.getEconomyBridge().getCurrencyName();
+        ui.set("#ListingCostLbl.Text",
+            "Cost: " + total + " " + currency
+            + " (" + lcfg.listingPricePerDay + "/day)");
 
         // Icon picker: highlight the selected tile and update the status label.
         for (int i = 0; i < ICON_OPTIONS.length; i++) {
@@ -1957,6 +2065,9 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             .addField(new KeyedCodec<>("@DepositAmount", Codec.STRING),
                 (data, value) -> data.depositAmountVal = value,
                 data -> data.depositAmountVal)
+            .addField(new KeyedCodec<>("@ListingDays", Codec.INTEGER),
+                (data, value) -> data.listingDaysVal = value,
+                data -> data.listingDaysVal)
             // Grid drop/click events (native ItemGrid interaction)
             .addField(new KeyedCodec<>("Action", Codec.STRING),
                 (data, value) -> data.action = value,
@@ -1988,6 +2099,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         private String categoryVal;
         private String npcSkinVal;
         private String depositAmountVal;
+        private Integer listingDaysVal;
         // Grid interaction fields
         private String action;
         private Integer slotIndex;

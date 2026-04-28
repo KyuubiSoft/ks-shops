@@ -261,6 +261,21 @@ public class ShopManager {
     }
 
     /**
+     * Returns the ShopData row whose {@code rentalSlotId} matches the
+     * given UUID. Used by the rental system to find the shell/renter
+     * shop backing a rental slot. Returns null if no match.
+     */
+    public ShopData getShopByRentalSlotId(UUID rentalSlotId) {
+        if (rentalSlotId == null) return null;
+        for (ShopData shop : shops.values()) {
+            if (rentalSlotId.equals(shop.getRentalSlotId())) {
+                return shop;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns all shops currently loaded in memory.
      */
     public Collection<ShopData> getAllShops() {

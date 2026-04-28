@@ -254,10 +254,12 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
     private void handleCardClick(String cardIndexStr) {
         try {
             int cardIndex = Integer.parseInt(cardIndexStr);
-            int actualIndex = currentPage * CARDS_PER_PAGE + cardIndex;
-
-            if (actualIndex >= 0 && actualIndex < filteredShops.size()) {
-                ShopData shop = filteredShops.get(actualIndex);
+            // filteredShops is already the current page slice (subList /
+            // searchShopsFiltered both return only the current page), so we
+            // index by cardIndex alone - applying currentPage*CARDS_PER_PAGE
+            // here would double-paginate and read past the page-sized list.
+            if (cardIndex >= 0 && cardIndex < filteredShops.size()) {
+                ShopData shop = filteredShops.get(cardIndex);
 
                 if (lastRef == null || lastStore == null) {
                     LOGGER.warning("[ShopDirectory] Cannot open shop: ref/store not available");
@@ -853,13 +855,14 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
             // Position may not be available in all contexts
         }
 
-        int startIndex = currentPage * CARDS_PER_PAGE;
-
+        // filteredShops already contains only the current page (the rebuild
+        // logic above either subList()s by currentPage*CARDS_PER_PAGE or asks
+        // DirectoryService for that page directly). Indexing by `i` here is
+        // therefore correct - using `currentPage * CARDS_PER_PAGE + i` would
+        // double-paginate and miss every slot beyond page 1.
         for (int i = 0; i < CARDS_PER_PAGE; i++) {
-            int actualIndex = startIndex + i;
-
-            if (actualIndex < filteredShops.size()) {
-                ShopData shop = filteredShops.get(actualIndex);
+            if (i < filteredShops.size()) {
+                ShopData shop = filteredShops.get(i);
                 ui.set("#DCard" + i + ".Visible", true);
 
                 // Avatar icon — flat 1-level selector on the uniquely-named ItemIcon.
@@ -900,10 +903,18 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                         i18n.get(playerRef, "shop.directory.no_ratings"));
                 }
 
-                // Item count
+                // Item count + listing remaining time. Both fit into the
+                // same row label - keeps the existing 8-card layout intact
+                // while still surfacing how long the listing will stay
+                // visible. Format: "5 items - Listed 3d" (or " - Permanent"
+                // for unlimited listings).
                 int itemCount = (shop.getItems() != null) ? shop.getItems().size() : 0;
-                ui.set("#DItems" + i + ".Text",
-                    i18n.get(playerRef, "shop.directory.item_count", itemCount));
+                String itemsText = i18n.get(playerRef, "shop.directory.item_count", itemCount);
+                String listingSuffix = formatListingSuffix(shop, playerRef, i18n);
+                if (listingSuffix != null && !listingSuffix.isEmpty()) {
+                    itemsText = itemsText + "  -  " + listingSuffix;
+                }
+                ui.set("#DItems" + i + ".Text", itemsText);
 
                 // Distance from player
                 double dx = shop.getPosX() - playerX;
@@ -1113,6 +1124,30 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         } else {
             return String.format("%.1fkm", distance / 1000.0);
         }
+    }
+
+    /**
+     * Builds the short "Listed Xd" / "Listed permanent" suffix for a card.
+     * Admin shops are always listed but should not advertise an expiry, so
+     * we skip the suffix for them. Player shops with `listedUntil = 0`
+     * shouldn't be in the directory at all, but we also short-circuit
+     * defensively. Returns null when nothing should be appended.
+     */
+    private String formatListingSuffix(ShopData shop, PlayerRef playerRef, ShopI18n i18n) {
+        if (shop.isAdminShop()) return null;
+        long until = shop.getListedUntil();
+        if (until == Long.MAX_VALUE) {
+            return i18n.get(playerRef, "shop.directory.listed_permanent");
+        }
+        long now = System.currentTimeMillis();
+        if (until <= now) return null;
+        long ms = until - now;
+        long days = ms / 86_400_000L;
+        long hours = (ms % 86_400_000L) / 3_600_000L;
+        String remaining = days > 0
+            ? days + "d " + hours + "h"
+            : hours + "h";
+        return i18n.get(playerRef, "shop.directory.listed_for", remaining);
     }
 
     // ==================== DISMISS ====================

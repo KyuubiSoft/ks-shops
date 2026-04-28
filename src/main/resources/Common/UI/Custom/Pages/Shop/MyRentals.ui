@@ -1,0 +1,217 @@
+// MyRentals UI -- Self-service list of a player's active rentals (740x560)
+$C = "../../Common.ui";
+
+$C.@PageOverlay {
+    Group #MyRentalsLayout {
+        LayoutMode: CenterMiddle;
+
+        $C.@DecoratedContainer #MyRentalsPanel {
+            Anchor: (Width: 740, Height: 560);
+
+            #Title {
+                Group {
+                    LayoutMode: Left;
+                    Anchor: (Height: 42);
+
+                    Group { FlexWeight: 1; }
+
+                    Label #TitleText {
+                        Style: (FontSize: 16, RenderBold: true, TextColor: #ffd700, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true);
+                        Text: "YOUR RENTALS";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+
+            #Content {
+                LayoutMode: Top;
+                Padding: (Left: 17, Right: 17, Top: 8, Bottom: 12);
+
+                // ---- Column header ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 22);
+                    LayoutMode: Left;
+
+                    Label { FlexWeight: 3; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Slot"; }
+                    Label { FlexWeight: 2; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Expires"; }
+                    Label { FlexWeight: 2; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Items"; }
+                    Label { FlexWeight: 2; Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, VerticalAlignment: Center); Text: "Revenue"; }
+                    Label { Anchor: (Width: 200); Style: (FontSize: 10, TextColor: #96a9be, RenderUppercase: true, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center); Text: "Actions"; }
+                }
+                Group { Anchor: (Height: 4); }
+                Group { Anchor: (Left: 0, Right: 0, Height: 1); Background: (Color: #ffffff15); }
+                Group { Anchor: (Height: 6); }
+
+                // ---- Empty state ----
+                Group #EmptyState {
+                    Anchor: (Left: 0, Right: 0, Height: 80);
+                    LayoutMode: CenterMiddle;
+                    Visible: false;
+
+                    Label {
+                        Anchor: (Height: 22);
+                        Style: (FontSize: 12, TextColor: #5a6a7a, HorizontalAlignment: Center, VerticalAlignment: Center);
+                        Text: "You have no active rentals.";
+                    }
+                }
+
+                // ---- Row 0 ----
+                Group #Row0 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #Row1 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #Row2 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #Row3 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #Row4 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+                Group { Anchor: (Height: 4); }
+
+                Group #Row5 {
+                    Anchor: (Left: 0, Right: 0, Height: 42);
+                    LayoutMode: Left;
+                    Padding: (Top: 4, Bottom: 4);
+                    Background: (Color: #ffffff06);
+                    Visible: false;
+
+                    Label #NameCell { FlexWeight: 3; Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center); Text: ""; }
+                    Label #ExpiresCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #ff9966, VerticalAlignment: Center); Text: ""; }
+                    Label #ItemsCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #bfcdd5, VerticalAlignment: Center); Text: ""; }
+                    Label #RevenueCell { FlexWeight: 2; Style: (FontSize: 11, TextColor: #66bb6a, VerticalAlignment: Center); Text: ""; }
+                    Group {
+                        Anchor: (Width: 200);
+                        LayoutMode: Left;
+                        Padding: (Right: 4);
+
+                        $C.@SmallSecondaryTextButton #ExtendBtn { @Anchor = (Width: 90, Height: 28); @Text = "EXTEND"; }
+                        Group { Anchor: (Width: 6); }
+                        $C.@SmallSecondaryTextButton #ReleaseBtn { @Anchor = (Width: 96, Height: 28); @Text = "RELEASE"; }
+                    }
+                }
+
+                Group { FlexWeight: 1; }
+
+                // ---- Buttons ----
+                Group {
+                    Anchor: (Left: 0, Right: 0, Height: 40);
+                    LayoutMode: Left;
+                    Padding: (Left: 20, Right: 20);
+
+                    Group { FlexWeight: 1; }
+
+                    $C.@CancelTextButton #CloseBtn {
+                        @Anchor = (Width: 160, Height: 34);
+                        @Text = "CLOSE";
+                    }
+
+                    Group { FlexWeight: 1; }
+                }
+            }
+        }
+    }
+}

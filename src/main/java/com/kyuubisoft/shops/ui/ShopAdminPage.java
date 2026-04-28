@@ -20,6 +20,9 @@ import com.kyuubisoft.shops.config.ShopConfig;
 import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopDatabase;
 import com.kyuubisoft.shops.data.ShopType;
+import com.kyuubisoft.shops.rental.RentalService;
+import com.kyuubisoft.shops.rental.RentalSlotData;
+import com.kyuubisoft.shops.rental.event.RentalExpiredEvent;
 import com.kyuubisoft.shops.service.ShopManager;
 
 import javax.annotation.Nonnull;
@@ -40,19 +43,21 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
     private static final Logger LOGGER = Logger.getLogger("KyuubiSoft Shops");
 
     private static final String[] TABS = {
-        "general", "economy", "rent", "shops", "players", "transactions", "stats", "blacklist"
+        "general", "economy", "rent", "shops", "players", "rentals",
+        "transactions", "stats", "blacklist"
     };
     private static final String[] TAB_IDS = {
         "SATabGeneral", "SATabEconomy", "SATabRent", "SATabShops",
-        "SATabPlayers", "SATabTransactions", "SATabStats", "SATabBlacklist"
+        "SATabPlayers", "SATabRentals", "SATabTransactions", "SATabStats", "SATabBlacklist"
     };
     private static final String[] PANEL_IDS = {
         "SAPanelGeneral", "SAPanelEconomy", "SAPanelRent", "SAPanelShops",
-        "SAPanelPlayers", "SAPanelTransactions", "SAPanelStats", "SAPanelBlacklist"
+        "SAPanelPlayers", "SAPanelRentals", "SAPanelTransactions", "SAPanelStats", "SAPanelBlacklist"
     };
 
     private static final int SHOPS_PER_PAGE = 8;
     private static final int PLAYERS_PER_PAGE = 6;
+    private static final int RENTALS_PER_PAGE = 8;
     private static final int TX_PER_PAGE = 10;
     private static final int BL_PER_PAGE = 10;
 
@@ -72,6 +77,12 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
     private int playersPage = 0;
     private String playersSearch = "";
     private List<ShopData> cachedPlayerShops = new ArrayList<>();
+
+    // Rentals tab state
+    private int rentalsPage = 0;
+    private String rentalsSearch = "";
+    private String rentalsFilter = "all"; // all | fixed | auction | rented | vacant
+    private List<RentalSlotData> cachedRentals = new ArrayList<>();
 
     // Transactions tab state
     private int txPage = 0;
@@ -151,6 +162,18 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
             case "players_prev" -> { if (playersPage > 0) playersPage--; }
             case "players_next" -> playersPage++;
 
+            // Rentals management
+            case "rentals_search" -> {
+                rentalsSearch = data.value != null ? data.value.trim() : "";
+                rentalsPage = 0;
+            }
+            case "rentals_prev" -> { if (rentalsPage > 0) rentalsPage--; }
+            case "rentals_next" -> rentalsPage++;
+            case "rentals_filter_all" -> { rentalsFilter = "all"; rentalsPage = 0; }
+            case "rentals_filter_vacant" -> { rentalsFilter = "vacant"; rentalsPage = 0; }
+            case "rentals_filter_auction" -> { rentalsFilter = "auction"; rentalsPage = 0; }
+            case "rentals_filter_rented" -> { rentalsFilter = "rented"; rentalsPage = 0; }
+
             // Transactions
             case "tx_search" -> {
                 txSearch = data.value != null ? data.value.trim() : "";
@@ -170,6 +193,8 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
                 else if (data.action.startsWith("players_close_")) handlePlayerClose(data.action);
                 else if (data.action.startsWith("players_open_")) handlePlayerOpen(data.action);
                 else if (data.action.startsWith("players_delete_")) handlePlayerDelete(data.action);
+                else if (data.action.startsWith("rentals_expire_")) handleRentalForceExpire(data.action);
+                else if (data.action.startsWith("rentals_delete_")) handleRentalDelete(data.action);
                 else if (data.action.startsWith("bl_remove_")) handleBlacklistRemove(data.action);
             }
         }
@@ -210,6 +235,7 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
             case "rent" -> populateRent(ui);
             case "shops" -> populateShops(ui);
             case "players" -> populatePlayers(ui);
+            case "rentals" -> populateRentals(ui);
             case "transactions" -> populateTransactions(ui);
             case "stats" -> populateStats(ui);
             case "blacklist" -> populateBlacklist(ui);
@@ -494,6 +520,177 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
                 plugin.getShopManager().deleteShop(shop.getId());
                 statusMessage = "Deleted player shop: " + shop.getName();
             }
+        } catch (Exception e) {
+            statusMessage = "Error: " + e.getMessage();
+        }
+    }
+
+    // ==================== RENTALS TAB ====================
+
+    /**
+     * Populates the Rentals tab grid: one row per {@link RentalSlotData}
+     * with slot name, mode, state (vacant/auction/rented), price or
+     * current bid, renter name + remaining time, and FORCE EXPIRE /
+     * DELETE action buttons. Supports filter tabs (all/vacant/auction/
+     * rented) and text search against slot display name + renter name.
+     */
+    private void populateRentals(UICommandBuilder ui) {
+        RentalService rentalService = plugin.getRentalService();
+        if (rentalService == null) {
+            ui.set("#RentEmpty.Visible", true);
+            ui.set("#RentPageInfo.Text", "0 / 0");
+            for (int i = 0; i < RENTALS_PER_PAGE; i++) {
+                ui.set("#RentRow" + i + ".Visible", false);
+            }
+            return;
+        }
+
+        // Reflect search + filter state back into the UI.
+        ui.set("#RentSearchField.Value", rentalsSearch);
+        ui.set("#RentFilterAllInd.Background", "all".equals(rentalsFilter) ? "#00bfff" : "#00000000");
+        ui.set("#RentFilterVacantInd.Background", "vacant".equals(rentalsFilter) ? "#00bfff" : "#00000000");
+        ui.set("#RentFilterAuctionInd.Background", "auction".equals(rentalsFilter) ? "#00bfff" : "#00000000");
+        ui.set("#RentFilterRentedInd.Background", "rented".equals(rentalsFilter) ? "#00bfff" : "#00000000");
+
+        List<RentalSlotData> allSlots = new ArrayList<>(rentalService.getAllSlots());
+
+        // Filter
+        List<RentalSlotData> filtered = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (RentalSlotData slot : allSlots) {
+            if (!matchesRentalFilter(slot, now)) continue;
+            if (!rentalsSearch.isEmpty()) {
+                String lower = rentalsSearch.toLowerCase();
+                String dname = slot.getDisplayName() != null ? slot.getDisplayName().toLowerCase() : "";
+                String rname = slot.getRentedByName() != null ? slot.getRentedByName().toLowerCase() : "";
+                if (!dname.contains(lower) && !rname.contains(lower)) continue;
+            }
+            filtered.add(slot);
+        }
+        filtered.sort(Comparator.comparing(s -> s.getDisplayName() != null ? s.getDisplayName() : "",
+            String.CASE_INSENSITIVE_ORDER));
+        cachedRentals = filtered;
+
+        int total = filtered.size();
+        int totalPages = Math.max(1, (int) Math.ceil(total / (double) RENTALS_PER_PAGE));
+        rentalsPage = Math.min(rentalsPage, totalPages - 1);
+        rentalsPage = Math.max(rentalsPage, 0);
+
+        int start = rentalsPage * RENTALS_PER_PAGE;
+        boolean anyVisible = false;
+
+        for (int i = 0; i < RENTALS_PER_PAGE; i++) {
+            int idx = start + i;
+            if (idx < total) {
+                RentalSlotData slot = filtered.get(idx);
+                anyVisible = true;
+                ui.set("#RentRow" + i + ".Visible", true);
+                ui.set("#RentName" + i + ".Text",
+                    slot.getDisplayName() != null ? slot.getDisplayName() : "?");
+                ui.set("#RentMode" + i + ".Text", slot.getMode().name());
+                if (slot.getMode() == RentalSlotData.Mode.AUCTION) {
+                    ui.set("#RentMode" + i + ".Style.TextColor", "#ffd700");
+                } else {
+                    ui.set("#RentMode" + i + ".Style.TextColor", "#66bb6a");
+                }
+
+                String stateText;
+                String priceText;
+                String renterText;
+                if (slot.getRentedBy() != null) {
+                    long remaining = Math.max(0, slot.getRentedUntil() - now);
+                    stateText = "RENTED";
+                    ui.set("#RentState" + i + ".Style.TextColor", "#00bcd4");
+                    priceText = slot.getPricePerDay() + "g/day";
+                    renterText = slot.getRentedByName() != null
+                        ? slot.getRentedByName() + " (" + RentalService.formatRemainingTime(remaining) + ")"
+                        : "? (" + RentalService.formatRemainingTime(remaining) + ")";
+                } else if (slot.getMode() == RentalSlotData.Mode.AUCTION && slot.isAuctionOpen()) {
+                    long remaining = Math.max(0, slot.getAuctionEndsAt() - now);
+                    stateText = "AUCTION";
+                    ui.set("#RentState" + i + ".Style.TextColor", "#ffd700");
+                    int bid = slot.getCurrentHighBid() > 0
+                        ? slot.getCurrentHighBid()
+                        : slot.getMinBid();
+                    priceText = bid + "g bid";
+                    renterText = slot.getCurrentHighBidderName() != null
+                        ? slot.getCurrentHighBidderName() + " (" + RentalService.formatRemainingTime(remaining) + ")"
+                        : "- (" + RentalService.formatRemainingTime(remaining) + ")";
+                } else {
+                    stateText = "VACANT";
+                    ui.set("#RentState" + i + ".Style.TextColor", "#66bb6a");
+                    priceText = slot.getMode() == RentalSlotData.Mode.AUCTION
+                        ? slot.getMinBid() + "g min"
+                        : slot.getPricePerDay() + "g/day";
+                    renterText = "-";
+                }
+
+                ui.set("#RentState" + i + ".Text", stateText);
+                ui.set("#RentPrice" + i + ".Text", priceText);
+                ui.set("#RentRenter" + i + ".Text", renterText);
+
+                // FORCE EXPIRE only makes sense on rented slots; grey it
+                // out visually by hiding the button when vacant/auction.
+                ui.set("#RentExpireBtn" + i + ".Visible", slot.getRentedBy() != null);
+            } else {
+                ui.set("#RentRow" + i + ".Visible", false);
+            }
+        }
+
+        ui.set("#RentEmpty.Visible", !anyVisible);
+        ui.set("#RentPageInfo.Text", (rentalsPage + 1) + " / " + totalPages);
+        ui.set("#RentPrevBtn.Visible", rentalsPage > 0);
+        ui.set("#RentNextBtn.Visible", rentalsPage < totalPages - 1);
+    }
+
+    private boolean matchesRentalFilter(RentalSlotData slot, long now) {
+        switch (rentalsFilter) {
+            case "vacant" -> {
+                return slot.getRentedBy() == null
+                    && (slot.getMode() == RentalSlotData.Mode.FIXED
+                        || !slot.isAuctionOpen());
+            }
+            case "auction" -> {
+                return slot.getMode() == RentalSlotData.Mode.AUCTION
+                    && slot.isAuctionOpen();
+            }
+            case "rented" -> {
+                return slot.getRentedBy() != null;
+            }
+            default -> {
+                return true;
+            }
+        }
+    }
+
+    private void handleRentalForceExpire(String action) {
+        try {
+            int rowIdx = Integer.parseInt(action.replace("rentals_expire_", ""));
+            int actualIdx = rentalsPage * RENTALS_PER_PAGE + rowIdx;
+            if (actualIdx < 0 || actualIdx >= cachedRentals.size()) return;
+            RentalSlotData slot = cachedRentals.get(actualIdx);
+            if (slot.getRentedBy() == null) {
+                statusMessage = "Slot is not rented.";
+                return;
+            }
+            plugin.getRentalService().expireSlot(slot, RentalExpiredEvent.Reason.FORCE_EXPIRED);
+            statusMessage = "Force-expired rental: " + slot.getDisplayName();
+        } catch (Exception e) {
+            statusMessage = "Error: " + e.getMessage();
+        }
+    }
+
+    private void handleRentalDelete(String action) {
+        try {
+            int rowIdx = Integer.parseInt(action.replace("rentals_delete_", ""));
+            int actualIdx = rentalsPage * RENTALS_PER_PAGE + rowIdx;
+            if (actualIdx < 0 || actualIdx >= cachedRentals.size()) return;
+            RentalSlotData slot = cachedRentals.get(actualIdx);
+            String name = slot.getDisplayName();
+            boolean ok = plugin.getRentalService().deleteSlot(slot.getId());
+            statusMessage = ok
+                ? "Deleted rental slot: " + name
+                : "Failed to delete: " + name;
         } catch (Exception e) {
             statusMessage = "Error: " + e.getMessage();
         }
@@ -839,6 +1036,32 @@ public class ShopAdminPage extends InteractiveCustomUIPage<ShopAdminPage.PageDat
                 EventData.of("Action", "players_open_" + i), false);
             events.addEventBinding(CustomUIEventBindingType.Activating, "#PDeleteBtn" + i,
                 EventData.of("Action", "players_delete_" + i), false);
+        }
+
+        // Rentals search + filter tabs + pagination
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentSearchBtn",
+            EventData.of("Action", "rentals_search")
+                .append("@Value", "#RentSearchField.Value"),
+            false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentFilterAll",
+            EventData.of("Action", "rentals_filter_all"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentFilterVacant",
+            EventData.of("Action", "rentals_filter_vacant"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentFilterAuction",
+            EventData.of("Action", "rentals_filter_auction"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentFilterRented",
+            EventData.of("Action", "rentals_filter_rented"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentPrevBtn",
+            EventData.of("Action", "rentals_prev"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RentNextBtn",
+            EventData.of("Action", "rentals_next"), false);
+
+        // Rental row buttons (force expire + delete)
+        for (int i = 0; i < RENTALS_PER_PAGE; i++) {
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#RentExpireBtn" + i,
+                EventData.of("Action", "rentals_expire_" + i), false);
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#RentDeleteBtn" + i,
+                EventData.of("Action", "rentals_delete_" + i), false);
         }
 
         // Transactions search + pagination

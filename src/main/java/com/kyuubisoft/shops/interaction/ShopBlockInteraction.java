@@ -17,6 +17,10 @@ import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.data.ShopType;
 import com.kyuubisoft.shops.i18n.ShopI18n;
 import com.kyuubisoft.shops.npc.ShopNpcManager;
+import com.kyuubisoft.shops.rental.RentalService;
+import com.kyuubisoft.shops.rental.RentalSlotData;
+import com.kyuubisoft.shops.rental.ui.RentalBidPage;
+import com.kyuubisoft.shops.rental.ui.RentalRentConfirmPage;
 import com.kyuubisoft.shops.service.ShopManager;
 import com.kyuubisoft.shops.service.ShopSessionManager;
 import com.kyuubisoft.shops.ui.ShopBrowsePage;
@@ -131,6 +135,63 @@ public class ShopBlockInteraction {
             }
         }
 
+        // --- Path 3: Vacant rental slot proximity ---
+        // If no shop was found above, check whether the player F-keyed
+        // anything within 3 blocks of a vacant rental slot position.
+        // Rented slots already have a ShopData row and are handled above.
+        if (shop == null) {
+            RentalService rentalService = plugin.getRentalService();
+            if (rentalService != null) {
+                double sourceX = 0, sourceY = 0, sourceZ = 0;
+                boolean haveSource = false;
+                var targetBlock = event.getTargetBlock();
+                if (targetBlock != null) {
+                    sourceX = targetBlock.x + 0.5;
+                    sourceY = targetBlock.y + 0.5;
+                    sourceZ = targetBlock.z + 0.5;
+                    haveSource = true;
+                } else if (targetEntity != null) {
+                    try {
+                        var tc = targetEntity.getTransformComponent();
+                        if (tc != null) {
+                            var pos = tc.getPosition();
+                            sourceX = pos.x;
+                            sourceY = pos.y;
+                            sourceZ = pos.z;
+                            haveSource = true;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+
+                if (haveSource) {
+                    RentalSlotData hit = null;
+                    double bestDistSq = Double.MAX_VALUE;
+                    for (RentalSlotData slot : rentalService.getAllSlots()) {
+                        if (!world.getName().equals(slot.getWorldName())) continue;
+                        if (slot.getRentedBy() != null) continue; // rented slots go via ShopData
+                        double dx = slot.getPosX() - sourceX;
+                        double dy = slot.getPosY() - sourceY;
+                        double dz = slot.getPosZ() - sourceZ;
+                        double distSq = dx * dx + dy * dy + dz * dz;
+                        if (distSq <= 9.0 && distSq < bestDistSq) {
+                            bestDistSq = distSq;
+                            hit = slot;
+                        }
+                    }
+
+                    if (hit != null) {
+                        event.setCancelled(true);
+                        Ref<EntityStore> entityRef = player.getReference();
+                        if (entityRef == null) return;
+                        Store<EntityStore> store = entityRef.getStore();
+                        if (store == null) return;
+                        openRentalConfirm(player, playerRef, entityRef, store, hit);
+                        return;
+                    }
+                }
+            }
+        }
+
         // No shop found — not our interaction
         if (shop == null) return;
 
@@ -144,8 +205,50 @@ public class ShopBlockInteraction {
         Store<EntityStore> store = entityRef.getStore();
         if (store == null) return;
 
-        // Handle the interaction
+        // --- Vacant shell detection ---
+        // If the ShopData is an ADMIN-type placeholder with rentalSlotId set,
+        // it's the vacant shell created by RentalService. Route to the
+        // rent/bid page instead of the normal shop interaction.
+        if (shop.isRentalBacked() && shop.isAdminShop()) {
+            RentalService rentalService = plugin.getRentalService();
+            if (rentalService != null) {
+                RentalSlotData slot = rentalService.getSlot(shop.getRentalSlotId());
+                if (slot != null && slot.getRentedBy() == null) {
+                    openRentalConfirm(player, playerRef, entityRef, store, slot);
+                    return;
+                }
+            }
+        }
+
+        // Handle the interaction (normal shop: browse for visitors, edit for owner)
         handleInteraction(player, playerRef, entityRef, store, shop);
+    }
+
+    /**
+     * Opens the matching rental page for a vacant slot — the fixed-price
+     * confirm dialog for {@code FIXED} slots, the full bid page for
+     * {@code AUCTION} slots.
+     */
+    private void openRentalConfirm(Player player, PlayerRef playerRef,
+                                   Ref<EntityStore> ref, Store<EntityStore> store,
+                                   RentalSlotData slot) {
+        CoreBridge.runWithI18n(playerRef, () -> {
+            try {
+                if (slot.getMode() == RentalSlotData.Mode.AUCTION) {
+                    RentalBidPage bidPage = new RentalBidPage(playerRef, player, plugin, slot);
+                    player.getPageManager().openCustomPage(ref, store, bidPage);
+                } else {
+                    RentalRentConfirmPage page = new RentalRentConfirmPage(
+                        playerRef, player, plugin, slot);
+                    player.getPageManager().openCustomPage(ref, store, page);
+                }
+            } catch (Exception e) {
+                LOGGER.warning("Failed to open rental page: " + e.getMessage());
+                player.sendMessage(Message.raw(
+                    "Failed to open rental dialog: " + e.getMessage()
+                ).color("#FF5555"));
+            }
+        });
     }
 
     // ==================== INTERACTION LOGIC ====================
@@ -251,13 +354,16 @@ public class ShopBlockInteraction {
 
         CoreBridge.runWithI18n(playerRef, () -> {
             try {
-                // TODO: Open ShopEditPage when implemented
-                // ShopEditPage page = new ShopEditPage(playerRef, player, plugin, shop);
-                // player.getPageManager().openCustomPage(ref, store, page);
-
-                // For now, open the browse page as a placeholder (owner can still see their shop)
-                ShopBrowsePage page = new ShopBrowsePage(playerRef, player, plugin, shop);
-                player.getPageManager().openCustomPage(ref, store, page);
+                com.kyuubisoft.shops.ui.ShopEditPage editPage =
+                    new com.kyuubisoft.shops.ui.ShopEditPage(playerRef, player, plugin, shop);
+                com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow window =
+                    new com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow(
+                        editPage.getStagingContainer());
+                window.registerCloseEvent(event -> {
+                    editPage.onWindowClose();
+                    sessionManager.unlockEditor(shopId, playerUuid);
+                });
+                player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
 
                 LOGGER.fine("Opened shop editor for " + playerRef.getUsername()
                     + " at shop '" + shop.getName() + "'");

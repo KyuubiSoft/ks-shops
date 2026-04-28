@@ -12,6 +12,8 @@ import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 
+import com.hypixel.hytale.server.core.Message;
+
 import com.kyuubisoft.shops.ShopPlugin;
 import com.kyuubisoft.shops.data.ShopData;
 import com.kyuubisoft.shops.service.ShopSessionManager;
@@ -98,6 +100,46 @@ public class ActionShopInteract extends ActionBase {
 
             world.execute(() -> {
                 try {
+                    // Vacant rental shell: ADMIN-type ShopData with rentalSlotId set,
+                    // open=false on purpose. Route to the rental confirm/bid page
+                    // BEFORE the closed-shop block below, otherwise vacant slots
+                    // would silently swallow the F-key. Mirrors the routing in
+                    // ShopBlockInteraction.onPlayerInteract.
+                    if (shop.getRentalSlotId() != null && shop.isAdminShop()) {
+                        com.kyuubisoft.shops.rental.RentalService rentalService =
+                            plugin.getRentalService();
+                        if (rentalService != null) {
+                            com.kyuubisoft.shops.rental.RentalSlotData slot =
+                                rentalService.getSlot(shop.getRentalSlotId());
+                            if (slot != null && slot.getRentedBy() == null) {
+                                if (slot.getMode() == com.kyuubisoft.shops.rental.RentalSlotData.Mode.AUCTION) {
+                                    com.kyuubisoft.shops.rental.ui.RentalBidPage bid =
+                                        new com.kyuubisoft.shops.rental.ui.RentalBidPage(
+                                            playerRef, player, plugin, slot);
+                                    player.getPageManager().openCustomPage(
+                                        playerReference, store, bid);
+                                } else {
+                                    com.kyuubisoft.shops.rental.ui.RentalRentConfirmPage rent =
+                                        new com.kyuubisoft.shops.rental.ui.RentalRentConfirmPage(
+                                            playerRef, player, plugin, slot);
+                                    player.getPageManager().openCustomPage(
+                                        playerReference, store, rent);
+                                }
+                                return;
+                            }
+                        }
+                    }
+
+                    // Block non-owners on closed shops. Owners keep full access
+                    // (editor) so they can still manage their own shop while it
+                    // is temporarily closed. Mirrors the check in
+                    // ShopBlockInteraction.handleInteraction.
+                    if (!shop.isOpen() && !isOwner) {
+                        String msg = plugin.getI18n().get(playerRef, "shop.error.closed");
+                        player.sendMessage(Message.raw(msg).color("#FF5555"));
+                        return;
+                    }
+
                     if (isOwner) {
                         ShopSessionManager sessionManager = plugin.getSessionManager();
                         if (sessionManager == null || !sessionManager.lockEditor(shop.getId(), playerUuid)) {

@@ -13,6 +13,7 @@
   "IncludesAssetPack": true,
   "OptionalDependencies": {
     "kyuubisoft:core": "*",
-    "kyuubisoft:claims": "*"
+    "kyuubisoft:claims": "*",
+    "TheNewEconomy:VaultUnlocked": "*"
   }
 }

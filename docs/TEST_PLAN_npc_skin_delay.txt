@@ -1,0 +1,264 @@
+Tip: For description use || or Tab: Title || Description
+
+Start a line with #: # Category name
+
+# 0. Vorbereitung (einmalig)
+0.1 Terminal im Projekt-Root oeffnen || Windows Explorer oeffnen, zu D:\Development\KyuubiSoft_Hytale_Setup navigieren, dort im Adressfeld "cmd" eintippen + Enter.
+0.2 Server vollstaendig stoppen || Falls Hytale-Server laeuft: im Server-Fenster "stop" eintippen + Enter. Warten bis Fenster sich schliesst oder "Server stopped" erscheint.
+0.3 Shops-Mod neu bauen || Im Terminal: ./gradlew :mods:shops:build. Warten bis "BUILD SUCCESSFUL" erscheint.
+0.4 JAR deployen || Im Terminal: ./gradlew :mods:shops:deployToServer. Danach liegt shops-<version>.jar im Server-mods-Ordner.
+0.5 Server-Path identifizieren || Notiere dir den Pfad zu deinem Hytale-Server-Root (wo server.exe / server.bat liegt). In dieser Anleitung genannt als <SERVER>.
+0.6 Config-Pfad identifizieren || Config liegt unter <SERVER>/data/shops/config.json. Falls Ordner leer ist: erst einmal in Test A.1 den Server starten, dann hier weitermachen.
+0.7 Server-Log sichtbar machen || Sorge dafuer, dass du die Server-Konsole sehen kannst waehrend du im Spiel bist (zweiter Monitor oder Alt+Tab bereit).
+0.8 Zwei Test-Accounts vorbereiten || Du brauchst mindestens 1 Account mit op / ks.shop.admin. Fuer Test E + F5 ist ein zweiter Account nuetzlich (anderer Char oder zweites Client-Fenster).
+
+# 1. Baseline - Erste Shops anlegen (einmalig vor allen Tests)
+1.1 Server starten || Server starten, warten bis im Log "Shops plugin loaded" erscheint.
+1.2 Mit Admin-Char einloggen || In den Hytale-Client einloggen mit Account der ks.shop.admin hat.
+1.3 An Test-Position laufen || Lauf zu einer freien Stelle, wo du 3-4 NPCs nebeneinander platzieren kannst. Merk dir die Position.
+1.4 Test-Shop A: Admin-Shop || Tippe: /kssa createadmin TestAdminShop. Erwartung: Chat "Admin shop created". Ein NPC steht vor dir.
+1.5 Schritt 3 Meter seitwaerts gehen || Gehe ~3 Bloecke seitwaerts, damit NPCs nicht ueberlappen.
+1.6 Test-Shop B: Player-Shop || Tippe: /ksshop create TestPlayerShop. Erwartung: Chat "Shop created". Ein NPC mit deinem eigenen Skin steht vor dir.
+1.7 Schritt 3 Meter seitwaerts gehen || Wieder seitwaerts.
+1.8 Test-Shop C: Rental Fixed || Tippe: /kssa createrental TestRentalFixed 100 7. Erwartung: Chat "Rental slot created". NPC mit Nameplate "TestRentalFixed [100g/day]".
+1.9 Schritt 3 Meter seitwaerts gehen || Wieder seitwaerts.
+1.10 Test-Shop D: Rental Auction || Tippe: /kssa createrentalauction TestRentalAuction 500 10 60 7. Erwartung: Chat "Auction slot created". NPC mit Nameplate "TestRentalAuction [AUCTION 500g]".
+1.11 Alle 4 NPCs sichtbar pruefen || Geh 10 Bloecke zurueck und schau alle 4 NPCs an. Alle stehen, alle haben Nameplate. Wenn ein Skin fehlt: Screenshot machen, das ist der Ursprungs-Bug.
+1.12 Server stoppen || In der Server-Konsole "stop" eintippen, warten bis Server beendet ist.
+
+# 2. Config-Baseline pruefen
+2.1 Config-Datei oeffnen || <SERVER>/data/shops/config.json in einem Texteditor oeffnen (z.B. Notepad++, VS Code).
+2.2 Abschnitt "npc" suchen || Strg+F -> "npc". Du findest einen Block: "npc": { ... }.
+2.3 Feld spawnDelaySecondsOnJoin pruefen || Im "npc"-Block muss stehen: "spawnDelaySecondsOnJoin": 3. Falls fehlt: Config ist alt.
+2.4 Feld skinRetryDelaySeconds pruefen || Im "npc"-Block muss stehen: "skinRetryDelaySeconds": 5. Falls fehlt: Config ist alt.
+2.5 Falls Felder fehlen: Config loeschen || Config-Datei komplett loeschen. Server kurz starten + wieder stoppen. Danach ist die Datei mit neuen Defaults regeneriert. Zurueck zu Schritt 2.1.
+2.6 Feld defaultSkinUsername notieren || Wert merken (meist ""). Wir aendern den spaeter.
+2.7 Config schliessen ohne Aenderungen || Editor schliessen, nichts speichern.
+
+# 3. Test A - Default 3s Delay (Happy Path)
+3.1 Sicherstellen dass Server aus ist || Kein Server-Prozess laeuft.
+3.2 Server starten || Server starten.
+3.3 Auf Plugin-Load warten || Log-Zeile "Shops plugin loaded" abwarten.
+3.4 Stoppuhr bereit || Handy-Stoppuhr oder stopwatch.online oeffnen.
+3.5 Hytale-Client starten + einloggen || Client oeffnen, Login, Server-Auswahl.
+3.6 In World joinen + Stoppuhr START || Beim Klick auf "World betreten" gleichzeitig Stoppuhr starten.
+3.7 NPCs beobachten || Erwartung: Fuer ~3 Sekunden stehen KEINE Shop-NPCs. Nach ~3s poppen alle 4 gleichzeitig auf.
+3.8 Stoppuhr-Wert notieren || Zeit zwischen "in World angekommen" und "NPC erscheint". Erwartung: ~3 Sekunden.
+3.9 Log-Zeile Spawn-Delay pruefen || In Server-Konsole muss stehen: "First player in world 'world' - spawning 4 shop NPC(s) in 3s".
+3.10 Log-Zeile Skin-Fetch pruefen || Nach ~3s 4x: "[Skin] Fetching skin '<name>' for shop '<shop>'".
+3.11 Log-Zeile Skin-Apply pruefen || Nach Fetch 4x: "[Skin] Applied '<name>' to shop NPC: <shop>".
+3.12 Alle 4 NPCs optisch pruefen || TestAdminShop, TestPlayerShop, TestRentalFixed, TestRentalAuction - haben alle einen Skin (nicht der default graue Mensch). Fehlt ein Skin: Bug.
+3.13 Ergebnis notieren || Haken setzen: "Test A Default Delay: OK" oder Notiz ueber Abweichung.
+3.14 Aus World ausloggen || /logout oder Escape -> Server verlassen.
+3.15 Server stoppen || "stop" in Konsole.
+
+# 4. Test B - Delay auf 0 (altes Verhalten)
+4.1 config.json oeffnen || <SERVER>/data/shops/config.json im Editor oeffnen.
+4.2 spawnDelaySecondsOnJoin auf 0 setzen || Die 3 durch 0 ersetzen. Speichern (Strg+S).
+4.3 Editor schliessen || Config schliessen.
+4.4 Server starten || Server starten, auf "Shops plugin loaded" warten.
+4.5 Client joinen mit Stoppuhr || World betreten, Stoppuhr gleichzeitig starten.
+4.6 Sofort-Spawn beobachten || Erwartung: NPCs sind SOFORT da (unter 1s).
+4.7 Log-Zeile pruefen || Log: "First player in world 'world' - spawning 4 shop NPC(s)" (ohne "in Xs"-Suffix).
+4.8 Ergebnis notieren || "Test B 0s Delay: OK"
+4.9 Ausloggen + Server stop || /logout, dann "stop" in Konsole.
+
+# 5. Test C - Langer Delay 10s
+5.1 config.json oeffnen || Editor auf.
+5.2 spawnDelaySecondsOnJoin auf 10 setzen || 0 durch 10 ersetzen. Speichern.
+5.3 Server starten || Starten, Log-Ready abwarten.
+5.4 Client joinen mit Stoppuhr || Betreten + Stoppuhr.
+5.5 10s warten || 10 Sekunden warten, erst DANN spawnen NPCs.
+5.6 Log-Zeile pruefen || Log: "... spawning 4 shop NPC(s) in 10s".
+5.7 Skin-Apply nach 10s || Nach den 10s kommen die "[Skin] Fetching" + "[Skin] Applied" Zeilen.
+5.8 Ergebnis notieren || "Test C 10s Delay: OK"
+5.9 Ausloggen + Server stop || Standard-Abfolge.
+
+# 6. Test D - Clamp-Validierung
+6.1 config.json oeffnen || Editor.
+6.2 spawnDelaySecondsOnJoin auf 999 setzen || Wert auf 999 setzen. Speichern.
+6.3 Server starten || Starten. Plugin-Load abwarten.
+6.4 Server nach Init stoppen || Nach 30 Sekunden einfach "stop" eintippen.
+6.5 Config erneut oeffnen || config.json wieder oeffnen.
+6.6 Wert pruefen (Obergrenze) || spawnDelaySecondsOnJoin muss jetzt 60 sein (geclampt von 999). Falls noch 999: Clamping fehlt.
+6.7 Wert auf -5 setzen || -5 eintragen, speichern.
+6.8 Server starten + stoppen || Start, Plugin-Load abwarten, dann stop.
+6.9 Wert pruefen (Untergrenze) || In config.json muss jetzt 0 stehen.
+6.10 skinRetryDelaySeconds obere Grenze || Wert auf 999 setzen, speichern, Server start/stop, pruefen: muss 60 sein.
+6.11 skinRetryDelaySeconds untere Grenze || Wert auf -5 setzen, speichern, Server start/stop, pruefen: muss 0 sein.
+6.12 Config auf Testwerte zuruecksetzen || spawnDelaySecondsOnJoin auf 3, skinRetryDelaySeconds auf 5. Speichern.
+6.13 Ergebnis notieren || "Test D Clamps: OK"
+
+# 7. Test E - Zweiter Spieler (kein Zusatz-Delay)
+7.1 Config-Check || spawnDelaySecondsOnJoin = 3.
+7.2 Server starten || Starten.
+7.3 Client 1 (Admin) joinen || Mit Admin-Account in World. Warten bis NPCs nach 3s da sind.
+7.4 Log-Zeile zaehlen (1x) || Suche im Log "First player in world". Erwartung: GENAU 1 Vorkommen.
+7.5 Client 2 (zweiter Account) joinen || Zweiten Client starten + joinen. ODER: Admin ausloggen + sofort wieder einloggen (zaehlt NICHT, siehe Note unten).
+7.6 NPCs sofort sichtbar beim 2. Spieler || Zweiter Spieler sieht alle 4 NPCs SOFORT (kein 3s Warten).
+7.7 Log-Zeile immer noch 1x || "First player in world" kommt NICHT nochmal im Log. Wenn doch: Bug.
+7.8 Ergebnis notieren || "Test E Second Player: OK"
+7.9 Beide Clients ausloggen, Server stoppen || Standard.
+7.10 Hinweis zu "admin ausloggen+einloggen" || Wenn KEIN anderer Spieler online bleibt, leert sich die spawnedWorlds-Registry NICHT (Singleton ueber Prozesslaufzeit). Der gleiche Admin der re-joint loest also auch KEINEN neuen Delay aus. Das ist korrekt so.
+
+# 8. Test F1 - Player Shop Live-Create + Delay nach Restart
+8.1 Server + Client bereit || Server laeuft, Admin eingeloggt, nach World-Join gewartet (NPCs da).
+8.2 An neuer Position stehen || Gehe 5 Bloecke weiter weg von den bestehenden Test-NPCs.
+8.3 Player Shop erstellen || /ksshop create TestLiveShop. Erwartung: NPC SOFORT da (kein Delay, weil in-session).
+8.4 Skin = eigener Name pruefen || NPC-Skin sollte deinem eigenen Character aehneln.
+8.5 Server stoppen || Ausloggen, "stop" in Konsole.
+8.6 Server neu starten || Starten, Plugin-Ready abwarten.
+8.7 World joinen mit Stoppuhr || Beim Betreten Stoppuhr.
+8.8 TestLiveShop nach 3s sichtbar || Nach ~3s ist auch der TestLiveShop-NPC wieder da.
+8.9 Skin immer noch korrekt || Nach Re-Spawn Skin = eigener Name.
+8.10 Ergebnis notieren || "Test F1 Player Shop: OK"
+8.11 Ausloggen, Server stoppen || Standard.
+
+# 9. Test F2 - Admin Shop mit Default-Skin
+9.1 config.json oeffnen || Editor.
+9.2 defaultSkinUsername auf echten User setzen || Feld "defaultSkinUsername": "Notch" eintragen (oder beliebiger echter Hytale-User). Speichern.
+9.3 Server starten || Starten.
+9.4 Client joinen + 3s warten || World betreten, NPCs abwarten.
+9.5 An freie Position gehen || 5 Bloecke weg.
+9.6 Admin Shop erstellen || /kssa createadmin TestDefaultSkinShop. NPC spawnt sofort.
+9.7 Skin = Notch-Skin || Der neue NPC hat den Notch-Skin (Hytale-Rendering).
+9.8 Log-Apply pruefen || "[Skin] Applied 'Notch' to shop NPC: TestDefaultSkinShop".
+9.9 Ergebnis notieren || "Test F2 Admin Default Skin: OK"
+9.10 Ausloggen, Server stoppen || Standard.
+
+# 10. Test F3 - Rental Vacant FIXED
+10.1 Rueckblick: Bereits in 1.8 erstellt || TestRentalFixed sollte schon stehen.
+10.2 Server + Client starten, 3s warten, zum NPC laufen || World joinen, zum TestRentalFixed-NPC laufen.
+10.3 Nameplate korrekt || Nameplate liest "TestRentalFixed [100g/day]".
+10.4 Skin vorhanden || NPC hat einen Skin (der default aus config, jetzt "Notch").
+10.5 F druecken || Auf den NPC schauen + F. Erwartung: Rent-Confirm-Dialog oeffnet sich.
+10.6 Dialog wieder schliessen || Cancel / Escape.
+10.7 Ergebnis notieren || "Test F3 Rental Fixed: OK"
+10.8 Ausloggen, Server stoppen || Standard.
+
+# 11. Test F4 - Rental Vacant AUCTION
+11.1 Bereits in 1.10 erstellt || TestRentalAuction sollte stehen.
+11.2 Server + Client + 3s + zum NPC || Wie in 10.2.
+11.3 Nameplate korrekt || Nameplate: "TestRentalAuction [AUCTION 500g]".
+11.4 Skin vorhanden || Wie F3.
+11.5 F druecken || Auction-Bid-Page oeffnet sich (kein Rent-Dialog).
+11.6 Countdown laeuft || Auf der Bid-Page tickt der Timer runter.
+11.7 Dialog schliessen || Close/Escape.
+11.8 Ergebnis notieren || "Test F4 Rental Auction: OK"
+11.9 Ausloggen, Server stoppen || Standard.
+
+# 12. Test F5 - Gemieteter Slot hat Mieter-Skin
+12.1 Zweiten Test-Account haben || Du brauchst einen zweiten Hytale-Account mit ein paar Gold (oder gib dir per Admin-Command Gold).
+12.2 Server + beide Clients starten || Admin + zweiter Account.
+12.3 Mit zweitem Account zum TestRentalFixed gehen || Zweiter Spieler laeuft zum Vacant-Slot aus Test F3.
+12.4 F druecken || Rent-Dialog.
+12.5 Rent bestaetigen || Confirm mit 100g fuer 1 Tag. Erwartung: Chat "You rented TestRentalFixed".
+12.6 NPC wechselt || Vacant-NPC verschwindet, neuer NPC mit Mieter-Skin erscheint.
+12.7 Nameplate geaendert || Nameplate zeigt jetzt Shop-Name mit "expires in X" oder aehnlich.
+12.8 Log Skin-Apply pruefen || Log: "[Skin] Applied '<MieterName>' to shop NPC: <Slot>".
+12.9 Ergebnis notieren || "Test F5 Rental Rented Skin: OK"
+12.10 Slot wieder freigeben || /kssa forceexpirerental <slotId>. slotId siehst du in /kssa listrentals. Alternativ in der Admin-UI. Dann wird NPC wieder Vacant-Shell.
+12.11 Ausloggen, Server stoppen || Standard.
+
+# 13. Test G1 - Skin Retry mit Fake-User
+13.1 Server muss aus sein || "stop" falls laeuft.
+13.2 config.json oeffnen || Editor.
+13.3 defaultSkinUsername auf Fake setzen || "defaultSkinUsername": "AsdfNonExistent12345XYZ". Speichern.
+13.4 skinRetryDelaySeconds auf 5 || Sollte schon 5 sein, nochmal pruefen.
+13.5 Server starten || Starten.
+13.6 Client joinen, 3s warten || Standard-Join.
+13.7 An freie Position gehen || 5 Bloecke weg.
+13.8 Admin Shop erstellen || /kssa createadmin RetryTest.
+13.9 Log Fetch-Start pruefen || "[Skin] Fetching skin 'AsdfNonExistent12345XYZ' for shop 'RetryTest'".
+13.10 Log Null-Return (1. Versuch) pruefen || "[Skin] fetchSkin returned null for 'AsdfNonExistent12345XYZ' ... - retrying in 5s".
+13.11 5 Sekunden warten || Einfach warten, Stoppuhr oder im Log-Stream schauen.
+13.12 Log Null-Return (2. Versuch) pruefen || Nach 5s: "[Skin] fetchSkin returned null ... - NPC keeps default" (KEIN weiteres "retrying").
+13.13 Kein 3. Retry || Warte weitere 10s. Keine weitere "retrying"-Zeile. Nur EIN Retry wird gemacht.
+13.14 Ergebnis notieren || "Test G1 Retry Fake User: OK"
+13.15 Ausloggen, Server stoppen || Standard.
+
+# 14. Test G2 - Retry deaktivieren (skinRetryDelaySeconds = 0)
+14.1 config.json oeffnen || Editor.
+14.2 skinRetryDelaySeconds auf 0 || Speichern.
+14.3 defaultSkinUsername bleibt Fake || "AsdfNonExistent12345XYZ" immer noch drin.
+14.4 Server starten || Starten.
+14.5 Client joinen, 3s warten || Standard.
+14.6 Admin Shop erstellen || /kssa createadmin RetryTest2.
+14.7 Log Fetch-Start || "[Skin] Fetching ..."
+14.8 Log direkter Abbruch || Log: "[Skin] fetchSkin returned null ... - NPC keeps default". KEIN "retrying in" davor!
+14.9 Ergebnis notieren || "Test G2 Retry disabled: OK"
+14.10 Config zuruecksetzen || defaultSkinUsername auf "Notch" zurueck, skinRetryDelaySeconds auf 5. Speichern.
+14.11 Ausloggen, Server stoppen || Standard.
+
+# 15. Test G3 - Retry mit echtem Network-Fail (optional advanced)
+15.1 Firewall-Regel vorbereiten || Windows Defender Firewall: "Erweiterte Einstellungen" -> "Ausgehende Regeln" -> "Neue Regel".
+15.2 Regel fuer playerdb.co blockieren || Regel-Typ: Benutzerdefiniert. Programm: Java.exe (vom Server-JDK). Port: TCP 443. Remote-IP: 172.67.149.166 + 104.21.17.178 (playerdb.co-IPs, via nslookup pruefen). Aktion: Blockieren. Name: "Block playerdb test".
+15.3 Regel aktivieren || Speichern, Regel erscheint in der Liste.
+15.4 Server starten || Starten.
+15.5 Client joinen, 3s warten || Standard.
+15.6 Admin Shop mit Test-User erstellen || /kssa createadmin G3Test. User bleibt Notch (echter Name).
+15.7 Log Null + Retry || Log: "fetchSkin returned null ... retrying in 5s".
+15.8 Firewall-Regel SOFORT deaktivieren || Innerhalb der 5s die Firewall-Regel deaktivieren (Rechtsklick -> Deaktivieren).
+15.9 Attempt 2 Erfolg || Nach den 5s: "[Skin] Applied 'Notch' to shop NPC: G3Test (attempt 2)".
+15.10 Firewall-Regel LOESCHEN || Rechtsklick -> Loeschen, damit keine Dauerblockade bleibt.
+15.11 Ergebnis notieren || "Test G3 Network Fail Recovery: OK oder SKIPPED".
+15.12 Ausloggen, Server stoppen || Standard.
+
+# 16. Test H - In-Session Creates (kein Delay)
+16.1 Server starten mit spawnDelaySecondsOnJoin=3 || Normaler Setup.
+16.2 Client joinen, 3s warten || Initial-Burst abwarten.
+16.3 Live Player Shop || Neue Position, /ksshop create HLivePlayer. NPC sofort da (unter 1s).
+16.4 Live Admin Shop || Neue Position, /kssa createadmin HLiveAdmin. NPC sofort.
+16.5 Live Rental Fixed || Neue Position, /kssa createrental HLiveRental 50 3. NPC sofort.
+16.6 Live Rental Auction || Neue Position, /kssa createrentalauction HLiveAuction 100 5 30 3. NPC sofort.
+16.7 Kein Delay fuer in-session || Bei allen 4 KEINE 3s Wartezeit. Delay gilt nur fuer World-Join.
+16.8 Log-Zeilen pruefen || "Shop NPC spawned" kommt direkt, kein Scheduler-Eintrag.
+16.9 Aufraeumen: 4 Test-Shops wieder loeschen || /kssa listrentals + /kssa deleterental <id> fuer HLiveRental + HLiveAuction. /kssa deleteadmin <id> fuer HLiveAdmin. /ksshop delete HLivePlayer.
+16.10 Ergebnis notieren || "Test H In-Session: OK"
+16.11 Ausloggen, Server stoppen || Standard.
+
+# 17. Test I - Shutdown waehrend Delay
+17.1 config.json oeffnen || Editor.
+17.2 spawnDelaySecondsOnJoin auf 30 || Langer Delay fuer dieses Szenario.
+17.3 Server starten || Starten, Plugin-Load abwarten.
+17.4 Client joinen || World betreten.
+17.5 Log-Zeile mit "in 30s" verifizieren || "First player in world ... in 30s" steht im Log.
+17.6 SOFORT stop eintippen || Innerhalb der 30s (z.B. nach 5s) "stop" in Server-Konsole + Enter.
+17.7 Auf sauberen Shutdown achten || Server faehrt normal runter. "Server stopped" erscheint.
+17.8 KEINE Exception im Log || Kein RejectedExecutionException, keine NullPointerException, nichts rot. Scroll durch den letzten Log-Bereich.
+17.9 Ergebnis notieren || "Test I Shutdown during Delay: OK"
+17.10 Config zuruecksetzen || spawnDelaySecondsOnJoin wieder auf 3. Speichern.
+
+# 18. Test J - Respawn-Command (Regression)
+18.1 Server starten + Client + 3s warten || Normale Join-Sequenz.
+18.2 An einen Test-NPC stellen || Zum TestAdminShop laufen.
+18.3 Alle NPCs zaehlen || Merk dir wie viele Shop-NPCs stehen (z.B. 4 aus der Baseline).
+18.4 Respawn-Command ausfuehren || /kssa respawnnpcs.
+18.5 Sofort-Respawn beobachten || NPCs verschwinden und kommen direkt wieder. KEIN 3s-Delay!
+18.6 Skin-Apply zaehlen || In Log: 4x "[Skin] Applied ...". Kommen innerhalb ~1-2s.
+18.7 NPC-Anzahl unveraendert || Wieder 4 NPCs, alle mit Nameplate, alle mit Skin.
+18.8 Ergebnis notieren || "Test J Respawn Command: OK"
+18.9 Ausloggen, Server stoppen || Standard.
+
+# 19. Aufraeumen nach allen Tests
+19.1 config.json auf Defaults zurueck || spawnDelaySecondsOnJoin: 3, skinRetryDelaySeconds: 5, defaultSkinUsername: "" (oder dein gewuenschter Produktivwert). Speichern.
+19.2 Test-Shops loeschen (optional) || Wenn nicht benoetigt: /kssa deleteadmin <id>, /ksshop delete TestPlayerShop, /kssa deleterental <id> fuer jeden Testslot.
+19.3 Firewall-Regeln aus G3 pruefen || Windows-Firewall: sicherstellen dass "Block playerdb test" NICHT mehr existiert.
+19.4 Server-Log archivieren || Falls du Beweise brauchst: <SERVER>/logs/latest.log in einen Testprotokoll-Ordner kopieren.
+19.5 Ergebnisse zusammenfassen || Alle Haken durchgehen. Was nicht OK war: Screenshots + Log-Auszuege an Claude senden.
+
+# 20. Log-Filter Referenz (zum Mitlesen)
+20.1 Spawn-Delay-Trigger || Suche nach: "First player in world". Einmal pro World pro Server-Lifetime.
+20.2 Fetch-Start || Suche: "[Skin] Fetching". Einmal pro Shop-NPC beim Spawn.
+20.3 Apply-Success || Suche: "[Skin] Applied". Erwartung: 1x pro Shop.
+20.4 Fetch-Fail || Suche: "returned null". Nur wenn Skin-API failt.
+20.5 Retry-geplant || Suche: "retrying in". Nur wenn 1. Versuch null war.
+20.6 Attempt 2 Success || Suche: "(attempt 2)". Nur wenn Retry erfolgreich war.
+20.7 Final-Gib-auf || Suche: "NPC keeps default". Fetch 2x fehlgeschlagen.
+
+# 21. Troubleshooting-Schnellcheck
+21.1 Config-Felder fehlen || Fix: <SERVER>/data/shops/config.json loeschen, Server kurz starten+stoppen, Defaults werden regeneriert.
+21.2 NPCs sofort trotz Config 3 || Fix: ./gradlew :mods:shops:build :mods:shops:deployToServer nochmal ausfuehren, dann Server neu starten.
+21.3 "retrying in 0s" trotz Config 5 || Fix: config.json erneut oeffnen, Wert pruefen, evtl doppelte Anfuehrungszeichen/Komma-Fehler.
+21.4 NPCs ganz ohne Skin nach allen Tests || Fix: defaultSkinUsername mit echtem Hytale-User (Notch, Steve etc.) setzen ODER owner-Namen pruefen.
+21.5 "First player in world" fehlt komplett || Fix: Plugin wurde nicht geladen. manifest.json + JAR im mods/ Ordner pruefen.

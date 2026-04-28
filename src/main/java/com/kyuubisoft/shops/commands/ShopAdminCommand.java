@@ -61,6 +61,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         addSubCommand(new ReloadCmd());
         addSubCommand(new RespawnNpcsCmd());
         addSubCommand(new DeleteNearestNpcCmd());
+        addSubCommand(new CreateRentalCmd());
+        addSubCommand(new CreateRentalAuctionCmd());
+        addSubCommand(new DeleteRentalCmd());
+        addSubCommand(new ListRentalsCmd());
+        addSubCommand(new ForceExpireRentalCmd());
     }
 
     // ==================== ADMIN COMMANDS ====================
@@ -308,16 +313,20 @@ public class ShopAdminCommand extends AbstractCommandCollection {
 
     private class ClosePlayerCmd extends CommandBase {
         @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> shopIdArg;
+        private final Argument<?, String> reasonArg;
+
         ClosePlayerCmd() {
             super("closeplayer", "Force-close a player shop");
             requirePermission("ks.shop.admin");
-            withRequiredArg("shopId", "Shop ID", ArgTypes.STRING);
+            shopIdArg = withRequiredArg("shopId", "Shop ID", ArgTypes.STRING);
+            reasonArg = withOptionalArg("reason", "Optional reason text", ArgTypes.GREEDY_STRING);
         }
 
         protected void executeSync(CommandContext ctx) {
-            String[] parts = ctx.getInputString().split("\\s+", 4);
-            String shopIdStr = parts.length > 2 ? parts[2] : "";
-            String reason = parts.length > 3 ? parts[3] : "Admin action";
+            String shopIdStr = ctx.get(shopIdArg);
+            String reason = ctx.provided(reasonArg) ? ctx.get(reasonArg) : "Admin action";
 
             UUID shopId;
             try {
@@ -501,16 +510,20 @@ public class ShopAdminCommand extends AbstractCommandCollection {
 
     private class BlacklistCmd extends CommandBase {
         @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> actionArg;
+        private final Argument<?, String> itemIdArg;
+
         BlacklistCmd() {
             super("blacklist", "Manage item blacklist");
             requirePermission("ks.shop.admin");
-            withRequiredArg("action", "add/remove/list", ArgTypes.STRING);
+            actionArg = withRequiredArg("action", "add/remove/list", ArgTypes.STRING);
+            itemIdArg = withOptionalArg("itemId", "Item ID (required for add/remove)", ArgTypes.STRING);
         }
 
         protected void executeSync(CommandContext ctx) {
-            String[] parts = ctx.getInputString().split("\\s+", 4);
-            String action = parts.length > 2 ? parts[2].toLowerCase() : "";
-            String itemId = parts.length > 3 ? parts[3] : "";
+            String action = ctx.get(actionArg).toLowerCase();
+            String itemId = ctx.provided(itemIdArg) ? ctx.get(itemIdArg) : "";
 
             ShopConfig config = plugin.getShopConfig();
             List<String> blacklist = config.getData().itemBlacklist;
@@ -682,6 +695,297 @@ public class ShopAdminCommand extends AbstractCommandCollection {
             } catch (Exception e) {
                 ctx.sender().sendMessage(Message.raw("Respawn failed: " + e.getMessage()).color("#FF5555"));
             }
+        }
+    }
+
+    // ==================== RENTAL STATION COMMANDS ====================
+
+    /**
+     * /kssa createrental &lt;displayName&gt; [pricePerDay] [maxDays]
+     *
+     * Creates a FIXED-price rental slot at the caller's position. The
+     * slot is persisted immediately; the renter shop (and vacant NPC)
+     * spawns on the first successful rent.
+     */
+    private class CreateRentalCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> displayNameArg;
+        private final Argument<?, Integer> pricePerDayArg;
+        private final Argument<?, Integer> maxDaysArg;
+
+        CreateRentalCmd() {
+            super("createrental", "Create a fixed-price rental slot at your position");
+            requirePermission("ks.shop.admin");
+            displayNameArg = withRequiredArg("displayName", "Slot display name", ArgTypes.STRING);
+            pricePerDayArg = withOptionalArg("pricePerDay", "Gold per day (default from config)", ArgTypes.INTEGER);
+            maxDaysArg = withOptionalArg("maxDays", "Max rental days (default from config)", ArgTypes.INTEGER);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            String displayName = ctx.get(displayNameArg);
+            ShopConfig.ConfigData cfg = plugin.getShopConfig().getData();
+            int pricePerDay = ctx.provided(pricePerDayArg)
+                ? Math.max(0, ctx.get(pricePerDayArg))
+                : cfg.rentalStations.defaultPricePerDay;
+            int maxDays = ctx.provided(maxDaysArg)
+                ? Math.max(1, ctx.get(maxDaysArg))
+                : cfg.rentalStations.defaultMaxDays;
+
+            TransformComponent tc = player.getTransformComponent();
+            if (tc == null) {
+                player.sendMessage(Message.raw("No position available").color("#FF5555"));
+                return;
+            }
+            Vector3d pos = tc.getPosition();
+            float rotY = 0.0f;
+            try {
+                var rotation = tc.getRotation();
+                if (rotation != null) rotY = rotation.y;
+            } catch (Throwable ignored) {}
+
+            var slot = plugin.getRentalService().createFixedSlot(
+                displayName, world.getName(),
+                pos.x, pos.y, pos.z, rotY,
+                pricePerDay, maxDays, null
+            );
+
+            // Immediately spawn the vacant shell NPC so the admin sees it.
+            ShopData shell = plugin.getShopManager().getShopByRentalSlotId(slot.getId());
+            if (shell != null) {
+                plugin.getNpcManager().registerShopInWorld(shell);
+                final float fRotY = rotY;
+                world.execute(() ->
+                    plugin.getNpcManager().spawnNpcAtPosition(shell, world, pos, fRotY));
+            }
+
+            player.sendMessage(Message.raw(
+                "Rental slot '" + displayName + "' created ("
+                + pricePerDay + "g/day, max " + maxDays + "d)"
+            ).color("#44FF44"));
+            player.sendMessage(Message.raw(
+                "Slot id: " + slot.getId()
+            ).color("#96a9be"));
+        }
+    }
+
+    /**
+     * /kssa createrentalauction &lt;displayName&gt; [minBid] [bidIncrement]
+     *     [durationMinutes] [rentalDays]
+     *
+     * Creates an AUCTION-mode rental slot at the caller's position and
+     * immediately starts the first auction round.
+     */
+    private class CreateRentalAuctionCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> displayNameArg;
+        private final Argument<?, Integer> minBidArg;
+        private final Argument<?, Integer> bidIncrementArg;
+        private final Argument<?, Integer> durationMinutesArg;
+        private final Argument<?, Integer> rentalDaysArg;
+
+        CreateRentalAuctionCmd() {
+            super("createrentalauction", "Create an auction-mode rental slot at your position");
+            requirePermission("ks.shop.admin");
+            displayNameArg = withRequiredArg("displayName", "Slot display name", ArgTypes.STRING);
+            minBidArg = withOptionalArg("minBid", "Minimum bid (default from config)", ArgTypes.INTEGER);
+            bidIncrementArg = withOptionalArg("bidIncrement", "Bid increment (default from config)", ArgTypes.INTEGER);
+            durationMinutesArg = withOptionalArg("durationMinutes", "Auction duration in minutes (default from config)", ArgTypes.INTEGER);
+            rentalDaysArg = withOptionalArg("rentalDays", "Rental days for winner (default from config)", ArgTypes.INTEGER);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            String displayName = ctx.get(displayNameArg);
+            ShopConfig.ConfigData cfg = plugin.getShopConfig().getData();
+            int minBid = ctx.provided(minBidArg)
+                ? Math.max(0, ctx.get(minBidArg))
+                : cfg.rentalStations.defaultMinBid;
+            int bidIncrement = ctx.provided(bidIncrementArg)
+                ? Math.max(1, ctx.get(bidIncrementArg))
+                : cfg.rentalStations.defaultBidIncrement;
+            int durationMinutes = ctx.provided(durationMinutesArg)
+                ? Math.max(1, ctx.get(durationMinutesArg))
+                : cfg.rentalStations.defaultAuctionDurationMinutes;
+            int rentalDays = ctx.provided(rentalDaysArg)
+                ? Math.max(1, ctx.get(rentalDaysArg))
+                : cfg.rentalStations.defaultMaxDays;
+
+            TransformComponent tc = player.getTransformComponent();
+            if (tc == null) {
+                player.sendMessage(Message.raw("No position available").color("#FF5555"));
+                return;
+            }
+            Vector3d pos = tc.getPosition();
+            float rotY = 0.0f;
+            try {
+                var rotation = tc.getRotation();
+                if (rotation != null) rotY = rotation.y;
+            } catch (Throwable ignored) {}
+
+            var slot = plugin.getRentalService().createAuctionSlot(
+                displayName, world.getName(),
+                pos.x, pos.y, pos.z, rotY,
+                minBid, bidIncrement, durationMinutes, rentalDays, null
+            );
+
+            // Immediately spawn the vacant shell NPC.
+            ShopData shell = plugin.getShopManager().getShopByRentalSlotId(slot.getId());
+            if (shell != null) {
+                plugin.getNpcManager().registerShopInWorld(shell);
+                final float fRotY = rotY;
+                world.execute(() ->
+                    plugin.getNpcManager().spawnNpcAtPosition(shell, world, pos, fRotY));
+            }
+
+            player.sendMessage(Message.raw(
+                "Auction slot '" + displayName + "' created (min "
+                + minBid + "g, +" + bidIncrement + "g, " + durationMinutes
+                + "min, " + rentalDays + " rental days)"
+            ).color("#44FF44"));
+            player.sendMessage(Message.raw(
+                "Slot id: " + slot.getId()
+            ).color("#96a9be"));
+        }
+    }
+
+    /**
+     * /kssa deleterental &lt;slotId&gt;
+     *
+     * Removes a rental slot. If a rental is currently active, the
+     * renter is refunded (items + balance via mailbox) first.
+     */
+    private class DeleteRentalCmd extends CommandBase {
+        @Override protected boolean canGeneratePermission() { return false; }
+        DeleteRentalCmd() {
+            super("deleterental", "Delete a rental slot (force-expires any active rental)");
+            requirePermission("ks.shop.admin");
+            withRequiredArg("slotId", "Slot UUID", ArgTypes.STRING);
+        }
+
+        protected void executeSync(CommandContext ctx) {
+            String[] parts = ctx.getInputString().trim().split("\\s+", 3);
+            String slotIdStr = parts.length > 2 ? parts[2] : "";
+            UUID slotId;
+            try {
+                slotId = UUID.fromString(slotIdStr);
+            } catch (IllegalArgumentException e) {
+                ctx.sender().sendMessage(Message.raw(
+                    "Invalid slot UUID: " + slotIdStr
+                ).color("#FF5555"));
+                return;
+            }
+            boolean deleted = plugin.getRentalService().deleteSlot(slotId);
+            if (deleted) {
+                ctx.sender().sendMessage(Message.raw(
+                    "Deleted rental slot " + slotId
+                ).color("#44FF44"));
+            } else {
+                ctx.sender().sendMessage(Message.raw(
+                    "No rental slot with id " + slotId
+                ).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /kssa listrentals - chat list of every rental slot in the caller's
+     * current world with its current state.
+     */
+    private class ListRentalsCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        ListRentalsCmd() {
+            super("listrentals", "List rental slots in your current world");
+            requirePermission("ks.shop.admin");
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            Collection<com.kyuubisoft.shops.rental.RentalSlotData> all =
+                plugin.getRentalService().getAllSlots();
+            int count = 0;
+            for (com.kyuubisoft.shops.rental.RentalSlotData slot : all) {
+                if (!world.getName().equals(slot.getWorldName())) continue;
+                count++;
+                String state;
+                if (slot.getRentedBy() != null) {
+                    long remaining = slot.getRentedUntil() - System.currentTimeMillis();
+                    long hours = Math.max(0, remaining / 3_600_000L);
+                    state = "RENTED by " + slot.getRentedByName() + " (" + hours + "h left)";
+                } else if (slot.isAuctionOpen()) {
+                    state = "AUCTION open, high bid " + slot.getCurrentHighBid();
+                } else {
+                    state = "VACANT";
+                }
+                player.sendMessage(Message.raw(
+                    "- " + slot.getDisplayName() + " [" + slot.getMode() + "] "
+                    + state + " | id=" + slot.getId()
+                ).color("#96a9be"));
+            }
+            if (count == 0) {
+                player.sendMessage(Message.raw(
+                    "No rental slots in " + world.getName()
+                ).color("#FFD700"));
+            } else {
+                player.sendMessage(Message.raw(
+                    count + " rental slot(s) total"
+                ).color("#44FF44"));
+            }
+        }
+    }
+
+    /**
+     * /kssa forceexpirerental &lt;slotId&gt; - admin override that runs the
+     * normal expiry path immediately (items mailed to renter, backing
+     * shop deleted, slot returns to vacant).
+     */
+    private class ForceExpireRentalCmd extends CommandBase {
+        @Override protected boolean canGeneratePermission() { return false; }
+        ForceExpireRentalCmd() {
+            super("forceexpirerental", "Force-expire a rental (mails items back)");
+            requirePermission("ks.shop.admin");
+            withRequiredArg("slotId", "Slot UUID", ArgTypes.STRING);
+        }
+
+        protected void executeSync(CommandContext ctx) {
+            String[] parts = ctx.getInputString().trim().split("\\s+", 3);
+            String slotIdStr = parts.length > 2 ? parts[2] : "";
+            UUID slotId;
+            try {
+                slotId = UUID.fromString(slotIdStr);
+            } catch (IllegalArgumentException e) {
+                ctx.sender().sendMessage(Message.raw(
+                    "Invalid slot UUID: " + slotIdStr
+                ).color("#FF5555"));
+                return;
+            }
+            var slot = plugin.getRentalService().getSlot(slotId);
+            if (slot == null) {
+                ctx.sender().sendMessage(Message.raw(
+                    "No rental slot with id " + slotId
+                ).color("#FF5555"));
+                return;
+            }
+            if (slot.getRentedBy() == null) {
+                ctx.sender().sendMessage(Message.raw(
+                    "Slot is not rented - nothing to expire"
+                ).color("#FFD700"));
+                return;
+            }
+            plugin.getRentalService().expireSlot(
+                slot,
+                com.kyuubisoft.shops.rental.event.RentalExpiredEvent.Reason.FORCE_EXPIRED);
+            ctx.sender().sendMessage(Message.raw(
+                "Force-expired rental: " + slot.getDisplayName()
+            ).color("#44FF44"));
         }
     }
 }

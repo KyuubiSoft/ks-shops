@@ -75,19 +75,23 @@ public class ShopCommand extends AbstractCommandCollection {
     }
 
     // P3 polish: Pending ownership transfer confirmations per player.
-    private final java.util.Map<UUID, TransferConfirm> pendingTransfers =
+    /** Pending incoming transfer requests keyed by target (recipient) UUID. */
+    private final java.util.Map<UUID, TransferRequest> pendingTransfers =
         new java.util.concurrent.ConcurrentHashMap<>();
     private static final long TRANSFER_CONFIRM_WINDOW_MS = 60_000L;
 
-    private static final class TransferConfirm {
+    private static final class TransferRequest {
         final UUID shopId;
-        final String targetName;
-        final UUID targetUuid;
+        final String shopName;
+        final UUID senderUuid;
+        final String senderName;
         final long expiresAt;
-        TransferConfirm(UUID shopId, String targetName, UUID targetUuid, long expiresAt) {
+        TransferRequest(UUID shopId, String shopName, UUID senderUuid,
+                        String senderName, long expiresAt) {
             this.shopId = shopId;
-            this.targetName = targetName;
-            this.targetUuid = targetUuid;
+            this.shopName = shopName;
+            this.senderUuid = senderUuid;
+            this.senderName = senderName;
             this.expiresAt = expiresAt;
         }
     }
@@ -108,6 +112,9 @@ public class ShopCommand extends AbstractCommandCollection {
         addSubCommand(new CloseCmd());
         addSubCommand(new RenameCmd());
         addSubCommand(new MyShopsCmd());
+        addSubCommand(new MyRentalsCmd());
+        addSubCommand(new ReleaseRentalCmd());
+        addSubCommand(new RentalStationsCmd());
         addSubCommand(new RateCmd());
         addSubCommand(new HistoryCmd());
         addSubCommand(new NotificationsCmd());
@@ -115,6 +122,8 @@ public class ShopCommand extends AbstractCommandCollection {
         addSubCommand(new DepositCmd());
         addSubCommand(new StatsCmd());
         addSubCommand(new TransferCmd());
+        addSubCommand(new AcceptTransferCmd());
+        addSubCommand(new DeclineTransferCmd());
         addSubCommand(new ListCmd());
     }
 
@@ -487,9 +496,14 @@ public class ShopCommand extends AbstractCommandCollection {
 
     private class DeleteCmd extends AbstractPlayerCommand {
         @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> shopIdArg;
+        private final Argument<?, String> confirmArg;
+
         DeleteCmd() {
             super("delete", "Delete your shop");
-            withRequiredArg("shopId", "Shop ID", ArgTypes.STRING);
+            shopIdArg = withRequiredArg("shopId", "Shop ID or name", ArgTypes.STRING);
+            confirmArg = withOptionalArg("confirm", "Type 'confirm' to finalise", ArgTypes.STRING);
         }
 
         @Override
@@ -508,10 +522,9 @@ public class ShopCommand extends AbstractCommandCollection {
             ShopManager shopManager = plugin.getShopManager();
             UUID playerUuid = playerRef.getUuid();
 
-            // Parse arguments: /ksshop delete <shopId> [confirm]
-            String[] parts = ctx.getInputString().split("\\s+", 4);
-            String shopIdentifier = parts.length > 2 ? parts[2].trim() : "";
-            boolean confirm = parts.length > 3 && "confirm".equalsIgnoreCase(parts[3].trim());
+            String shopIdentifier = ctx.get(shopIdArg).trim();
+            boolean confirm = ctx.provided(confirmArg)
+                && "confirm".equalsIgnoreCase(ctx.get(confirmArg).trim());
 
             if (shopIdentifier.isEmpty()) {
                 player.sendMessage(Message.raw(
@@ -635,7 +648,9 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             targetShop.setOpen(true);
-            plugin.getNpcManager().spawnNpc(targetShop);
+            // NPC was never despawned on close - just strip the [CLOSED] suffix
+            // from the nameplate so the shop visually reads "open" again.
+            plugin.getNpcManager().refreshNameTag(targetShop, world);
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.status.opened", targetShop.getName())).color("#55FF55"));
         }
@@ -682,7 +697,10 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             targetShop.setOpen(false);
-            plugin.getNpcManager().despawnNpc(targetShop.getId());
+            // NPC stays visible - the nameplate refresh appends [CLOSED] so
+            // passers-by see the state without F-keying, and ShopBlockInteraction
+            // blocks the browse UI for non-owners until the shop is re-opened.
+            plugin.getNpcManager().refreshNameTag(targetShop, world);
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.status.closed", targetShop.getName())).color("#FFD700"));
         }
@@ -755,8 +773,13 @@ public class ShopCommand extends AbstractCommandCollection {
             String oldName = targetShop.getName();
             targetShop.setName(newName);
 
-            // Respawn NPC to update nameplate
-            plugin.getNpcManager().respawnNpc(targetShop);
+            // Update the nameplate in place (no respawn needed). A full
+            // respawn would despawn + re-spawn the NPC - which, on the
+            // world-less overload we used to call, left the entity alive
+            // and a second NPC was created the next time the chunk
+            // reloaded. refreshNameTag dispatches to the world thread and
+            // just flips the Nameplate text.
+            plugin.getNpcManager().refreshNameTag(targetShop, world);
 
             player.sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rename.success", oldName, newName)).color("#55FF55"));
@@ -787,6 +810,108 @@ public class ShopCommand extends AbstractCommandCollection {
             } catch (Exception e) {
                 e.printStackTrace();
                 player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /ksshop myrentals — chat list of the player's active rental slots.
+     * Phase 1 MVP: text output only; a full {@code MyRentalsPage} with
+     * EXTEND / RELEASE buttons lands in Phase 2.
+     */
+    /**
+     * /ksshop myrentals — opens the {@link com.kyuubisoft.shops.rental.ui.MyRentalsPage}
+     * self-service UI with per-rental EXTEND / RELEASE EARLY buttons.
+     */
+    private class MyRentalsCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        MyRentalsCmd() { super("myrentals", "Open your active shop rentals"); }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            try {
+                com.kyuubisoft.shops.rental.ui.MyRentalsPage page =
+                    new com.kyuubisoft.shops.rental.ui.MyRentalsPage(playerRef, player, plugin);
+                player.getPageManager().openCustomPage(ref, store, page);
+            } catch (Exception e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.open_failed")
+                ).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /ksshop rentalstations — opens the multi-slot browse page for every
+     * rental slot in the caller's current world.
+     */
+    private class RentalStationsCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        RentalStationsCmd() { super("rentalstations", "Browse rental slots in your current world"); }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            try {
+                com.kyuubisoft.shops.rental.ui.RentalStationPage page =
+                    new com.kyuubisoft.shops.rental.ui.RentalStationPage(
+                        playerRef, player, plugin, world.getName());
+                player.getPageManager().openCustomPage(ref, store, page);
+            } catch (Exception e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.error.open_failed")
+                ).color("#FF5555"));
+            }
+        }
+    }
+
+    /**
+     * /ksshop releaserental &lt;slotId&gt; — voluntary early release. Items
+     * are mailed back to the renter, gold refund fraction from config.
+     */
+    private class ReleaseRentalCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        ReleaseRentalCmd() {
+            super("releaserental", "Release one of your rental slots early");
+            withRequiredArg("slotId", "Rental slot UUID", ArgTypes.STRING);
+        }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+
+            String[] parts = ctx.getInputString().trim().split("\\s+", 3);
+            String slotIdStr = parts.length > 2 ? parts[2] : "";
+            UUID slotId;
+            try {
+                slotId = UUID.fromString(slotIdStr);
+            } catch (IllegalArgumentException e) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rental.slot_not_found")
+                ).color("#FF5555"));
+                return;
+            }
+            var rentalService = plugin.getRentalService();
+            if (rentalService == null) return;
+            var slot = rentalService.getSlot(slotId);
+            String name = slot != null ? slot.getDisplayName() : slotIdStr;
+
+            boolean ok = rentalService.releaseEarly(playerRef, slotId);
+            if (ok) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rental.released_chat", name)
+                ).color("#55ff55"));
+            } else {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.rental.rent_failed")
+                ).color("#FF5555"));
             }
         }
     }
@@ -1222,10 +1347,14 @@ public class ShopCommand extends AbstractCommandCollection {
      */
     private class TransferCmd extends AbstractPlayerCommand {
         @Override protected boolean canGeneratePermission() { return false; }
+
+        private final Argument<?, String> shopIdArg;
+        private final Argument<?, String> playerNameArg;
+
         TransferCmd() {
-            super("transfer", "Transfer shop ownership to another player");
-            withRequiredArg("shopId", "Shop ID or name", ArgTypes.STRING);
-            withRequiredArg("playerName", "Target player name", ArgTypes.STRING);
+            super("transfer", "Send a shop ownership transfer request to another player");
+            shopIdArg = withRequiredArg("shopId", "Shop ID or name", ArgTypes.STRING);
+            playerNameArg = withRequiredArg("playerName", "Target player name", ArgTypes.STRING);
         }
 
         @Override
@@ -1244,11 +1373,8 @@ public class ShopCommand extends AbstractCommandCollection {
             ShopManager shopManager = plugin.getShopManager();
             UUID playerUuid = playerRef.getUuid();
 
-            // Parse arguments: /ksshop transfer <shopId> <targetName> [confirm]
-            String[] parts = ctx.getInputString().split("\\s+", 5);
-            String shopIdentifier = parts.length > 2 ? parts[2].trim() : "";
-            String targetName = parts.length > 3 ? parts[3].trim() : "";
-            boolean confirm = parts.length > 4 && "confirm".equalsIgnoreCase(parts[4].trim());
+            String shopIdentifier = ctx.get(shopIdArg).trim();
+            String targetName = ctx.get(playerNameArg).trim();
 
             if (shopIdentifier.isEmpty() || targetName.isEmpty()) {
                 player.sendMessage(Message.raw(
@@ -1322,58 +1448,141 @@ public class ShopCommand extends AbstractCommandCollection {
             UUID shopId = shop.getId();
             String shopName = shop.getName();
             String resolvedTargetName = targetRef.getUsername();
-
-            // Expire any stale confirmation first.
-            TransferConfirm pending = pendingTransfers.get(playerUuid);
             long now = System.currentTimeMillis();
-            if (pending != null && pending.expiresAt < now) {
-                pendingTransfers.remove(playerUuid);
-                pending = null;
-            }
 
-            if (confirm && pending != null
-                    && pending.shopId.equals(shopId)
-                    && pending.targetUuid.equals(targetUuid)) {
-                // Execute the transfer.
-                pendingTransfers.remove(playerUuid);
-
-                boolean ok = plugin.getShopService().transferShop(
-                    shopId, targetUuid, resolvedTargetName);
-                if (!ok) {
-                    player.sendMessage(Message.raw(
-                        i18n.get(playerRef, "shop.transfer.failed")).color("#FF5555"));
-                    return;
-                }
-
-                // Respawn the NPC so its nameplate/skin reflects the new owner.
-                try {
-                    plugin.getNpcManager().respawnNpc(shop);
-                } catch (Exception ignored) {
-                    // Non-fatal — the transfer itself already persisted.
-                }
-
+            // Reject if the target already has a pending request (avoid
+            // overwriting another player's pending offer silently).
+            TransferRequest existing = pendingTransfers.get(targetUuid);
+            if (existing != null && existing.expiresAt > now) {
                 player.sendMessage(Message.raw(
-                    i18n.get(playerRef, "shop.transfer.confirmed_sender",
-                        shopName, resolvedTargetName)).color("#55FF55"));
-
-                // Notify the new owner if they are still online.
-                try {
-                    targetRef.sendMessage(Message.raw(
-                        i18n.get(targetRef, "shop.transfer.confirmed_target",
-                            playerRef.getUsername(), shopName)).color("#55FF55"));
-                } catch (Exception ignored) {
-                    // Target may have logged out between resolution and send — ignore.
-                }
+                    i18n.get(playerRef, "shop.transfer.target_busy",
+                        resolvedTargetName)).color("#FF5555"));
                 return;
             }
 
-            // Stage a new confirmation.
-            pendingTransfers.put(playerUuid,
-                new TransferConfirm(shopId, resolvedTargetName, targetUuid,
-                    now + TRANSFER_CONFIRM_WINDOW_MS));
+            // Stage the request keyed by the TARGET. They confirm via
+            // /ksshop accepttransfer or reject via /ksshop declinetransfer.
+            pendingTransfers.put(targetUuid,
+                new TransferRequest(shopId, shopName, playerUuid,
+                    playerRef.getUsername(), now + TRANSFER_CONFIRM_WINDOW_MS));
+
             player.sendMessage(Message.raw(
-                i18n.get(playerRef, "shop.transfer.confirm_prompt",
-                    shopIdentifier, resolvedTargetName, shopName)).color("#FFAA00"));
+                i18n.get(playerRef, "shop.transfer.request_sent",
+                    resolvedTargetName, shopName)).color("#FFAA00"));
+
+            try {
+                targetRef.sendMessage(Message.raw(
+                    i18n.get(targetRef, "shop.transfer.request_received",
+                        playerRef.getUsername(), shopName)).color("#FFD700"));
+            } catch (Exception ignored) {
+                // Target may have logged out between resolution and send.
+            }
+        }
+    }
+
+    /**
+     * /ksshop accepttransfer - Target accepts a pending transfer request and
+     * receives ownership of the shop.
+     */
+    private class AcceptTransferCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        AcceptTransferCmd() { super("accepttransfer", "Accept a pending shop transfer request"); }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            UUID playerUuid = playerRef.getUuid();
+            long now = System.currentTimeMillis();
+
+            TransferRequest req = pendingTransfers.get(playerUuid);
+            if (req == null || req.expiresAt < now) {
+                if (req != null) pendingTransfers.remove(playerUuid);
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.no_pending")).color("#FF5555"));
+                return;
+            }
+
+            ShopData shop = plugin.getShopManager().getShop(req.shopId);
+            if (shop == null || shop.getOwnerUuid() == null
+                    || !shop.getOwnerUuid().equals(req.senderUuid)) {
+                pendingTransfers.remove(playerUuid);
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.expired")).color("#FF5555"));
+                return;
+            }
+
+            pendingTransfers.remove(playerUuid);
+
+            boolean ok = plugin.getShopService().transferShop(
+                req.shopId, playerUuid, playerRef.getUsername());
+            if (!ok) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.failed")).color("#FF5555"));
+                return;
+            }
+
+            try {
+                plugin.getNpcManager().refreshNameTag(shop, world);
+            } catch (Exception ignored) {
+                // Non-fatal - transfer itself persisted.
+            }
+
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.transfer.accepted_target",
+                    req.senderName, req.shopName)).color("#55FF55"));
+
+            // Notify the original sender if still online.
+            try {
+                for (PlayerRef candidate : world.getPlayerRefs()) {
+                    if (candidate != null && req.senderUuid.equals(candidate.getUuid())) {
+                        candidate.sendMessage(Message.raw(
+                            i18n.get(candidate, "shop.transfer.accepted_sender",
+                                playerRef.getUsername(), req.shopName)).color("#55FF55"));
+                        break;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
+    /**
+     * /ksshop declinetransfer - Target rejects a pending transfer request.
+     */
+    private class DeclineTransferCmd extends AbstractPlayerCommand {
+        @Override protected boolean canGeneratePermission() { return false; }
+        DeclineTransferCmd() { super("declinetransfer", "Decline a pending shop transfer request"); }
+
+        @Override
+        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                              PlayerRef playerRef, World world) {
+            Player player = ctx.senderAs(Player.class);
+            ShopI18n i18n = plugin.getI18n();
+            UUID playerUuid = playerRef.getUuid();
+
+            TransferRequest req = pendingTransfers.remove(playerUuid);
+            if (req == null) {
+                player.sendMessage(Message.raw(
+                    i18n.get(playerRef, "shop.transfer.no_pending")).color("#FF5555"));
+                return;
+            }
+
+            player.sendMessage(Message.raw(
+                i18n.get(playerRef, "shop.transfer.declined_target",
+                    req.senderName, req.shopName)).color("#FFAA00"));
+
+            // Notify sender if online.
+            try {
+                for (PlayerRef candidate : world.getPlayerRefs()) {
+                    if (candidate != null && req.senderUuid.equals(candidate.getUuid())) {
+                        candidate.sendMessage(Message.raw(
+                            i18n.get(candidate, "shop.transfer.declined_sender",
+                                playerRef.getUsername(), req.shopName)).color("#FFAA00"));
+                        break;
+                    }
+                }
+            } catch (Exception ignored) {}
         }
     }
 

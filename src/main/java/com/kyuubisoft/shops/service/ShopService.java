@@ -350,11 +350,11 @@ public class ShopService {
         // --- Validate shop exists and is open ---
         ShopData shop = shopManager.getShop(shopId);
         if (shop == null) {
-            LOGGER.fine("Sell rejected: shop not found " + shopId);
+            LOGGER.info("Sell rejected: shop not found " + shopId);
             return false;
         }
         if (!shop.isOpen()) {
-            LOGGER.fine("Sell rejected: shop is closed " + shopId);
+            LOGGER.info("Sell rejected: shop is closed " + shopId);
             return false;
         }
 
@@ -363,29 +363,29 @@ public class ShopService {
         // drain the shop balance / extract money. Mirrors the check in purchaseItem().
         UUID sellerUuid = seller.getUuid();
         if (!shop.isAdminShop() && shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(sellerUuid)) {
-            LOGGER.fine("Sell rejected: seller is shop owner");
+            LOGGER.info("Sell rejected: seller " + seller.getUsername() + " is the shop owner");
             return false;
         }
 
         // --- Find the ShopItem by itemId ---
         ShopItem shopItem = shop.getItem(itemId);
         if (shopItem == null) {
-            LOGGER.fine("Sell rejected: item not found in shop " + itemId);
+            LOGGER.info("Sell rejected: item not found in shop " + itemId);
             return false;
         }
         if (!shopItem.isSellEnabled()) {
-            LOGGER.fine("Sell rejected: sell disabled for " + itemId);
+            LOGGER.info("Sell rejected: sell disabled for " + itemId);
             return false;
         }
         if (shopItem.getSellPrice() <= 0) {
-            LOGGER.fine("Sell rejected: sell price is zero or negative for " + itemId);
+            LOGGER.info("Sell rejected: sell price is zero or negative for " + itemId);
             return false;
         }
 
         // --- Check max stock (don't accept more than maxStock) ---
         if (!shopItem.isUnlimitedStock() && shopItem.getMaxStock() > 0) {
             if (shopItem.getStock() + quantity > shopItem.getMaxStock()) {
-                LOGGER.fine("Sell rejected: shop at max stock for " + itemId);
+                LOGGER.info("Sell rejected: shop at max stock for " + itemId);
                 return false;
             }
         }
@@ -395,7 +395,7 @@ public class ShopService {
         int quota = shopItem.getDailyBuyLimit();
         if (quota > 0) {
             if (quantity > quota) {
-                LOGGER.fine("Sell rejected: would exceed shop buyback quota (quota=" + quota + " requested=" + quantity + ")");
+                LOGGER.info("Sell rejected: would exceed shop buyback quota (quota=" + quota + " requested=" + quantity + ")");
                 return false;
             }
         }
@@ -410,8 +410,8 @@ public class ShopService {
         boolean isPlayerShop = shop.isPlayerShop() && shop.getOwnerUuid() != null;
         if (isPlayerShop) {
             if (shop.getShopBalance() < totalPrice) {
-                LOGGER.fine("Sell rejected: shop balance insufficient ("
-                    + shop.getShopBalance() + " < " + totalPrice + ")");
+                LOGGER.info("Sell rejected: shop '" + shop.getName() + "' balance insufficient ("
+                    + shop.getShopBalance() + " < " + totalPrice + ") - owner needs to /ksshop deposit");
                 return false;
             }
         }
@@ -424,7 +424,8 @@ public class ShopService {
         // --- Step 1: Remove items from seller (placeholder) ---
         boolean removed = removeItem(seller, itemId, quantity);
         if (!removed) {
-            LOGGER.fine("Sell rejected: failed to remove items from seller inventory");
+            LOGGER.info("Sell rejected: failed to remove " + quantity + "x " + itemId
+                + " from seller inventory (not enough in inventory?)");
             return false;
         }
 
@@ -644,22 +645,31 @@ public class ShopService {
         // New shops get an initial listing state based on the config +
         // the owner's permissions:
         //   - ks.shop.list.permanent        -> listed forever
-        //   - ks.shop.list.free             -> listed for listingFreeDaysOnCreate
         //   - listing feature disabled      -> listed forever (legacy)
-        //   - otherwise                     -> listingFreeDaysOnCreate free days
-        //                                     (0 days = not listed; owner must
-        //                                     /ksshop list <days> to get seen)
+        //   - first shop ever               -> listingFreeDaysOnCreate free days,
+        //                                      flag persists in shop_player_flags
+        //                                      so delete+recreate cannot reuse it
+        //   - otherwise                     -> not listed (must /ksshop list <days>)
         if (!cfg.playerShops.listingEnabled) {
             shopData.setListedUntil(Long.MAX_VALUE);
-        } else if (player != null && player.hasPermission("ks.shop.list.permanent", false)) {
+        } else if (com.kyuubisoft.shops.util.PermissionLimits.hasExplicit(
+                player, "ks.shop.list.permanent")) {
             shopData.setListedUntil(Long.MAX_VALUE);
         } else {
             int freeDays = Math.max(0, cfg.playerShops.listingFreeDaysOnCreate);
-            if (freeDays > 0) {
+            boolean alreadyUsed = database.hasUsedFreeListing(ownerUuid);
+            if (freeDays > 0 && !alreadyUsed) {
                 shopData.setListedUntil(
                     System.currentTimeMillis() + (long) freeDays * 86_400_000L);
+                database.markFreeListingUsed(ownerUuid);
+                LOGGER.info("Granted " + freeDays + "-day free listing to "
+                    + owner.getUsername() + " (first shop)");
             } else {
                 shopData.setListedUntil(0L);
+                if (alreadyUsed) {
+                    LOGGER.fine("Free-listing freebie skipped for "
+                        + owner.getUsername() + " - already used on a previous shop");
+                }
             }
         }
 
@@ -804,7 +814,10 @@ public class ShopService {
         }
 
         // Permanent permission short-circuit: free and forever.
-        if (player != null && player.hasPermission("ks.shop.list.permanent", false)) {
+        // Wildcard-aware so an OP / `*` grant does not silently turn every
+        // bought listing into a free permanent one.
+        if (com.kyuubisoft.shops.util.PermissionLimits.hasExplicit(
+                player, "ks.shop.list.permanent")) {
             shop.setListedUntil(Long.MAX_VALUE);
             database.saveShop(shop);
             return ListingResult.success(Long.MAX_VALUE, 0);
@@ -817,7 +830,9 @@ public class ShopService {
         if (days > maxDays) days = maxDays;
 
         // Free permission bypasses payment but stays day-limited.
-        boolean free = player != null && player.hasPermission("ks.shop.list.free", false);
+        // Same wildcard guard as above - OP must not silently get free listings.
+        boolean free = com.kyuubisoft.shops.util.PermissionLimits.hasExplicit(
+            player, "ks.shop.list.free");
         int cost = free ? 0 : Math.max(0, cfg.playerShops.listingPricePerDay * days);
 
         if (cost > 0) {

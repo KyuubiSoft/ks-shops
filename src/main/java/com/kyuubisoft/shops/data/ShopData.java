@@ -41,6 +41,12 @@ public class ShopData {
      *  0 = never listed, {@link Long#MAX_VALUE} = permanent (via permission
      *  or admin override), anything else = expires at that time. */
     private long listedUntil = 0L;
+    /** When non-null, this shop is backing a rental slot. Links back to
+     *  {@code RentalSlotData.id} for the vacant-slot NPC flow + expiry. */
+    private UUID rentalSlotId;
+    /** Mirror of {@code RentalSlotData.rentedUntil} for quick filtering
+     *  without a join. 0 = not a rental / not rented. */
+    private long rentalExpiresAt = 0L;
     private long createdAt;
     private long lastActivity;
     private transient volatile boolean dirty;
@@ -155,6 +161,10 @@ public class ShopData {
         if (listedUntil == Long.MAX_VALUE) return true;
         return listedUntil > System.currentTimeMillis();
     }
+    public UUID getRentalSlotId() { return rentalSlotId; }
+    public long getRentalExpiresAt() { return rentalExpiresAt; }
+    /** True when this shop row is backing a rental slot (regardless of rented state). */
+    public boolean isRentalBacked() { return rentalSlotId != null; }
     public long getCreatedAt() { return createdAt; }
     public long getLastActivity() { return lastActivity; }
 
@@ -196,6 +206,8 @@ public class ShopData {
     public void setOpen(boolean open) { this.open = open; markDirty(); }
     public void setShowNameTag(boolean showNameTag) { this.showNameTag = showNameTag; markDirty(); }
     public void setListedUntil(long listedUntil) { this.listedUntil = listedUntil; markDirty(); }
+    public void setRentalSlotId(UUID rentalSlotId) { this.rentalSlotId = rentalSlotId; markDirty(); }
+    public void setRentalExpiresAt(long rentalExpiresAt) { this.rentalExpiresAt = rentalExpiresAt; markDirty(); }
     public void setPacked(boolean packed) { this.packed = packed; markDirty(); }
     public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; markDirty(); }
 
