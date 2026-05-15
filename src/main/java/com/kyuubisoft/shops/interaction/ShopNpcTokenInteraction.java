@@ -3,8 +3,8 @@ package com.kyuubisoft.shops.interaction;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
@@ -107,23 +107,23 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
             }
 
             // Permission check (mirrors /ksshop create)
-            if (!player.hasPermission("ks.shop.user.create", true)) {
-                player.sendMessage(Message.raw(
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.create", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.no_permission")).color("#FF5555"));
                 interactionContext.getState().state = InteractionState.Finished;
                 return;
             }
 
             // Resolve player position (needed both for replant and fresh-create).
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
                 interactionContext.getState().state = InteractionState.Failed;
                 return;
             }
             final Vector3d pos = tc.getPosition();
-            Vector3f rotation = null;
+            Rotation3f rotation = null;
             try {
                 rotation = tc.getRotation();
             } catch (Throwable ignored) {
@@ -153,12 +153,12 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                             pos.x, pos.y, pos.z, rotY);
                         if (ok) {
                             consumeOneToken(player);
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.token.replanted",
                                     replantTarget.getName())
                             ).color("#55FF55"));
                         } else {
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.token.failed",
                                     i18n.get(playerRef, "shop.create.failed"))
                             ).color("#FF5555"));
@@ -180,7 +180,7 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
             int maxShops = com.kyuubisoft.shops.util.PermissionLimits.resolveMaxShops(
                 player, cfg.getData().playerShops.maxShopsPerPlayer);
             if (ownedCount >= maxShops) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.token.not_enough_shops")).color("#FF5555"));
                 interactionContext.getState().state = InteractionState.Finished;
                 return;
@@ -197,7 +197,7 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
                     ? result.getErrorKey()
                     : "shop.create.failed";
                 String message = i18n.get(playerRef, errorKey);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.token.failed", message)).color("#FF5555"));
                 interactionContext.getState().state = InteractionState.Finished;
                 return;
@@ -222,7 +222,7 @@ public class ShopNpcTokenInteraction extends SimpleInstantInteraction {
             // Consume one token from the player's inventory.
             consumeOneToken(player);
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.token.spawned")).color("#55FF55"));
 
             interactionContext.getState().state = InteractionState.Finished;

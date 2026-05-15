@@ -1,6 +1,6 @@
 package com.kyuubisoft.shops.commands;
 
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
@@ -80,7 +80,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopAdminPage page = new ShopAdminPage(playerRef, player, plugin);
             player.getPageManager().openCustomPage(ref, store, page);
         }
@@ -97,23 +101,27 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
 
             // Parse greedy title (everything after the subcommand token).
             String[] parts = ctx.getInputString().split("\\s+", 3);
             String title = parts.length > 2 ? parts[2] : "";
             if (title.isBlank()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "Usage: /kssa createadmin <title>"
                 ).color("#FF5555"));
                 return;
             }
 
             // Resolve spawn position from the player's transform.
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.create.failed")
                 ).color("#FF5555"));
                 return;
@@ -133,7 +141,7 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 String errorKey = result.getErrorKey() != null
                     ? result.getErrorKey()
                     : "shop.create.failed";
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, errorKey)
                 ).color("#FF5555"));
                 return;
@@ -146,10 +154,10 @@ public class ShopAdminCommand extends AbstractCommandCollection {
             world.execute(() ->
                 plugin.getNpcManager().spawnNpcAtPosition(newShop, world, pos, finalRotY));
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 plugin.getI18n().get("shop.admin.create.success", title)
             ).color("#44FF44"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Use /kssa editadmin to add items to this shop."
             ).color("#96a9be"));
         }
@@ -170,10 +178,14 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
 
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             double px = 0, py = 0, pz = 0;
             if (tc != null) {
                 Vector3d pos = tc.getPosition();
@@ -197,14 +209,14 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 }
             }
             if (nearest == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "No admin shop in this world. Use /kssa createadmin <title> first."
                 ).color("#FF5555"));
                 return;
             }
 
             if (!plugin.getSessionManager().lockEditor(nearest.getId(), playerRef.getUuid())) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.editor_locked")
                 ).color("#FF5555"));
                 return;
@@ -224,12 +236,12 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                     plugin.getSessionManager().unlockEditor(shopUuid, playerUuid);
                 });
                 player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "Editing admin shop: " + targetShop.getName()
                 ).color("#55FF55"));
             } catch (Exception e) {
                 plugin.getSessionManager().unlockEditor(shopUuid, playerUuid);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "Failed to open admin shop editor: " + e.getMessage()
                 ).color("#FF5555"));
             }
@@ -606,7 +618,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             if (world == null) {
                 ctx.sender().sendMessage(Message.raw("No world context available").color("#FF5555"));
                 return;
@@ -614,7 +630,7 @@ public class ShopAdminCommand extends AbstractCommandCollection {
 
             double px, py, pz;
             try {
-                TransformComponent tc = player.getTransformComponent();
+                TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
                 if (tc == null || tc.getPosition() == null) {
                     ctx.sender().sendMessage(Message.raw("Could not read your position").color("#FF5555"));
                     return;
@@ -725,7 +741,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             String displayName = ctx.get(displayNameArg);
             ShopConfig.ConfigData cfg = plugin.getShopConfig().getData();
             int pricePerDay = ctx.provided(pricePerDayArg)
@@ -735,9 +755,9 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 ? Math.max(1, ctx.get(maxDaysArg))
                 : cfg.rentalStations.defaultMaxDays;
 
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc == null) {
-                player.sendMessage(Message.raw("No position available").color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw("No position available").color("#FF5555"));
                 return;
             }
             Vector3d pos = tc.getPosition();
@@ -762,11 +782,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                     plugin.getNpcManager().spawnNpcAtPosition(shell, world, pos, fRotY));
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Rental slot '" + displayName + "' created ("
                 + pricePerDay + "g/day, max " + maxDays + "d)"
             ).color("#44FF44"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Slot id: " + slot.getId()
             ).color("#96a9be"));
         }
@@ -801,7 +821,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             String displayName = ctx.get(displayNameArg);
             ShopConfig.ConfigData cfg = plugin.getShopConfig().getData();
             int minBid = ctx.provided(minBidArg)
@@ -817,9 +841,9 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 ? Math.max(1, ctx.get(rentalDaysArg))
                 : cfg.rentalStations.defaultMaxDays;
 
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc == null) {
-                player.sendMessage(Message.raw("No position available").color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw("No position available").color("#FF5555"));
                 return;
             }
             Vector3d pos = tc.getPosition();
@@ -844,12 +868,12 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                     plugin.getNpcManager().spawnNpcAtPosition(shell, world, pos, fRotY));
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Auction slot '" + displayName + "' created (min "
                 + minBid + "g, +" + bidIncrement + "g, " + durationMinutes
                 + "min, " + rentalDays + " rental days)"
             ).color("#44FF44"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Slot id: " + slot.getId()
             ).color("#96a9be"));
         }
@@ -908,7 +932,11 @@ public class ShopAdminCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             Collection<com.kyuubisoft.shops.rental.RentalSlotData> all =
                 plugin.getRentalService().getAllSlots();
             int count = 0;
@@ -925,17 +953,17 @@ public class ShopAdminCommand extends AbstractCommandCollection {
                 } else {
                     state = "VACANT";
                 }
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "- " + slot.getDisplayName() + " [" + slot.getMode() + "] "
                     + state + " | id=" + slot.getId()
                 ).color("#96a9be"));
             }
             if (count == 0) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "No rental slots in " + world.getName()
                 ).color("#FFD700"));
             } else {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     count + " rental slot(s) total"
                 ).color("#44FF44"));
             }

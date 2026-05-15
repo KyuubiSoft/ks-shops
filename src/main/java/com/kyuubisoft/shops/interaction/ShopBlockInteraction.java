@@ -152,7 +152,8 @@ public class ShopBlockInteraction {
                     haveSource = true;
                 } else if (targetEntity != null) {
                     try {
-                        var tc = targetEntity.getTransformComponent();
+                        var entityRef = targetEntity.getReference();
+                        var tc = entityRef.getStore().getComponent(entityRef, com.hypixel.hytale.server.core.modules.entity.component.TransformComponent.getComponentType());
                         if (tc != null) {
                             var pos = tc.getPosition();
                             sourceX = pos.x;
@@ -244,7 +245,7 @@ public class ShopBlockInteraction {
                 }
             } catch (Exception e) {
                 LOGGER.warning("Failed to open rental page: " + e.getMessage());
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "Failed to open rental dialog: " + e.getMessage()
                 ).color("#FF5555"));
             }
@@ -279,13 +280,13 @@ public class ShopBlockInteraction {
             && shop.getOwnerUuid().equals(playerUuid);
 
         if (!shop.isOpen() && !isOwner) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.closed")).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.closed")).color("#FF5555"));
             return;
         }
 
         // Permission check for browsing
-        if (!isOwner && !player.hasPermission("ks.shop.user.browse", true)) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.no_permission")).color("#FF5555"));
+        if (!isOwner && !player.getPlayerRef().hasPermission("ks.shop.user.browse", true)) {
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.no_permission")).color("#FF5555"));
             return;
         }
 
@@ -325,7 +326,7 @@ public class ShopBlockInteraction {
             } catch (Exception e) {
                 LOGGER.warning("Failed to open browse page for " + playerRef.getUsername()
                     + ": " + e.getMessage());
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             }
         });
     }
@@ -345,7 +346,7 @@ public class ShopBlockInteraction {
         // Acquire editor lock
         if (!sessionManager.lockEditor(shopId, playerUuid)) {
             UUID currentEditor = sessionManager.getEditorPlayer(shopId);
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.error.editor_locked")).color("#FF5555"));
             LOGGER.fine("Editor lock denied for " + playerRef.getUsername()
                 + " on shop '" + shop.getName() + "' (locked by " + currentEditor + ")");
@@ -372,7 +373,7 @@ public class ShopBlockInteraction {
                 sessionManager.unlockEditor(shopId, playerUuid);
                 LOGGER.warning("Failed to open editor page for " + playerRef.getUsername()
                     + ": " + e.getMessage());
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             }
         });

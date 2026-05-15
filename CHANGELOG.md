@@ -1,5 +1,148 @@
 # Shops Plugin - Changelog
 
+## [Unreleased] - 2026-05-09
+### Fixed
+- **`/ksshop` and `/ksshopadmin` thread-assertion crash** on Hytale prerelease 2026.04.30+. `CommandUtils.resolvePlayer(ctx)` hits the now-strict `Store.getComponent(...)` and command callbacks run off the WorldThread. All callsites in `ShopCommand` and `ShopAdminCommand` switched to the cached `CorePlugin.getInstance().getPlayer(playerRef.getUuid())` lookup.
+
+## [Unreleased] - 2026-05-04
+
+### Changed
+- **Hytale prerelease 2026.04.30 migration**: Build now targets `libs/HytaleServer-prerelease.jar` (Implementation-Version `2026.04.30-b4f6a911e`, branch `pre-release`). Adopted breaking API changes:
+  - `com.hypixel.hytale.math.vector.Vector3d/3i` -> `org.joml.Vector3d/3i` (joml field-style accessors `.x()/.y()/.z()` instead of `.getX()/.getY()/.getZ()`).
+  - `Vector3f` -> `Rotation3f` (domain-type split for rotation values).
+  - `Vector3d.distanceTo(...)` -> `Vector3d.distance(...)`; `Vector3d.assign(...)` -> `Vector3d.set(...)`; `Vector3d.clone().add(int,int,int)` rewritten as `new Vector3d(...).add(0d, 1d, 0d)` to keep the old non-mutating semantics.
+  - `SwitchActiveSlotEvent` removed -> `InventorySetActiveSlotEvent` (no longer cancellable; `isCancelled()` calls dropped).
+  - `InventoryChangeEvent` moved from `inventory` to `event.events.ecs` package.
+  - `Player.sendMessage/hasPermission/getDisplayName` no longer resolve on the Player component -> routed through `Player.getPlayerRef().sendMessage/hasPermission/getUsername`. `getDisplayName()` is now `getUsername()` on PlayerRef/CommandSender.
+  - `Player.getTransformComponent()` removed -> resolved via `player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType())`.
+  - `CommandContext.senderAs(Player.class)` rejected (Player no longer extends CommandSender) -> use `ctx.senderAsPlayerRef()` and resolve the Player component via the EntityStore. Helper added at `core/util/CommandUtils.resolvePlayer(ctx)` for mods with the core dependency; mods without core resolve inline.
+  - `Universe.getPlayers()` now returns `Collection<PlayerRef>` instead of `List<PlayerRef>` -> wrapped in `new ArrayList<>(...)` at call sites that need List.
+  - `Inventory.HOTBAR_SECTION_ID` constant moved to `InventoryComponent.HOTBAR_SECTION_ID` (the `Inventory` class is for-removal).
+  - `Vector2f` import path corrected from `com.hypixel.hytale.protocol.Vector2f` to `org.joml.Vector2f`.
+  - `PlayerStorage.save(uuid, holder)` now requires a third `boolean` argument.
+  - `Entity.getTransformComponent()` removed -> resolved via `entity.getReference().getStore().getComponent(ref, TransformComponent.getComponentType())`.
+
+Root `gradle.properties` `hytaleServerVersion` bumped from `2026.03.26-89796e57b` to `2026.04.30-b4f6a911e`.
+## [Browse Page - Widen Rate Button] - 2026-04-29
+
+### Problem
+
+The "Rate" button on the customer Browse page rendered as `Ra...` - the 60px width was too narrow for the button's padding + label.
+
+### Fix
+
+Bumped `#RateButton @Anchor = (Width: 60)` to `(Width: 90)`. Same width as the matching `BackBtn` next to it.
+
+### Files Changed
+- `resources/Common/UI/Custom/Pages/Shop/ShopBrowse.ui` - `#RateButton` width
+
+---
+
+## [Failed-Spawn Retry - Recover Shops In Unloaded Chunks] - 2026-04-29
+
+### Problem
+
+After a server restart with shops in chunks the joining player wasn't yet near, the spawn burst showed a wall of warnings and most NPCs never appeared:
+
+```
+[NPC|P] Unable to handle non-spawned entity: Shop_Keeper_Role!
+[KyuubiSoft Shops] NPC spawn returned null for shop test1234
+[NPC|P] Unable to handle non-spawned entity: Shop_Keeper_Role!
+[KyuubiSoft Shops] NPC spawn returned null for shop shop6
+... (15+ shops)
+```
+
+Only the 3 shops near the player's spawn location got NPCs. The other ~15 stayed invisible until the next manual `/kssa respawnnpcs`.
+
+### Root Cause
+
+`NPCPlugin.spawnEntity` returns `null` when the target chunk isn't loaded - Hytale can't drop an entity into a chunk that isn't in memory. At server start the player is near spawn, those chunks load first; shops in distant chunks fail to spawn until someone walks there. We logged the warning and gave up.
+
+### Fix
+
+Track failed spawns in a `Set<UUID> failedSpawns`. Two changes:
+
+1. In both spawn paths (`spawnNpcInternal` and `spawnNpcInternalAt`), when `result == null`:
+   - Add `shopId` to `failedSpawns`
+   - Updated log: `... will retry on next tick (chunk likely not loaded)`
+2. Successful spawn: remove `shopId` from `failedSpawns`
+3. New `retryFailedSpawns(World)` runs on the existing 30s periodic orphan-sweep tick. Iterates the set, calls `spawnNpcInternal` again for each shop in the world. Successful retries drop themselves from the set; persistent failures stay queued for the next tick.
+
+A shop deep in an unloaded chunk now spawns automatically the next time the engine populates the area - no admin action needed.
+
+### Logs
+
+```
+NPC spawn returned null for shop ShopX - will retry on next tick (chunk likely not loaded)
+... 30s later ...
+Retry pass: recovered 5 shop NPC spawn(s) (10 still queued)
+... another 30s ...
+Retry pass: recovered 7 shop NPC spawn(s) (3 still queued)
+... eventually queue empties as players move around
+```
+
+### Files Changed
+- `npc/ShopNpcManager.java` - new `failedSpawns` Set, registered on null-spawn, drained on success, retried by `retryFailedSpawns` from the periodic orphan-sweep tick
+
+---
+
+## [World Re-Entry - Refresh Naked NPC Skins] - 2026-04-28
+
+### Problem
+
+Switch worlds, come back. All shop NPCs in the returning world appeared naked (default grey model). Stayed naked until the next server restart.
+
+### Root Cause
+
+Hytale unloads chunks when the player leaves a world; on return, the chunks reload and the persistent NPC entities come back from `PersistentModel`. But `PlayerSkinComponent` is **not** persisted in chunk data - it's set at runtime via `applySkin`. So the chunk-restored NPCs come back stripped.
+
+The `onPlayerAddedToWorld` handler had a hard early-return:
+```java
+if (!spawnedWorlds.add(worldName)) return;
+```
+
+That made the spawn burst (which applies skins) fire only the FIRST time a world saw a player. Re-entries skipped the entire skin pipeline. The orphan-sweep didn't help either because the chunk-restored NPCs share the persistent UUID our tracking already knows - they don't look "stale" to it.
+
+### Fix
+
+Split `onPlayerAddedToWorld` into two paths:
+
+1. **First-time entry (`spawnedWorlds.add() == true`):** unchanged - full spawn burst with `spawnDelaySecondsOnJoin` delay.
+2. **Re-entry (`add()` == false):** new `scheduleSkinRefreshForWorld` method. For every tracked shop in this world:
+   - Resolve a fresh `EntityRef` via the persistent NPC UUID
+   - If valid -> re-apply skin + nameplate (chunk-restored NPC was naked)
+   - If invalid -> full despawn + respawn (safety fallback)
+
+Same delay as first-spawn so the client cosmetic subsystem is ready. Logs `Player re-entered '<world>' - refreshed N skin(s), respawned N stale NPC(s)` on success.
+
+### Files Changed
+- `npc/ShopNpcManager.java` - `onPlayerAddedToWorld` branches on first-vs-re-entry; new `scheduleSkinRefreshForWorld` helper
+
+---
+
+## [Rental Remaining Time - Move From Nameplate To Overlays] - 2026-04-28
+
+### Change
+
+The rental remaining-time indicator (e.g. `(6d 22h left)`) is no longer appended to the NPC nameplate. It now surfaces in the Browse and Edit overlays only:
+
+- **Browse (customer view):** new green `#InfoRental` label in the InfoBar (between item count and Rate button). Reads `Rental: 6d 22h left` only on rental-backed player shops; hidden otherwise.
+- **Edit (owner view):** unchanged - already shows `Rental: 6d 22h 14m remaining` in the Settings tab listing block.
+
+### Why
+
+The nameplate gets crowded fast and the remaining-time was static (set on spawn / refreshNameTag), so it slowly drifted out of date over a multi-day rental. Putting it in the overlays:
+1. Keeps the nameplate clean (just the shop name + `[CLOSED]` if applicable)
+2. Refreshes live every time the page is opened or rebuilt
+3. Surfaces the info exactly when the player is engaging with the shop
+
+### Files Changed
+- `npc/ShopNpcManager.java` - `applyNameTag` no longer appends rental suffix; nameplate is shop name (+ `[CLOSED]` for non-rental closed shops only)
+- `resources/Common/UI/Custom/Pages/Shop/ShopBrowse.ui` - new `#InfoRental` label in the InfoBar (default `Visible: false`)
+- `ui/ShopBrowsePage.java` - `buildUI` populates `#InfoRental` text + visibility from the slot's `rentedUntil`
+
+---
+
 ## [Browse Grid - Preserve Editor Slot Positions] - 2026-04-28
 
 ### Feature

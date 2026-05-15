@@ -124,7 +124,7 @@ public class ShopNotificationsPage extends InteractiveCustomUIPage<ShopNotificat
             currentPage = 0;
 
             ShopI18n i18n = plugin.getI18n();
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.notifications.marked_read")).color("#55FF55"));
         } catch (Exception e) {
             LOGGER.warning("[ShopNotifications] Failed to mark notifications read: " + e.getMessage());

@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 
@@ -136,31 +136,35 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
 
             // BUG #8 fix: Getting-started block so new players know the basic flow
             // before they see the raw command list.
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.header")).color("#FFD700"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step1")).color("#bfcdd5"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step2")).color("#bfcdd5"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step3")).color("#bfcdd5"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step4")).color("#bfcdd5"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step5")).color("#bfcdd5"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.spacer")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.header")).color("#FFD700"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step1")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step2")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step3")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step4")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.step5")).color("#bfcdd5"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.gs.spacer")).color("#bfcdd5"));
 
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.header")).color("#FFD700"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.create")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.edit")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.browse")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.search")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.visit")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.rate")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.myshops")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.collect")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.history")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.stats")).color("#96a9be"));
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.help.transfer")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.header")).color("#FFD700"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.create")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.edit")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.browse")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.search")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.visit")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.rate")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.myshops")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.collect")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.history")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.stats")).color("#96a9be"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.help.transfer")).color("#96a9be"));
         }
     }
 
@@ -171,16 +175,20 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.browse", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.browse", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
             // Admin kill-switch: features.directory = false hides the
             // global directory entirely so visiting requires walking up
             // to the NPC in person.
             if (!plugin.getShopConfig().getData().features.directory) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     plugin.getI18n().get(playerRef, "shop.directory.disabled")
                 ).color("#FF5555"));
                 return;
@@ -200,9 +208,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.browse", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.browse", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -214,7 +226,7 @@ public class ShopCommand extends AbstractCommandCollection {
             String rawQuery = parts.length > 2 ? parts[2] : "";
             String needle = rawQuery.trim().toLowerCase();
             if (needle.isBlank()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.search.empty_query")).color("#FF5555"));
                 return;
             }
@@ -239,18 +251,18 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (matches.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.search.no_results", rawQuery)).color("#FFAA00"));
                 return;
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.search.header", matches.size(), rawQuery)).color("#FFD700"));
             for (ShopData shop : matches) {
                 String typeLabel = shop.isAdminShop()
                     ? "[ADMIN]"
                     : "[" + (shop.getOwnerName() != null ? shop.getOwnerName() : "?") + "]";
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     " - " + typeLabel + " " + shop.getName()
                         + " (" + shop.getItems().size() + " items)").color("#96a9be"));
             }
@@ -267,9 +279,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.browse", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.browse", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -280,7 +296,7 @@ public class ShopCommand extends AbstractCommandCollection {
             String[] parts = ctx.getInputString().split("\\s+", 3);
             String shopIdentifier = parts.length > 2 ? parts[2] : "";
             if (shopIdentifier.isBlank()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.visit.id_required")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.visit.id_required")).color("#FF5555"));
                 return;
             }
 
@@ -305,13 +321,13 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (shop == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.visit.not_found", shopIdentifier)).color("#FF5555"));
                 return;
             }
 
             if (!shop.isOpen()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.closed")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.closed")).color("#FF5555"));
                 return;
             }
 
@@ -324,7 +340,7 @@ public class ShopCommand extends AbstractCommandCollection {
                     ShopBrowsePage page = new ShopBrowsePage(playerRef, player, plugin, targetShop);
                     player.getPageManager().openCustomPage(ref, store, page);
                 } catch (Exception e) {
-                    player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+                    player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
                 }
             });
         }
@@ -340,9 +356,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.create", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.create", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -356,15 +376,15 @@ public class ShopCommand extends AbstractCommandCollection {
             String[] parts = ctx.getInputString().split("\\s+", 3);
             String shopName = parts.length > 2 ? parts[2] : "";
             if (shopName.isBlank()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.create.name_required")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.create.name_required")).color("#FF5555"));
                 return;
             }
 
             // Get player position for shop placement. The NPC spawns at the player's
             // exact coordinates (no Shop_Block scan — the new flow is NPC-only).
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc == null) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.create.failed")).color("#FF5555"));
                 return;
             }
             Vector3d pos = tc.getPosition();
@@ -388,7 +408,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 String errorKey = result.getErrorKey() != null
                     ? result.getErrorKey()
                     : "shop.create.failed";
-                player.sendMessage(Message.raw(i18n.get(playerRef, errorKey)).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, errorKey)).color("#FF5555"));
                 return;
             }
 
@@ -397,13 +417,13 @@ public class ShopCommand extends AbstractCommandCollection {
 
             // Register in NPC world index and spawn a standalone NPC at the
             // player's feet. World.execute() hops onto the entity thread.
-            final com.hypixel.hytale.math.vector.Vector3d spawnPos = pos;
+            final org.joml.Vector3d spawnPos = pos;
             final float finalRotY = rotY;
             plugin.getNpcManager().registerShopInWorld(newShop);
             world.execute(() ->
                 plugin.getNpcManager().spawnNpcAtPosition(newShop, world, spawnPos, finalRotY));
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.success", newShop.getName())).color("#55FF55"));
         }
     }
@@ -415,9 +435,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -428,7 +452,7 @@ public class ShopCommand extends AbstractCommandCollection {
             UUID playerUuid = playerRef.getUuid();
 
             // Find nearest owned shop
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             double px = 0, py = 0, pz = 0;
             if (tc != null) {
                 Vector3d pos = tc.getPosition();
@@ -457,14 +481,14 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (nearest == null) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
                 return;
             }
 
             // Acquire editor lock
             ShopSessionManager sessionManager = plugin.getSessionManager();
             if (!sessionManager.lockEditor(nearest.getId(), playerUuid)) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.editor_locked")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.editor_locked")).color("#FF5555"));
                 return;
             }
 
@@ -484,12 +508,12 @@ public class ShopCommand extends AbstractCommandCollection {
                 });
 
                 player.getPageManager().openCustomPageWithWindows(ref, store, editPage, window);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.edit.opened", targetShop.getName())).color("#55FF55"));
             } catch (Exception e) {
                 e.printStackTrace();
                 sessionManager.unlockEditor(shopUuid, playerUuid);
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             }
         }
     }
@@ -509,9 +533,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.delete", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.delete", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -527,7 +555,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 && "confirm".equalsIgnoreCase(ctx.get(confirmArg).trim());
 
             if (shopIdentifier.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.visit.id_required")).color("#FF5555"));
                 return;
             }
@@ -551,14 +579,14 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (shop == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.delete.not_found", shopIdentifier)).color("#FF5555"));
                 return;
             }
 
             // Ownership check — players can only delete shops they own.
             if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(playerUuid)) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.delete.not_owner")).color("#FF5555"));
                 return;
             }
@@ -586,12 +614,12 @@ public class ShopCommand extends AbstractCommandCollection {
 
                 boolean deleted = plugin.getShopService().deletePlayerShop(playerRef, shopId);
                 if (!deleted) {
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.delete.failed")).color("#FF5555"));
                     return;
                 }
 
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.delete.confirmed", shopName)).color("#55FF55"));
                 return;
             }
@@ -599,7 +627,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Stage a new confirmation.
             pendingDeletes.put(playerUuid,
                 new DeleteConfirm(shopId, now + DELETE_CONFIRM_WINDOW_MS));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.delete.confirm_prompt", shopIdentifier, shopName))
                 .color("#FFAA00"));
         }
@@ -612,9 +640,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -626,7 +658,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Find the player's shop(s) and open the nearest one
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
                 return;
             }
 
@@ -642,7 +674,7 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (targetShop.isOpen()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.status.already_open", targetShop.getName())).color("#FFD700"));
                 return;
             }
@@ -651,7 +683,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // NPC was never despawned on close - just strip the [CLOSED] suffix
             // from the nameplate so the shop visually reads "open" again.
             plugin.getNpcManager().refreshNameTag(targetShop, world);
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.status.opened", targetShop.getName())).color("#55FF55"));
         }
     }
@@ -663,9 +695,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -676,7 +712,7 @@ public class ShopCommand extends AbstractCommandCollection {
 
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
                 return;
             }
 
@@ -691,7 +727,7 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (!targetShop.isOpen()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.status.already_closed", targetShop.getName())).color("#FFD700"));
                 return;
             }
@@ -701,7 +737,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // passers-by see the state without F-keying, and ShopBlockInteraction
             // blocks the browse UI for non-owners until the shop is re-opened.
             plugin.getNpcManager().refreshNameTag(targetShop, world);
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.status.closed", targetShop.getName())).color("#FFD700"));
         }
     }
@@ -716,9 +752,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -731,14 +771,14 @@ public class ShopCommand extends AbstractCommandCollection {
             String[] parts = ctx.getInputString().split("\\s+", 3);
             String newName = parts.length > 2 ? parts[2].trim() : "";
             if (newName.isBlank()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.rename.name_required")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.rename.name_required")).color("#FF5555"));
                 return;
             }
 
             // Validate name length
             var cfg = plugin.getShopConfig().getData().playerShops;
             if (newName.length() < cfg.nameMinLength || newName.length() > cfg.nameMaxLength) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rename.invalid_length",
                         cfg.nameMinLength, cfg.nameMaxLength)).color("#FF5555"));
                 return;
@@ -747,7 +787,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Check uniqueness
             for (ShopData existing : plugin.getShopManager().getAllShops()) {
                 if (existing.getName().equalsIgnoreCase(newName)) {
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.rename.name_taken", newName)).color("#FF5555"));
                     return;
                 }
@@ -756,7 +796,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Find nearest owned shop
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
                 return;
             }
 
@@ -781,7 +821,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // just flips the Nameplate text.
             plugin.getNpcManager().refreshNameTag(targetShop, world);
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rename.success", oldName, newName)).color("#55FF55"));
         }
     }
@@ -793,13 +833,17 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
 
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.myshops.none")).color("#FFD700"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.myshops.none")).color("#FFD700"));
                 return;
             }
 
@@ -809,7 +853,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 player.getPageManager().openCustomPage(ref, store, page);
             } catch (Exception e) {
                 e.printStackTrace();
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             }
         }
     }
@@ -830,14 +874,18 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             try {
                 com.kyuubisoft.shops.rental.ui.MyRentalsPage page =
                     new com.kyuubisoft.shops.rental.ui.MyRentalsPage(playerRef, player, plugin);
                 player.getPageManager().openCustomPage(ref, store, page);
             } catch (Exception e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.open_failed")
                 ).color("#FF5555"));
             }
@@ -855,7 +903,11 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             try {
                 com.kyuubisoft.shops.rental.ui.RentalStationPage page =
@@ -863,7 +915,7 @@ public class ShopCommand extends AbstractCommandCollection {
                         playerRef, player, plugin, world.getName());
                 player.getPageManager().openCustomPage(ref, store, page);
             } catch (Exception e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.open_failed")
                 ).color("#FF5555"));
             }
@@ -884,7 +936,11 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
 
             String[] parts = ctx.getInputString().trim().split("\\s+", 3);
@@ -893,7 +949,7 @@ public class ShopCommand extends AbstractCommandCollection {
             try {
                 slotId = UUID.fromString(slotIdStr);
             } catch (IllegalArgumentException e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rental.slot_not_found")
                 ).color("#FF5555"));
                 return;
@@ -905,11 +961,11 @@ public class ShopCommand extends AbstractCommandCollection {
 
             boolean ok = rentalService.releaseEarly(playerRef, slotId);
             if (ok) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rental.released_chat", name)
                 ).color("#55ff55"));
             } else {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rental.rent_failed")
                 ).color("#FF5555"));
             }
@@ -927,9 +983,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.rate", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.rate", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -947,7 +1007,7 @@ public class ShopCommand extends AbstractCommandCollection {
             String starsStr = parts.length > 3 ? parts[3].trim() : "";
 
             if (shopIdentifier.isEmpty() || starsStr.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.invalid_arguments",
                         "/ksshop rate <shopId> <1-5>")).color("#FF5555"));
                 return;
@@ -957,12 +1017,12 @@ public class ShopCommand extends AbstractCommandCollection {
             try {
                 stars = Integer.parseInt(starsStr);
             } catch (NumberFormatException e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rate.invalid_stars")).color("#FF5555"));
                 return;
             }
             if (stars < 1 || stars > 5) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rate.invalid_stars")).color("#FF5555"));
                 return;
             }
@@ -986,7 +1046,7 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (shop == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.shop_not_found", shopIdentifier))
                     .color("#FF5555"));
                 return;
@@ -994,7 +1054,7 @@ public class ShopCommand extends AbstractCommandCollection {
 
             // Owners cannot rate their own shops.
             if (shop.getOwnerUuid() != null && shop.getOwnerUuid().equals(raterUuid)) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rate.own_shop")).color("#FF5555"));
                 return;
             }
@@ -1017,12 +1077,12 @@ public class ShopCommand extends AbstractCommandCollection {
                 shop.recalculateRating(allRatings);
                 database.saveShop(shop);
             } catch (Exception e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rate.failed")).color("#FF5555"));
                 return;
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rate.success", shop.getName(), stars))
                 .color("#55FF55"));
         }
@@ -1035,7 +1095,11 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
 
@@ -1044,12 +1108,12 @@ public class ShopCommand extends AbstractCommandCollection {
                 plugin.getDatabase().loadTransactions(playerUuid, 20);
 
             if (transactions.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.history.empty")).color("#FFD700"));
                 return;
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.history.header", transactions.size())).color("#FFD700"));
 
             for (ShopDatabase.TransactionRecord tx : transactions) {
@@ -1065,14 +1129,14 @@ public class ShopCommand extends AbstractCommandCollection {
                             + " for " + tx.totalPrice;
                         if (tx.taxAmount > 0) line += " (+" + tx.taxAmount + " tax)";
                         line += " - " + timeAgo;
-                        player.sendMessage(Message.raw(line).color("#FF8888"));
+                        player.getPlayerRef().sendMessage(Message.raw(line).color("#FF8888"));
                     } else {
                         // Player was the seller
                         line = " [SALE] " + tx.buyerName + " bought " + tx.quantity
                             + "x " + itemName + " for " + tx.totalPrice;
                         if (tx.taxAmount > 0) line += " (+" + tx.taxAmount + " tax)";
                         line += " - " + timeAgo;
-                        player.sendMessage(Message.raw(line).color("#55FF55"));
+                        player.getPlayerRef().sendMessage(Message.raw(line).color("#55FF55"));
                     }
                 } else if ("SELL".equals(tx.type)) {
                     if (isBuyer) {
@@ -1081,13 +1145,13 @@ public class ShopCommand extends AbstractCommandCollection {
                             + " for " + tx.totalPrice;
                         if (tx.taxAmount > 0) line += " (-" + tx.taxAmount + " tax)";
                         line += " - " + timeAgo;
-                        player.sendMessage(Message.raw(line).color("#55FF55"));
+                        player.getPlayerRef().sendMessage(Message.raw(line).color("#55FF55"));
                     } else {
                         // Shop owner: someone sold items to your shop
                         line = " [BUYBACK] " + tx.buyerName + " sold " + tx.quantity
                             + "x " + itemName + " for " + tx.totalPrice;
                         line += " - " + timeAgo;
-                        player.sendMessage(Message.raw(line).color("#FF8888"));
+                        player.getPlayerRef().sendMessage(Message.raw(line).color("#FF8888"));
                     }
                 }
             }
@@ -1122,10 +1186,14 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
 
             if (!plugin.getShopConfig().getData().notifications.enabled) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     plugin.getI18n().get(playerRef, "shop.notifications.disabled")).color("#FF5555"));
                 return;
             }
@@ -1135,7 +1203,7 @@ public class ShopCommand extends AbstractCommandCollection {
                     ShopNotificationsPage page = new ShopNotificationsPage(playerRef, player, plugin);
                     player.getPageManager().openCustomPage(ref, store, page);
                 } catch (Exception e) {
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         plugin.getI18n().get(playerRef, "shop.error.open_failed")).color("#FF5555"));
                 }
             });
@@ -1159,9 +1227,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.collect", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.collect", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -1174,7 +1246,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 // Non-fatal — still show the redirect message
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.collect.use_mailbox", unclaimed)
             ).color("#FFD700"));
         }
@@ -1190,9 +1262,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
 
@@ -1208,14 +1284,14 @@ public class ShopCommand extends AbstractCommandCollection {
             try {
                 amount = Integer.parseInt(parts.length > 2 ? parts[2] : "0");
             } catch (NumberFormatException e) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.invalid_arguments",
                         "/ksshop deposit <amount>")).color("#FF5555"));
                 return;
             }
 
             if (amount <= 0) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.invalid_arguments",
                         "/ksshop deposit <amount>")).color("#FF5555"));
                 return;
@@ -1224,7 +1300,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Find nearest owned shop
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.no_shop")).color("#FF5555"));
                 return;
             }
 
@@ -1241,15 +1317,15 @@ public class ShopCommand extends AbstractCommandCollection {
             boolean success = shopService.depositToShop(playerRef, targetShop.getId(), amount);
             if (success) {
                 String formatted = plugin.getEconomyBridge().format(amount);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.deposit.success",
                         formatted, targetShop.getName())).color("#55FF55"));
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.deposit.new_balance",
                         plugin.getEconomyBridge().format(targetShop.getShopBalance()))
                 ).color("#96a9be"));
             } else {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.deposit.failed")).color("#FF5555"));
             }
         }
@@ -1271,13 +1347,17 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
 
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerUuid);
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.stats.no_shops")).color("#FFD700"));
                 return;
             }
@@ -1307,30 +1387,30 @@ public class ShopCommand extends AbstractCommandCollection {
             double avgRating = ratingCountSum > 0 ? ratingStarSum / ratingCountSum : 0.0;
 
             var econ = plugin.getEconomyBridge();
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.stats.header")).color("#FFD700"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.stats.shops_owned",
                     ownedShops.size(), maxShops)).color("#bfcdd5"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.stats.total_revenue",
                     econ.format(totalRevenue))).color("#bfcdd5"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.stats.total_tax",
                     econ.format(totalTax))).color("#bfcdd5"));
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.stats.total_sales",
                     totalSales)).color("#bfcdd5"));
             if (ratingCountSum > 0) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.stats.avg_rating",
                         String.format("%.1f", avgRating), ratingCountSum)).color("#bfcdd5"));
             } else {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.stats.no_ratings")).color("#96a9be"));
             }
             if (unclaimedMails > 0) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.stats.pending_mails",
                         unclaimedMails)).color("#55FF55"));
             }
@@ -1360,9 +1440,13 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
-            if (!player.hasPermission("ks.shop.user.edit", true)) {
-                player.sendMessage(Message.raw(
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
+            if (!player.getPlayerRef().hasPermission("ks.shop.user.edit", true)) {
+                player.getPlayerRef().sendMessage(Message.raw(
                     plugin.getI18n().get("shop.error.no_permission")).color("#FF5555"));
                 return;
             }
@@ -1377,7 +1461,7 @@ public class ShopCommand extends AbstractCommandCollection {
             String targetName = ctx.get(playerNameArg).trim();
 
             if (shopIdentifier.isEmpty() || targetName.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.invalid_arguments",
                         "/ksshop transfer <shopId> <playerName>")).color("#FF5555"));
                 return;
@@ -1402,7 +1486,7 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (shop == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.error.shop_not_found", shopIdentifier))
                     .color("#FF5555"));
                 return;
@@ -1410,7 +1494,7 @@ public class ShopCommand extends AbstractCommandCollection {
 
             // Ownership check.
             if (shop.getOwnerUuid() == null || !shop.getOwnerUuid().equals(playerUuid)) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.not_owner")).color("#FF5555"));
                 return;
             }
@@ -1425,14 +1509,14 @@ public class ShopCommand extends AbstractCommandCollection {
             }
 
             if (targetRef == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.target_offline")).color("#FF5555"));
                 return;
             }
 
             UUID targetUuid = targetRef.getUuid();
             if (targetUuid == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.target_not_found", targetName))
                     .color("#FF5555"));
                 return;
@@ -1440,7 +1524,7 @@ public class ShopCommand extends AbstractCommandCollection {
 
             // Reject self-transfer.
             if (targetUuid.equals(playerUuid)) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.self_target")).color("#FF5555"));
                 return;
             }
@@ -1454,7 +1538,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // overwriting another player's pending offer silently).
             TransferRequest existing = pendingTransfers.get(targetUuid);
             if (existing != null && existing.expiresAt > now) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.target_busy",
                         resolvedTargetName)).color("#FF5555"));
                 return;
@@ -1466,7 +1550,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 new TransferRequest(shopId, shopName, playerUuid,
                     playerRef.getUsername(), now + TRANSFER_CONFIRM_WINDOW_MS));
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.transfer.request_sent",
                     resolvedTargetName, shopName)).color("#FFAA00"));
 
@@ -1491,7 +1575,11 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
             long now = System.currentTimeMillis();
@@ -1499,7 +1587,7 @@ public class ShopCommand extends AbstractCommandCollection {
             TransferRequest req = pendingTransfers.get(playerUuid);
             if (req == null || req.expiresAt < now) {
                 if (req != null) pendingTransfers.remove(playerUuid);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.no_pending")).color("#FF5555"));
                 return;
             }
@@ -1508,7 +1596,7 @@ public class ShopCommand extends AbstractCommandCollection {
             if (shop == null || shop.getOwnerUuid() == null
                     || !shop.getOwnerUuid().equals(req.senderUuid)) {
                 pendingTransfers.remove(playerUuid);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.expired")).color("#FF5555"));
                 return;
             }
@@ -1518,7 +1606,7 @@ public class ShopCommand extends AbstractCommandCollection {
             boolean ok = plugin.getShopService().transferShop(
                 req.shopId, playerUuid, playerRef.getUsername());
             if (!ok) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.failed")).color("#FF5555"));
                 return;
             }
@@ -1529,7 +1617,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 // Non-fatal - transfer itself persisted.
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.transfer.accepted_target",
                     req.senderName, req.shopName)).color("#55FF55"));
 
@@ -1557,18 +1645,22 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             UUID playerUuid = playerRef.getUuid();
 
             TransferRequest req = pendingTransfers.remove(playerUuid);
             if (req == null) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.transfer.no_pending")).color("#FF5555"));
                 return;
             }
 
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.transfer.declined_target",
                     req.senderName, req.shopName)).color("#FFAA00"));
 
@@ -1604,7 +1696,11 @@ public class ShopCommand extends AbstractCommandCollection {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef playerRef, World world) {
-            Player player = ctx.senderAs(Player.class);
+            Player player = com.kyuubisoft.core.CorePlugin.getInstance().getPlayer(playerRef.getUuid());
+            if (player == null) {
+                playerRef.sendMessage(Message.raw("Player entity not cached.").color("#FF5555"));
+                return;
+            }
             ShopI18n i18n = plugin.getI18n();
             if (CoreBridge.showcaseWriteGuard(player, playerRef)) return;
 
@@ -1616,7 +1712,7 @@ public class ShopCommand extends AbstractCommandCollection {
                 } catch (NumberFormatException ignored) {}
             }
             if (days <= 0) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.list.usage")).color("#FF5555"));
                 return;
             }
@@ -1624,7 +1720,7 @@ public class ShopCommand extends AbstractCommandCollection {
             // Resolve nearest owned shop in this world.
             List<ShopData> ownedShops = plugin.getShopManager().getShopsByOwner(playerRef.getUuid());
             if (ownedShops.isEmpty()) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.list.no_shop")).color("#FF5555"));
                 return;
             }
@@ -1637,20 +1733,20 @@ public class ShopCommand extends AbstractCommandCollection {
                 String key = result.getErrorKey() != null
                     ? result.getErrorKey()
                     : "shop.list.failed";
-                player.sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
                 return;
             }
 
             long until = result.getNewListedUntil();
             int cost = result.getCostCharged();
             if (until == Long.MAX_VALUE) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.list.success_permanent", targetShop.getName())
                 ).color("#55FF55"));
             } else {
                 long daysLeft = Math.max(0,
                     (until - System.currentTimeMillis()) / 86_400_000L);
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.list.success",
                         targetShop.getName(), daysLeft, cost)
                 ).color("#55FF55"));
@@ -1664,7 +1760,7 @@ public class ShopCommand extends AbstractCommandCollection {
      * Finds the nearest owned shop from a list, based on player position.
      */
     private ShopData findNearestOwnedShop(List<ShopData> shops, Player player, World world) {
-        TransformComponent tc = player.getTransformComponent();
+        TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
         double px = 0, py = 0, pz = 0;
         if (tc != null) {
             Vector3d pos = tc.getPosition();

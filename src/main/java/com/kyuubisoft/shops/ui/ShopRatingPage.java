@@ -150,14 +150,14 @@ public class ShopRatingPage extends InteractiveCustomUIPage<ShopRatingPage.Ratin
 
         // Validate: must select stars
         if (selectedStars < 1 || selectedStars > 5) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.rate.select_stars")).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.rate.select_stars")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
 
         // Validate: cannot rate own shop
         if (playerRef.getUuid().equals(shopData.getOwnerUuid())) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.rate.own_shop")).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.rate.own_shop")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
@@ -168,7 +168,7 @@ public class ShopRatingPage extends InteractiveCustomUIPage<ShopRatingPage.Ratin
             long elapsed = System.currentTimeMillis() - lastRatingTimestamp;
             if (elapsed < cooldownMs) {
                 long remainingMinutes = TimeUnit.MILLISECONDS.toMinutes(cooldownMs - elapsed) + 1;
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rate.cooldown", remainingMinutes)).color("#FF5555"));
                 this.sendUpdate(new UICommandBuilder(), false);
                 return;
@@ -206,7 +206,7 @@ public class ShopRatingPage extends InteractiveCustomUIPage<ShopRatingPage.Ratin
         this.reviews = allRatings;
         this.lastRatingTimestamp = rating.getTimestamp();
 
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             i18n.get(playerRef, "shop.rate.success", selectedStars)).color("#55FF55"));
 
         // Refresh to show the updated reviews

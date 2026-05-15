@@ -1,6 +1,6 @@
 package com.kyuubisoft.shops.npc;
 
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.EntityUpdate;

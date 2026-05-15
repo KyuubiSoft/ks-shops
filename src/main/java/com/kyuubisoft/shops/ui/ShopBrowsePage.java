@@ -272,7 +272,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         ShopItem item = findItemBySlot(buyItems, gridSlotIndex);
         if (item != null) {
             if (!item.hasStock()) {
-                player.sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.out_of_stock")).color("#FF5555"));
+                player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.browse.out_of_stock")).color("#FF5555"));
                 refreshUI();
                 return;
             }
@@ -324,14 +324,14 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                         if (success) {
                             int totalReceived = item.getSellPrice() * confirmQuantity;
                             String currencyName = plugin.getEconomyBridge().getCurrencyName();
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.sell.success",
                                     confirmQuantity,
                                     formatItemName(item.getItemId()),
                                     totalReceived,
                                     currencyName)).color("#44FF44"));
                         } else {
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.browse.sell_failed")).color("#FF5555"));
                         }
                     } else {
@@ -344,7 +344,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                         if (result.isSuccess()) {
                             int totalPaid = item.getBuyPrice() * confirmQuantity;
                             String currencyName = plugin.getEconomyBridge().getCurrencyName();
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, "shop.buy.success",
                                     confirmQuantity,
                                     formatItemName(item.getItemId()),
@@ -354,7 +354,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
                             String key = result.getErrorKey() != null
                                 ? result.getErrorKey()
                                 : "shop.browse.purchase_failed";
-                            player.sendMessage(Message.raw(
+                            player.getPlayerRef().sendMessage(Message.raw(
                                 i18n.get(playerRef, key)).color("#FF5555"));
                         }
                     }
@@ -393,7 +393,7 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
             player.getPageManager().openCustomPage(lastRef, lastStore, ratingPage);
         } catch (Exception e) {
             LOGGER.warning("[ShopBrowse] Failed to open rating page: " + e.getMessage());
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 plugin.getI18n().get(playerRef, "shop.error.open_failed")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
         }
@@ -553,6 +553,32 @@ public class ShopBrowsePage extends InteractiveCustomUIPage<ShopBrowsePage.ShopB
         int itemCount = (activeItems != null) ? activeItems.size() : 0;
         ui.set("#InfoBar #InfoItemCount.Text",
             i18n.get(playerRef, "shop.browse.item_count", itemCount));
+
+        // Rental remaining time. Only visible on rental-backed PLAYER shops -
+        // tells the buyer how long this slot's current owner is staying.
+        // Source-of-truth is RentalSlotData.rentedUntil; falls back to the
+        // shop's denormalised mirror only if the slot lookup fails.
+        boolean showRental = false;
+        if (shopData.isRentalBacked() && shopData.isPlayerShop()) {
+            long expiresAt = 0L;
+            var rs = plugin.getRentalService();
+            if (rs != null) {
+                var slot = rs.getSlot(shopData.getRentalSlotId());
+                if (slot != null) expiresAt = slot.getRentedUntil();
+            }
+            if (expiresAt <= 0) expiresAt = shopData.getRentalExpiresAt();
+            long ms = expiresAt - System.currentTimeMillis();
+            if (ms > 0) {
+                long days = ms / 86_400_000L;
+                long hours = (ms % 86_400_000L) / 3_600_000L;
+                String txt = days > 0
+                    ? "Rental: " + days + "d " + hours + "h left"
+                    : "Rental: " + hours + "h left";
+                ui.set("#InfoBar #InfoRental.Text", txt);
+                showRental = true;
+            }
+        }
+        ui.set("#InfoBar #InfoRental.Visible", showRental);
 
         // Rate button (only for player shops, not own shop)
         boolean canRate = shopData.isPlayerShop()

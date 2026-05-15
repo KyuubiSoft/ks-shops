@@ -266,7 +266,7 @@ public class RentalService {
 
         if (player != null) {
             try {
-                if (!player.hasPermission("ks.rental.rent", true)) {
+                if (!player.getPlayerRef().hasPermission("ks.rental.rent", true)) {
                     return RentResult.NO_PERMISSION;
                 }
             } catch (Exception ignored) {
@@ -446,7 +446,7 @@ public class RentalService {
 
         if (player != null) {
             try {
-                if (!player.hasPermission("ks.rental.bid", true)) {
+                if (!player.getPlayerRef().hasPermission("ks.rental.bid", true)) {
                     return BidResult.NO_PERMISSION;
                 }
             } catch (Exception ignored) {
@@ -538,7 +538,7 @@ public class RentalService {
         try {
             Player online = plugin.getOnlinePlayer(playerUuid);
             if (online != null) {
-                online.sendMessage(Message.raw(text).color(hexColor));
+                online.getPlayerRef().sendMessage(Message.raw(text).color(hexColor));
             }
         } catch (Exception ignored) {
         }
@@ -877,7 +877,7 @@ public class RentalService {
             slot.getCurrentHighBid());
         for (Player p : plugin.getOnlinePlayers().values()) {
             try {
-                p.sendMessage(Message.raw(msg).color("#ffd700"));
+                p.getPlayerRef().sendMessage(Message.raw(msg).color("#ffd700"));
             } catch (Exception ignored) {
             }
         }
@@ -952,7 +952,7 @@ public class RentalService {
             if (player != null) {
                 var world = player.getWorld();
                 if (world != null) {
-                    var pos = new com.hypixel.hytale.math.vector.Vector3d(
+                    var pos = new org.joml.Vector3d(
                         shop.getPosX(), shop.getPosY(), shop.getPosZ());
                     float rotY = shop.getNpcRotY();
                     world.execute(() ->
@@ -1025,8 +1025,8 @@ public class RentalService {
                 resolveDefaultWorld();
             if (world != null) {
                 final ShopData spawnTarget = shell;
-                final com.hypixel.hytale.math.vector.Vector3d pos =
-                    new com.hypixel.hytale.math.vector.Vector3d(
+                final org.joml.Vector3d pos =
+                    new org.joml.Vector3d(
                         slot.getPosX(), slot.getPosY(), slot.getPosZ());
                 final float rotY = slot.getNpcRotY();
                 world.execute(() ->

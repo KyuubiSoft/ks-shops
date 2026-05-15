@@ -136,7 +136,7 @@ public class ActionShopInteract extends ActionBase {
                     // ShopBlockInteraction.handleInteraction.
                     if (!shop.isOpen() && !isOwner) {
                         String msg = plugin.getI18n().get(playerRef, "shop.error.closed");
-                        player.sendMessage(Message.raw(msg).color("#FF5555"));
+                        player.getPlayerRef().sendMessage(Message.raw(msg).color("#FF5555"));
                         return;
                     }
 

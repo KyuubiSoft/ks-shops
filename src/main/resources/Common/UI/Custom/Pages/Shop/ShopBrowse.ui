@@ -220,10 +220,18 @@ $C.@PageOverlay {
             Text: "";
           }
 
+          Group { Anchor: (Width: 8); }
+
+          Label #InfoRental {
+            Visible: false;
+            Style: (FontSize: 11, TextColor: #88dd88, RenderBold: true, VerticalAlignment: Center);
+            Text: "";
+          }
+
           Group { Anchor: (Width: 10); }
 
           $C.@SmallSecondaryTextButton #RateButton {
-            @Anchor = (Width: 60);
+            @Anchor = (Width: 90);
             @Text = "Rate";
             Visible: false;
           }

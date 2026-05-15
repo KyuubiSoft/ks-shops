@@ -17,7 +17,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 
 import org.bson.BsonDocument;
@@ -337,7 +337,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                 if (result.isSuccess()) {
                     int totalPaid = buyConfirmItem.getBuyPrice() * buyConfirmQuantity;
                     String currencyName = plugin.getEconomyBridge().getCurrencyName();
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.buy.success",
                             buyConfirmQuantity,
                             ShopBrowsePage.formatItemName(buyConfirmItem.getItemId()),
@@ -348,7 +348,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
                     String key = result.getErrorKey() != null
                         ? result.getErrorKey()
                         : "shop.browse.purchase_failed";
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         i18n.get(playerRef, key)).color("#FF5555"));
                 }
                 clearBuyConfirm();
@@ -843,7 +843,7 @@ public class ShopDirectoryPage extends InteractiveCustomUIPage<ShopDirectoryPage
         double playerX = 0;
         double playerZ = 0;
         try {
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc != null) {
                 Vector3d pos = tc.getPosition();
                 if (pos != null) {

@@ -520,7 +520,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         boolean unchanged = (currentSkin == null && normalised == null)
             || (currentSkin != null && currentSkin.equals(normalised));
         if (unchanged) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.edit.skin.applied")).color("#55FF55"));
             refreshUI();
             return;
@@ -546,7 +546,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             LOGGER.warning("[ShopEdit] NPC respawn failed after skin change: " + e.getMessage());
         }
 
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             i18n.get(playerRef, "shop.edit.skin.applied")).color("#55FF55"));
 
         refreshUI();
@@ -587,7 +587,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             String key = result.getErrorKey() != null
                 ? result.getErrorKey()
                 : "shop.list.failed";
-            player.sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
@@ -595,13 +595,13 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         long until = result.getNewListedUntil();
         int cost = result.getCostCharged();
         if (until == Long.MAX_VALUE) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.list.success_permanent", shopData.getName())
             ).color("#55FF55"));
         } else {
             long daysLeft = Math.max(0,
                 (until - System.currentTimeMillis()) / 86_400_000L);
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.list.success",
                     shopData.getName(), daysLeft, cost)
             ).color("#55FF55"));
@@ -621,13 +621,13 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         }
 
         if (!ok) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.pickup.failed")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
 
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             i18n.get(playerRef, "shop.pickup.success", shopData.getName())
         ).color("#55FF55"));
 
@@ -708,13 +708,13 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
 
         // Validate edited name
         if (editedName.isEmpty()) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.name_empty")).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.edit.name_empty")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
         if (editedName.length() < cfg.playerShops.nameMinLength
             || editedName.length() > cfg.playerShops.nameMaxLength) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.edit.name_invalid")
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
@@ -726,7 +726,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             for (ShopData other : plugin.getShopManager().getAllShops()) {
                 if (other.getId().equals(shopData.getId())) continue;
                 if (other.getName().equalsIgnoreCase(editedName)) {
-                    player.sendMessage(Message.raw(
+                    player.getPlayerRef().sendMessage(Message.raw(
                         i18n.get(playerRef, "shop.edit.name_taken")
                     ).color("#FF5555"));
                     this.sendUpdate(new UICommandBuilder(), false);
@@ -800,7 +800,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             plugin.getDatabase().saveShopItems(shopData.getId(), newItems);
         } catch (Exception e) {
             LOGGER.warning("[ShopEdit] Failed to save shop to DB: " + e.getMessage());
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.edit.save_failed")
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
@@ -824,7 +824,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         // Unlock editor session
         plugin.getSessionManager().unlockEditor(shopData.getId(), playerRef.getUuid());
 
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             i18n.get(playerRef, "shop.edit.saved", shopData.getName())
         ).color("#55FF55"));
 
@@ -894,14 +894,14 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             try {
                 depositAmount = Double.parseDouble(pendingDepositAmount.trim());
             } catch (NumberFormatException ignored) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.deposit.invalid_amount")
                 ).color("#FF5555"));
                 return;
             }
         }
         if (depositAmount <= 0) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.deposit.invalid_amount")
             ).color("#FF5555"));
             return;
@@ -912,12 +912,12 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
         );
 
         if (success) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.deposit.success",
                     plugin.getEconomyBridge().format(depositAmount), shopData.getName())
             ).color("#55FF55"));
         } else {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.deposit.failed")
             ).color("#FF5555"));
         }
@@ -1925,7 +1925,7 @@ public class ShopEditPage extends InteractiveCustomUIPage<ShopEditPage.EditData>
             try {
                 Player p = store.getComponent(ref, Player.getComponentType());
                 if (p != null) {
-                    p.sendMessage(Message.raw(
+                    p.getPlayerRef().sendMessage(Message.raw(
                         plugin.getI18n().get(playerRef, "shop.edit.unsaved_warning")
                     ).color("#ffaa00"));
                 }

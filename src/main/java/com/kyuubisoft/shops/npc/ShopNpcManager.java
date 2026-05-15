@@ -3,8 +3,8 @@ package com.kyuubisoft.shops.npc;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -88,6 +88,12 @@ public class ShopNpcManager {
     /** Maps shopId -> spawned NPCEntity UUID (for chunk reload detection) */
     private final Map<UUID, UUID> entityUuids = new ConcurrentHashMap<>();
 
+    /**
+     * Shops whose initial spawn returned null (typically because the target
+     * chunk wasn't loaded yet). The periodic sweep retries these.
+     */
+    private final Set<UUID> failedSpawns = ConcurrentHashMap.newKeySet();
+
     /** Per-shop rotation tracking (null = look-at-player disabled in config) */
     private final ShopNpcRotationManager rotationManager = new ShopNpcRotationManager();
 
@@ -154,8 +160,14 @@ public class ShopNpcManager {
         String worldName = world.getName();
         if (worldName == null) return;
 
-        // Only initialize once per world
-        if (!spawnedWorlds.add(worldName)) return;
+        // First-time entry vs re-entry. spawnedWorlds.add() returns true only
+        // the first time we see a world; subsequent player-joins (including
+        // the same player coming back after a world switch) hit the false
+        // path and only refresh skins on already-tracked NPCs.
+        if (!spawnedWorlds.add(worldName)) {
+            scheduleSkinRefreshForWorld(worldName, world);
+            return;
+        }
 
         Set<UUID> shopsInWorld = worldShops.get(worldName);
         if (shopsInWorld == null || shopsInWorld.isEmpty()) {
@@ -208,6 +220,81 @@ public class ShopNpcManager {
             // Scheduler unavailable - fall through to immediate spawn.
         }
         spawnTask.run();
+    }
+
+    /**
+     * Player re-entry into a world that was already initialised this session.
+     * Hytale unloads the chunks while the player was away and reloads them on
+     * return - the persistent NPCs come back from {@code PersistentModel} but
+     * **without** their {@code PlayerSkinComponent}, so they look naked.
+     *
+     * For each tracked shop in this world we resolve a fresh entity ref via
+     * the persistent UUID and re-apply skin + nameplate. If the ref is dead
+     * (full chunk eviction without restore yet) we run a despawn-and-spawn
+     * fallback. The same {@code spawnDelaySecondsOnJoin} delay applies as
+     * for first-time spawn so the client cosmetic subsystem is ready.
+     */
+    private void scheduleSkinRefreshForWorld(String worldName, World world) {
+        Set<UUID> shopsInWorld = worldShops.get(worldName);
+        if (shopsInWorld == null || shopsInWorld.isEmpty()) return;
+
+        int delaySeconds = Math.max(0, config.getData().npc.spawnDelaySecondsOnJoin);
+
+        Runnable task = () -> world.execute(() -> {
+            int refreshed = 0;
+            int respawned = 0;
+            var store = world.getEntityStore().getStore();
+            for (UUID shopId : shopsInWorld) {
+                ShopData shop = shopManager.getShop(shopId);
+                if (shop == null || shop.isPacked()) continue;
+
+                UUID npcUuid = entityUuids.get(shopId);
+                Ref<EntityStore> freshRef = npcUuid != null
+                    ? world.getEntityRef(npcUuid)
+                    : null;
+
+                if (freshRef == null || !freshRef.isValid()) {
+                    // Tracked entity is gone (or never tracked). Full respawn.
+                    try {
+                        despawnNpcInternal(shopId, world);
+                        Vector3d pos = new Vector3d(
+                            shop.getPosX(), shop.getPosY(), shop.getPosZ());
+                        spawnNpcInternalAt(shop, world, pos, shop.getNpcRotY());
+                        respawned++;
+                    } catch (Exception e) {
+                        LOGGER.fine("re-entry respawn failed for " + shopId
+                            + ": " + e.getMessage());
+                    }
+                    continue;
+                }
+
+                // Entity is alive (chunk-restored or never unloaded).
+                // Re-apply skin + nameplate so chunk-restored NPCs lose
+                // their naked appearance.
+                try {
+                    applySkinIfAvailable(shop, freshRef, world, store);
+                    applyNameTag(shop, freshRef, store);
+                    refreshed++;
+                } catch (Exception e) {
+                    LOGGER.fine("re-entry skin refresh failed for " + shopId
+                        + ": " + e.getMessage());
+                }
+            }
+            if (refreshed > 0 || respawned > 0) {
+                LOGGER.info("Player re-entered '" + worldName
+                    + "' - refreshed " + refreshed + " skin(s), respawned "
+                    + respawned + " stale NPC(s)");
+            }
+        });
+
+        if (delaySeconds > 0) {
+            ScheduledExecutorService scheduler = plugin.getScheduler();
+            if (scheduler != null && !scheduler.isShutdown()) {
+                scheduler.schedule(task, delaySeconds, TimeUnit.SECONDS);
+                return;
+            }
+        }
+        task.run();
     }
 
     /**
@@ -287,11 +374,58 @@ public class ShopNpcManager {
                 if (r > 0) {
                     LOGGER.info("Periodic orphan sweep: removed " + r + " chunk-restored shop NPC(s)");
                 }
+                // Piggyback the retry of failed spawns. Shops whose initial
+                // spawn returned null (most often: chunk not loaded at the
+                // time of the spawn burst) get another attempt now. By the
+                // 30s mark the engine has usually populated all near-spawn
+                // chunks, and over multiple ticks even far-away shops get
+                // their chance once a player visits the area.
+                retryFailedSpawns(world);
             });
             return removed[0];
         } catch (Exception e) {
             LOGGER.fine("runPeriodicOrphanSweep failed: " + e.getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * Re-runs {@link #spawnNpcInternal} for every shop currently in
+     * {@link #failedSpawns}. Successful spawns drop themselves from the set
+     * via the success branch in spawnNpcInternal; persistent failures stay
+     * queued and will be retried on the next periodic sweep tick.
+     *
+     * MUST run inside {@code world.execute()} - the caller dispatches it.
+     */
+    private void retryFailedSpawns(World world) {
+        if (failedSpawns.isEmpty()) return;
+        // Snapshot to avoid concurrent-modification while spawnNpcInternal
+        // mutates the set on success.
+        java.util.List<UUID> snapshot = new java.util.ArrayList<>(failedSpawns);
+        int recovered = 0;
+        for (UUID shopId : snapshot) {
+            ShopData shop = shopManager.getShop(shopId);
+            if (shop == null) {
+                failedSpawns.remove(shopId);
+                continue;
+            }
+            // Only retry shops that belong to the resolved world. Shops in
+            // other worlds will be picked up when their world initialises.
+            if (!world.getName().equals(shop.getWorldName())) continue;
+            if (shop.isPacked()) {
+                failedSpawns.remove(shopId);
+                continue;
+            }
+            try {
+                spawnNpcInternal(shop, world);
+                if (!failedSpawns.contains(shopId)) recovered++;
+            } catch (Exception e) {
+                LOGGER.fine("retry spawn failed for " + shopId + ": " + e.getMessage());
+            }
+        }
+        if (recovered > 0) {
+            LOGGER.info("Retry pass: recovered " + recovered + " shop NPC spawn(s) "
+                + "(" + failedSpawns.size() + " still queued)");
         }
     }
 
@@ -388,7 +522,7 @@ public class ShopNpcManager {
                 return;
             }
 
-            Vector3f npcRotation = new Vector3f(0.0f, rotY, 0.0f);
+            Rotation3f npcRotation = new Rotation3f(0.0f, rotY, 0.0f);
 
             // Resolve role: prefer our standalone Shop_Keeper_Role, fall back to
             // Core's KS_NPC_* roles if the shipped JSON somehow failed to load.
@@ -426,9 +560,17 @@ public class ShopNpcManager {
             );
 
             if (result == null || result.first() == null) {
-                LOGGER.warning("NPC spawn returned null for shop " + shop.getName());
+                // Most common cause: target chunk not loaded yet. Mark for
+                // retry on the periodic sweep tick - once the chunk gets
+                // populated (player walks there, engine catches up, another
+                // player joins, etc) the retry succeeds.
+                failedSpawns.add(shopId);
+                LOGGER.warning("NPC spawn returned null for shop " + shop.getName()
+                    + " - will retry on next tick (chunk likely not loaded)");
                 return;
             }
+            // Spawn succeeded: drop from retry set if it was queued.
+            failedSpawns.remove(shopId);
 
             Ref<EntityStore> entityRef = result.first();
             NPCEntity npcEntity = result.second();
@@ -505,7 +647,7 @@ public class ShopNpcManager {
             // all go through spawnNpcAtPosition with the raw coords).
             Vector3d npcPosition = new Vector3d(
                 shop.getPosX(), shop.getPosY(), shop.getPosZ());
-            Vector3f npcRotation = new Vector3f(0.0f, shop.getNpcRotY(), 0.0f);
+            Rotation3f npcRotation = new Rotation3f(0.0f, shop.getNpcRotY(), 0.0f);
 
             // Resolve role — prefer interactable role for F-key interaction
             String roleName = NPC_ROLE_INTERACTABLE;
@@ -542,9 +684,17 @@ public class ShopNpcManager {
             );
 
             if (result == null || result.first() == null) {
-                LOGGER.warning("NPC spawn returned null for shop " + shop.getName());
+                // Most common cause: target chunk not loaded yet. Mark for
+                // retry on the periodic sweep tick - once the chunk gets
+                // populated (player walks there, engine catches up, another
+                // player joins, etc) the retry succeeds.
+                failedSpawns.add(shopId);
+                LOGGER.warning("NPC spawn returned null for shop " + shop.getName()
+                    + " - will retry on next tick (chunk likely not loaded)");
                 return;
             }
+            // Spawn succeeded: drop from retry set if it was queued.
+            failedSpawns.remove(shopId);
 
             Ref<EntityStore> entityRef = result.first();
             NPCEntity npcEntity = result.second();
@@ -770,39 +920,14 @@ public class ShopNpcManager {
                 entityRef, Nameplate.getComponentType());
             if (shop.isShowNameTag() && shop.getName() != null && !shop.getName().isEmpty()) {
                 String label = shop.getName();
-                // Rental-backed PLAYER shop: surface remaining rental time.
-                // Helps the renter see what they own and lets visitors gauge
-                // when the slot will free up. Vacant rental shells (ADMIN type)
-                // already encode their state in the display name itself
-                // ("[100g/day]" / "[AUCTION 500g]") via buildVacantName.
-                //
-                // Source-of-truth is RentalSlotData.rentedUntil in
-                // shop_rental_slots, NOT shop.rentalExpiresAt - the latter is
-                // a denormalised mirror that can drift if the slot row is
-                // edited directly. Reading from the slot keeps the UI honest.
-                if (shop.isRentalBacked() && shop.isPlayerShop()) {
-                    long expiresAt = 0L;
-                    com.kyuubisoft.shops.rental.RentalService rs =
-                        plugin.getRentalService();
-                    if (rs != null) {
-                        com.kyuubisoft.shops.rental.RentalSlotData slot =
-                            rs.getSlot(shop.getRentalSlotId());
-                        if (slot != null) expiresAt = slot.getRentedUntil();
-                    }
-                    if (expiresAt <= 0) expiresAt = shop.getRentalExpiresAt();
-                    long ms = expiresAt - System.currentTimeMillis();
-                    if (ms > 0) {
-                        long days = ms / 86_400_000L;
-                        long hours = (ms % 86_400_000L) / 3_600_000L;
-                        label = label + (days > 0
-                            ? " (" + days + "d " + hours + "h left)"
-                            : " (" + hours + "h left)");
-                    }
-                } else if (!shop.isOpen() && shop.getRentalSlotId() == null) {
-                    // Append [CLOSED] when the shop is temporarily unavailable.
-                    // Keeps the NPC visible as a place marker + owner's claim
-                    // on the spot, while making the state obvious to passers-by
-                    // without a F-key.
+                // Closed shops show [CLOSED] above the NPC. Rental remaining
+                // time is intentionally NOT in the nameplate any more - it
+                // surfaces in the Browse + Edit overlays instead, which is
+                // where the owner / buyer actually engages with the shop.
+                // Vacant rental shells encode their state in the display
+                // name itself ("[100g/day]" / "[AUCTION 500g]") via
+                // buildVacantName, so this branch only handles real shops.
+                if (!shop.isOpen() && shop.getRentalSlotId() == null) {
                     label = label + " [CLOSED]";
                 }
                 nameplate.setText(label);

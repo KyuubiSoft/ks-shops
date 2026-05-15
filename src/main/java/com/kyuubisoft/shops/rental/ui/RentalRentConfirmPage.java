@@ -93,7 +93,7 @@ public class RentalRentConfirmPage extends InteractiveCustomUIPage<RentalRentCon
         RentalService.RentResult result = service.rentSlot(playerRef, player, slot.getId(), days);
         switch (result) {
             case SUCCESS -> {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.rental.rent_success",
                         slot.getDisplayName(), days)
                 ).color("#55FF55"));
@@ -111,7 +111,7 @@ public class RentalRentConfirmPage extends InteractiveCustomUIPage<RentalRentCon
     }
 
     private void sendError(String key) {
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             plugin.getI18n().get(playerRef, key)
         ).color("#FF5555"));
         this.sendUpdate(new UICommandBuilder(), false);

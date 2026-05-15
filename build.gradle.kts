@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly(files("${rootProject.projectDir}/libs/HytaleServer.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/HytaleServer-prerelease.jar"))
 
     // Optional dependencies (reflection-based bridges)
     compileOnly(project(":mods:core"))

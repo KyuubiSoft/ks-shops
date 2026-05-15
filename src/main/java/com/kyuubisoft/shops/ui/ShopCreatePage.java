@@ -158,19 +158,19 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
 
         // --- Validate name ---
         if (shopName.isEmpty()) {
-            player.sendMessage(Message.raw(i18n.get(playerRef, "shop.create.name_empty")).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, "shop.create.name_empty")).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
         if (shopName.length() < cfg.playerShops.nameMinLength) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.name_too_short", cfg.playerShops.nameMinLength)
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
             return;
         }
         if (shopName.length() > cfg.playerShops.nameMaxLength) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.name_too_long", cfg.playerShops.nameMaxLength)
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
@@ -182,7 +182,7 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
         if (cost > 0) {
             double balance = plugin.getEconomyBridge().getBalance(playerRef.getUuid());
             if (balance < cost) {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.create.not_enough", cost)
                 ).color("#FF5555"));
                 this.sendUpdate(new UICommandBuilder(), false);
@@ -195,7 +195,7 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
         String worldName = "";
         double x = 0, y = 0, z = 0;
         try {
-            TransformComponent tc = player.getTransformComponent();
+            TransformComponent tc = player.getPlayerRef().getHolder().getComponent(TransformComponent.getComponentType());
             if (tc != null) {
                 var pos = tc.getPosition();
                 x = pos.x;
@@ -217,7 +217,7 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
 
         if (result.isSuccess()) {
             ShopData created = result.getShop();
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.create.success", created.getName())
             ).color("#55FF55"));
 
@@ -231,7 +231,7 @@ public class ShopCreatePage extends InteractiveCustomUIPage<ShopCreatePage.Creat
             String errorKey = result.getErrorKey() != null
                 ? result.getErrorKey()
                 : "shop.create.failed";
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, errorKey)
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);

@@ -49,7 +49,7 @@ public final class PermissionLimits {
     public static boolean hasWildcard(Player player) {
         if (player == null) return false;
         try {
-            return player.hasPermission(WILDCARD_SENTINEL, false);
+            return player.getPlayerRef().hasPermission(WILDCARD_SENTINEL, false);
         } catch (Exception e) {
             return false;
         }
@@ -66,7 +66,7 @@ public final class PermissionLimits {
         if (player == null || node == null) return false;
         if (hasWildcard(player)) return false;
         try {
-            return player.hasPermission(node, false);
+            return player.getPlayerRef().hasPermission(node, false);
         } catch (Exception e) {
             return false;
         }
@@ -110,7 +110,7 @@ public final class PermissionLimits {
         int highest = globalDefault;
         for (int n = 1; n <= MAX_SCAN; n++) {
             try {
-                if (player.hasPermission(prefix + n, false) && n > highest) {
+                if (player.getPlayerRef().hasPermission(prefix + n, false) && n > highest) {
                     highest = n;
                 }
             } catch (Exception ignored) {

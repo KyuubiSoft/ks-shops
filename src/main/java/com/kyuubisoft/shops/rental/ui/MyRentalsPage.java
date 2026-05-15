@@ -101,7 +101,7 @@ public class MyRentalsPage extends InteractiveCustomUIPage<MyRentalsPage.MyRenta
         // Default: extend by 1 day. A fancier UI would prompt for days.
         var result = plugin.getRentalService().extendRental(playerRef, player, slotId, 1);
         if (result == RentalService.RentResult.SUCCESS) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rental.extend_success", "1",
                     String.valueOf(java.time.LocalDate.now().plusDays(1)))
             ).color("#55ff55"));
@@ -114,7 +114,7 @@ public class MyRentalsPage extends InteractiveCustomUIPage<MyRentalsPage.MyRenta
                 case SLOT_NOT_FOUND -> "shop.rental.slot_not_found";
                 default -> "shop.rental.extend_failed";
             };
-            player.sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
+            player.getPlayerRef().sendMessage(Message.raw(i18n.get(playerRef, key)).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);
         }
     }
@@ -125,12 +125,12 @@ public class MyRentalsPage extends InteractiveCustomUIPage<MyRentalsPage.MyRenta
         String name = slot != null ? slot.getDisplayName() : slotId.toString();
         boolean ok = plugin.getRentalService().releaseEarly(playerRef, slotId);
         if (ok) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rental.released_chat", name)
             ).color("#55ff55"));
             refreshUI();
         } else {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.rental.rent_failed")
             ).color("#FF5555"));
             this.sendUpdate(new UICommandBuilder(), false);

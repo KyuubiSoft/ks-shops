@@ -152,7 +152,7 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
             if (dispenseAndClaim(fresh)) {
                 sendClaimChatMessage(i18n, fresh);
             } else {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     i18n.get(playerRef, "shop.mailbox.claim_failed")).color("#FF5555"));
             }
         } catch (NumberFormatException e) {
@@ -197,11 +197,11 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
 
         if (claimedCount > 0) {
             String moneyFormatted = plugin.getEconomyBridge().format(claimedMoney);
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.mailbox.claimed_all",
                     claimedCount, claimedItems, moneyFormatted)).color("#55FF55"));
         } else if (!mails.isEmpty()) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.mailbox.claim_failed")).color("#FF5555"));
         }
 
@@ -247,12 +247,12 @@ public class MailboxPage extends InteractiveCustomUIPage<MailboxPage.MailboxData
     private void sendClaimChatMessage(ShopI18n i18n, MailboxEntry mail) {
         if (mail.getType() == MailboxEntry.Type.ITEM) {
             String itemLabel = formatItemName(mail.getItemId());
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.mailbox.claimed_item",
                     mail.getQuantity(), itemLabel)).color("#55FF55"));
         } else if (mail.getType() == MailboxEntry.Type.MONEY) {
             String moneyFormatted = plugin.getEconomyBridge().format(mail.getAmount());
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 i18n.get(playerRef, "shop.mailbox.claimed_money", moneyFormatted)).color("#55FF55"));
         }
     }

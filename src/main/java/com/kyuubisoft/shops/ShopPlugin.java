@@ -152,7 +152,7 @@ public class ShopPlugin extends JavaPlugin {
                                 "ks.shop.user.browse", "ks.shop.user.buy", "ks.shop.user.sell",
                                 "ks.shop.user.rate", "ks.shop.user.collect", "ks.shop.user.transfer"
                             }) {
-                                try { p.hasPermission(node, true); } catch (Exception ignored) {}
+                                try { p.getPlayerRef().hasPermission(node, true); } catch (Exception ignored) {}
                             }
                         }
                     } catch (Exception ignored) {}

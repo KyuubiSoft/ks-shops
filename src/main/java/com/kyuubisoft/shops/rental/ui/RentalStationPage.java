@@ -129,7 +129,7 @@ public class RentalStationPage extends InteractiveCustomUIPage<RentalStationPage
             return;
         }
         if (slot.getRentedBy() != null) {
-            player.sendMessage(Message.raw(
+            player.getPlayerRef().sendMessage(Message.raw(
                 "Slot is already rented."
             ).color("#FFD700"));
             this.sendUpdate(new UICommandBuilder(), false);

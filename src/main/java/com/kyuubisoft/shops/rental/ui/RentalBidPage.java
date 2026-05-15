@@ -115,7 +115,7 @@ public class RentalBidPage extends InteractiveCustomUIPage<RentalBidPage.BidData
             .placeBid(playerRef, player, slotId, bidAmount);
         switch (result) {
             case SUCCESS -> {
-                player.sendMessage(Message.raw(
+                player.getPlayerRef().sendMessage(Message.raw(
                     "Bid placed: " + bidAmount + " Gold"
                 ).color("#55ff55"));
                 refreshUI();
@@ -133,7 +133,7 @@ public class RentalBidPage extends InteractiveCustomUIPage<RentalBidPage.BidData
     }
 
     private void sendError(String key) {
-        player.sendMessage(Message.raw(
+        player.getPlayerRef().sendMessage(Message.raw(
             plugin.getI18n().get(playerRef, key)
         ).color("#FF5555"));
         this.sendUpdate(new UICommandBuilder(), false);
